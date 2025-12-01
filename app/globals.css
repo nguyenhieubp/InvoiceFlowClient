@@ -1,4 +1,70 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes scaleIn {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes slideDown {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes progress {
+    0% {
+      width: 0%;
+      transform: translateX(0);
+    }
+    50% {
+      width: 70%;
+      transform: translateX(0);
+    }
+    100% {
+      width: 100%;
+      transform: translateX(100%);
+    }
+  }
+
+  .animate-fadeIn {
+    animation: fadeIn 0.2s ease-out;
+  }
+
+  .animate-scaleIn {
+    animation: scaleIn 0.3s ease-out;
+  }
+
+  .animate-slideDown {
+    animation: slideDown 0.3s ease-out;
+  }
+
+  .animate-progress {
+    animation: progress 2s ease-in-out infinite;
+  }
+}
 
 :root {
   --background: #ffffff;
@@ -8,8 +74,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-inter);
 }
 
 @media (prefers-color-scheme: dark) {
