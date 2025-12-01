@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import Sidebar from './Sidebar';
 
 interface LayoutWithSidebarProps {
@@ -37,14 +38,28 @@ export default function LayoutWithSidebar({ children }: LayoutWithSidebarProps) 
         {/* Top bar với menu button */}
         <header className="bg-white border-b border-gray-200 sticky top-0 z-30 shadow-sm">
           <div className="flex items-center justify-between px-4 py-3">
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="lg:hidden p-2 rounded-md text-gray-600 hover:bg-gray-100 transition-colors"
-            >
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="lg:hidden p-2 rounded-md text-gray-600 hover:bg-gray-100 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+              <div className="hidden lg:flex items-center gap-2">
+                <div className="w-8 h-8 rounded flex items-center justify-center flex-shrink-0 overflow-hidden">
+                  <Image
+                    src="https://images.crunchbase.com/image/upload/c_pad,h_256,w_256,f_auto,q_auto:eco,dpr_1/009f3fa2c79f4b35ae518d568753e59c?ik-sanitizeSvg=true"
+                    alt="Logo"
+                    width={32}
+                    height={32}
+                    className="object-contain"
+                  />
+                </div>
+                <span className="text-lg font-bold text-gray-900">InvoiceFlow</span>
+              </div>
+            </div>
             <div className="flex-1 lg:pl-4">
               {/* Có thể thêm breadcrumb hoặc title ở đây */}
             </div>
