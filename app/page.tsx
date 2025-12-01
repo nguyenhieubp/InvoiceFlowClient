@@ -4,7 +4,6 @@ export default function Home() {
   return (
     <div className="max-w-6xl mx-auto">
       <div className="mb-8 p-4">
-        <h1 className="text-4xl font-bold mb-4 text-gray-900">Chào mừng đến với InvoiceFlow</h1>
         <p className="text-lg text-gray-600">
           Hệ thống quản lý và in hóa đơn tự động
         </p>
