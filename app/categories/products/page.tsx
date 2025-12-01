@@ -772,7 +772,7 @@ export default function ProductsPage() {
                     <h3 className="text-sm font-semibold text-blue-900 mb-2">Lưu ý:</h3>
                     <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
                       <li>File Excel phải có header ở dòng đầu tiên</li>
-                      <li>Các cột trong file phải khớp với tên field (ví dụ: "Mã vật tư", "Tên vật tư", ...)</li>
+                      <li>Các cột trong file phải khớp với tên field (ví dụ: &quot;Mã vật tư&quot;, &quot;Tên vật tư&quot;, ...)</li>
                       <li>Mã vật tư là bắt buộc. Nếu đã tồn tại, dữ liệu sẽ được cập nhật</li>
                       <li>Các giá trị boolean (Có/Không, True/False, 1/0) sẽ được tự động chuyển đổi</li>
                     </ul>

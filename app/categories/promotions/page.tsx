@@ -665,7 +665,7 @@ export default function PromotionsPage() {
                     <h3 className="text-sm font-semibold text-blue-900 mb-2">Lưu ý:</h3>
                     <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
                       <li>File Excel phải có header ở dòng đầu tiên</li>
-                      <li>Các cột trong file phải khớp với tên field (ví dụ: "Mã chương trình", "Tên chương trình", ...)</li>
+                      <li>Các cột trong file phải khớp với tên field (ví dụ: &quot;Mã chương trình&quot;, &quot;Tên chương trình&quot;, ...)</li>
                       <li>Mã chương trình là bắt buộc. Nếu đã tồn tại, dữ liệu sẽ được xóa và tạo mới</li>
                       <li>Các giá trị boolean (Có/Không, True/False, 1/0) sẽ được tự động chuyển đổi</li>
                     </ul>

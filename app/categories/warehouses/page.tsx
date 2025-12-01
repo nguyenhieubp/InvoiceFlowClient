@@ -650,7 +650,7 @@ export default function WarehousesPage() {
                     <h3 className="text-sm font-semibold text-blue-900 mb-2">Lưu ý:</h3>
                     <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
                       <li>File Excel phải có header ở dòng đầu tiên</li>
-                      <li>Các cột trong file phải khớp với tên field (ví dụ: "Mã kho", "Tên kho", ...)</li>
+                      <li>Các cột trong file phải khớp với tên field (ví dụ: &quot;Mã kho&quot;, &quot;Tên kho&quot;, ...)</li>
                       <li>Mã kho là bắt buộc. Nếu đã tồn tại, dữ liệu sẽ được xóa và tạo mới</li>
                     </ul>
                   </div>
