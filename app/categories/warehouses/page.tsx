@@ -88,10 +88,23 @@ export default function WarehousesPage() {
     return () => clearTimeout(timer);
   }, [toast]);
 
+  // Debounce search query
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+      // Reset về trang 1 khi search query thay đổi
+      setPagination((prev) => ({ ...prev, page: 1 }));
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
   useEffect(() => {
     loadWarehouses();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pagination.page, pagination.limit]);
+  }, [pagination.page, pagination.limit, debouncedSearchQuery]);
 
   const loadWarehouses = async () => {
     try {
@@ -99,7 +112,7 @@ export default function WarehousesPage() {
       const response = await categoriesApi.getWarehouses({
         page: pagination.page,
         limit: pagination.limit,
-        search: searchQuery || undefined,
+        search: debouncedSearchQuery || undefined,
       });
       const data = response.data.data || response.data || [];
       setWarehouses(data);
@@ -114,18 +127,6 @@ export default function WarehousesPage() {
       setLoading(false);
     }
   };
-
-  // Filter warehouses by search query
-  const filteredWarehouses = warehouses.filter((warehouse) => {
-    if (!searchQuery.trim()) return true;
-    const query = searchQuery.toLowerCase();
-    return (
-      warehouse.maKho?.toLowerCase().includes(query) ||
-      warehouse.tenKho?.toLowerCase().includes(query) ||
-      warehouse.maERP?.toLowerCase().includes(query) ||
-      warehouse.donVi?.toLowerCase().includes(query)
-    );
-  });
 
   const toggleColumn = (field: keyof WarehouseItem) => {
     setSelectedColumns(prev => {
@@ -156,12 +157,28 @@ export default function WarehousesPage() {
     if (value === null || value === undefined || value === '') return (
       <span className="text-gray-400 italic">-</span>
     );
+    
+    // Xử lý boolean: kiểm tra cả boolean, số (0/1), và string ("true"/"false", "1"/"0")
+    let boolValue: boolean | null = null;
     if (typeof value === 'boolean') {
+      boolValue = value;
+    } else if (typeof value === 'number') {
+      boolValue = value === 1;
+    } else if (typeof value === 'string') {
+      const lowerValue = value.toLowerCase().trim();
+      if (lowerValue === 'true' || lowerValue === '1' || lowerValue === 'yes' || lowerValue === 'có' || lowerValue === 'x') {
+        boolValue = true;
+      } else if (lowerValue === 'false' || lowerValue === '0' || lowerValue === 'no' || lowerValue === 'không' || lowerValue === '') {
+        boolValue = false;
+      }
+    }
+    
+    if (boolValue !== null) {
       return (
         <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-          value ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+          boolValue ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
         }`}>
-          {value ? 'Có' : 'Không'}
+          {boolValue ? 'Có' : 'Không'}
         </span>
       );
     }
@@ -447,10 +464,7 @@ export default function WarehousesPage() {
                 type="text"
                 placeholder="Tìm kiếm theo mã kho, tên kho, mã ERP, đơn vị..."
                 value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setPagination((prev) => ({ ...prev, page: 1 }));
-                }}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
               />
             </div>
@@ -465,7 +479,7 @@ export default function WarehousesPage() {
               <p className="text-sm text-gray-500">Đang tải dữ liệu...</p>
             </div>
           </div>
-        ) : filteredWarehouses.length === 0 ? (
+        ) : warehouses.length === 0 ? (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
             <div className="text-center">
               <div className="text-gray-400 mb-3">
@@ -496,7 +510,7 @@ export default function WarehousesPage() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredWarehouses.map((warehouse, index) => (
+                  {warehouses.map((warehouse, index) => (
                     <tr key={warehouse.id || index} className="hover:bg-gray-50 transition-colors">
                       {visibleColumns.map((field) => (
                         <td

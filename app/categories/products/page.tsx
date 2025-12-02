@@ -271,12 +271,28 @@ export default function ProductsPage() {
     if (value === null || value === undefined || value === '') return (
       <span className="text-gray-400 italic">-</span>
     );
+    
+    // Xử lý boolean: kiểm tra cả boolean, số (0/1), và string ("true"/"false", "1"/"0")
+    let boolValue: boolean | null = null;
     if (typeof value === 'boolean') {
+      boolValue = value;
+    } else if (typeof value === 'number') {
+      boolValue = value === 1;
+    } else if (typeof value === 'string') {
+      const lowerValue = value.toLowerCase().trim();
+      if (lowerValue === 'true' || lowerValue === '1' || lowerValue === 'yes' || lowerValue === 'có' || lowerValue === 'x') {
+        boolValue = true;
+      } else if (lowerValue === 'false' || lowerValue === '0' || lowerValue === 'no' || lowerValue === 'không' || lowerValue === '') {
+        boolValue = false;
+      }
+    }
+    
+    if (boolValue !== null) {
       return (
         <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-          value ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+          boolValue ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
         }`}>
-          {value ? 'Có' : 'Không'}
+          {boolValue ? 'Có' : 'Không'}
         </span>
       );
     }

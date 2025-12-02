@@ -8,15 +8,15 @@ interface PromotionItem {
   id?: string;
   maChuongTrinh?: string;
   tenChuongTrinh?: string;
-  muaHangGiamGia?: boolean;
-  ckTheoCS?: boolean;
-  ckVIP?: boolean;
-  voucher?: boolean;
-  coupon?: boolean;
-  ecode?: boolean;
-  tangHang?: boolean;
-  nskm?: boolean;
-  combo?: boolean;
+  muaHangGiamGia?: string;
+  ckTheoCS?: string;
+  ckVIP?: string;
+  voucher?: string;
+  coupon?: string;
+  ecode?: string;
+  tangHang?: string;
+  nskm?: string;
+  combo?: string;
   maPhi?: string;
   maBoPhan?: string;
   taiKhoanChietKhau?: string;
@@ -105,10 +105,23 @@ export default function PromotionsPage() {
     return () => clearTimeout(timer);
   }, [toast]);
 
+  // Debounce search query
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+      // Reset về trang 1 khi search query thay đổi
+      setPagination((prev) => ({ ...prev, page: 1 }));
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
   useEffect(() => {
     loadPromotions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pagination.page, pagination.limit]);
+  }, [pagination.page, pagination.limit, debouncedSearchQuery]);
 
   const loadPromotions = async () => {
     try {
@@ -116,7 +129,7 @@ export default function PromotionsPage() {
       const response = await categoriesApi.getPromotions({
         page: pagination.page,
         limit: pagination.limit,
-        search: searchQuery || undefined,
+        search: debouncedSearchQuery || undefined,
       });
       const data = response.data.data || response.data || [];
       setPromotions(data);
@@ -131,16 +144,6 @@ export default function PromotionsPage() {
       setLoading(false);
     }
   };
-
-  // Filter promotions by search query
-  const filteredPromotions = promotions.filter((promotion) => {
-    if (!searchQuery.trim()) return true;
-    const query = searchQuery.toLowerCase();
-    return (
-      promotion.maChuongTrinh?.toLowerCase().includes(query) ||
-      promotion.tenChuongTrinh?.toLowerCase().includes(query)
-    );
-  });
 
   const toggleColumn = (field: keyof PromotionItem) => {
     setSelectedColumns(prev => {
@@ -171,12 +174,28 @@ export default function PromotionsPage() {
     if (value === null || value === undefined || value === '') return (
       <span className="text-gray-400 italic">-</span>
     );
+    
+    // Xử lý boolean: kiểm tra cả boolean, số (0/1), và string ("true"/"false", "1"/"0")
+    let boolValue: boolean | null = null;
     if (typeof value === 'boolean') {
+      boolValue = value;
+    } else if (typeof value === 'number') {
+      boolValue = value === 1;
+    } else if (typeof value === 'string') {
+      const lowerValue = value.toLowerCase().trim();
+      if (lowerValue === 'true' || lowerValue === '1' || lowerValue === 'yes' || lowerValue === 'có' || lowerValue === 'x') {
+        boolValue = true;
+      } else if (lowerValue === 'false' || lowerValue === '0' || lowerValue === 'no' || lowerValue === 'không' || lowerValue === '') {
+        boolValue = false;
+      }
+    }
+    
+    if (boolValue !== null) {
       return (
         <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-          value ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+          boolValue ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
         }`}>
-          {value ? 'Có' : 'Không'}
+          {boolValue ? 'Có' : 'Không'}
         </span>
       );
     }
@@ -462,10 +481,7 @@ export default function PromotionsPage() {
                 type="text"
                 placeholder="Tìm kiếm theo mã chương trình, tên chương trình..."
                 value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setPagination((prev) => ({ ...prev, page: 1 }));
-                }}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
               />
             </div>
@@ -480,7 +496,7 @@ export default function PromotionsPage() {
               <p className="text-sm text-gray-500">Đang tải dữ liệu...</p>
             </div>
           </div>
-        ) : filteredPromotions.length === 0 ? (
+        ) : promotions.length === 0 ? (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
             <div className="text-center">
               <div className="text-gray-400 mb-3">
@@ -511,7 +527,7 @@ export default function PromotionsPage() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredPromotions.map((promotion, index) => (
+                  {promotions.map((promotion, index) => (
                     <tr key={promotion.id || index} className="hover:bg-gray-50 transition-colors">
                       {visibleColumns.map((field) => (
                         <td
@@ -861,14 +877,14 @@ export default function PromotionsPage() {
                       { key: 'nskm', label: 'NSKM' },
                       { key: 'combo', label: 'Combo' },
                     ].map((field) => (
-                      <div key={field.key} className="flex items-center">
+                      <div key={field.key}>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">{FIELD_LABELS[field.key as keyof PromotionItem]}</label>
                         <input
-                          type="checkbox"
-                          checked={formData[field.key as keyof PromotionItem] as boolean || false}
-                          onChange={(e) => updateFormField(field.key as keyof PromotionItem, e.target.checked)}
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                          type="text"
+                          value={(formData[field.key as keyof PromotionItem] as string) || ''}
+                          onChange={(e) => updateFormField(field.key as keyof PromotionItem, e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         />
-                        <label className="ml-2 block text-sm text-gray-700">{FIELD_LABELS[field.key as keyof PromotionItem]}</label>
                       </div>
                     ))}
                   </div>
