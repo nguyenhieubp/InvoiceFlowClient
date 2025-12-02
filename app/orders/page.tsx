@@ -421,6 +421,7 @@ const MAIN_COLUMNS: OrderColumn[] = [
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [allOrders, setAllOrders] = useState<Order[]>([]);
+  const [rawOrders, setRawOrders] = useState<Order[]>([]); // Orders gốc từ backend (chưa có product)
   const [displayedOrders, setDisplayedOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<{ brand?: string; dateFrom?: string; dateTo?: string }>({});
@@ -435,9 +436,108 @@ export default function OrdersPage() {
     totalPages: 0,
   });
   const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
+  const [productCache, setProductCache] = useState<Map<string, any>>(new Map());
+  const [loadingProducts, setLoadingProducts] = useState(false);
 
   const showToast = (type: 'success' | 'error' | 'info', message: string) => {
     setToast({ type, message });
+  };
+
+  // Helper function để map API response từ Loyalty API sang cấu trúc product
+  const mapLoyaltyApiProductToProductItem = (apiProduct: any) => {
+    if (!apiProduct) return null;
+    
+    return {
+      maERP: apiProduct.materialCode || null,
+      maVatTu: apiProduct.materialCode || null,
+      tenVatTu: apiProduct.name || apiProduct.invoiceName || apiProduct.alternativeName || null,
+      dvt: apiProduct.unit || null,
+      loaiVatTu: apiProduct.materialType || null,
+      tkVatTu: apiProduct.materialAccount || null,
+      tkGiaVonBanBuon: apiProduct.wholesaleCostAccount || null,
+      tkDoanhThuBanBuon: apiProduct.wholesaleRevenueAccount || null,
+      tkGiaVonBanLe: apiProduct.retailCostAccount || null,
+      tkDoanhThuBanLe: apiProduct.retailRevenueAccount || null,
+      tkChiPhiKhuyenMai: null, // API không có trường này, để null
+      nhieuDvt: apiProduct.multipleUnits || false,
+      theoDoiTonKho: apiProduct.trackInventory || false,
+      theoDoiLo: apiProduct.trackBatch || false,
+      theoDoiKiemKe: apiProduct.trackStocktake || false,
+      theoDoiSerial: apiProduct.trackSerial || false,
+      barcode: apiProduct.barcode || null,
+    };
+  };
+
+  // Fetch product từ Loyalty API
+  const fetchProductFromLoyaltyAPI = async (materialCode: string): Promise<any | null> => {
+    // Kiểm tra cache trước
+    if (productCache.has(materialCode)) {
+      return productCache.get(materialCode);
+    }
+
+    try {
+      const response = await fetch(
+        `https://loyaltyapi.vmt.vn/products/material-code/${materialCode}`,
+        {
+          headers: { accept: 'application/json' },
+        }
+      );
+      
+      if (!response.ok) {
+        console.error(`Lỗi khi lấy product từ Loyalty API cho materialCode ${materialCode}: ${response.statusText}`);
+        return null;
+      }
+
+      const data = await response.json();
+      const mappedProduct = mapLoyaltyApiProductToProductItem(data);
+      
+      // Lưu vào cache
+      if (mappedProduct) {
+        setProductCache(prev => new Map(prev).set(materialCode, mappedProduct));
+        return mappedProduct;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error(`Lỗi khi lấy product từ Loyalty API cho materialCode ${materialCode}:`, error);
+      return null;
+    }
+  };
+
+  // Load products cho tất cả itemCode trong orders
+  const loadProductsForOrders = async (orders: Order[]): Promise<void> => {
+    // Lấy tất cả itemCode unique từ orders
+    const itemCodes = new Set<string>();
+    orders.forEach(order => {
+      if (order.sales) {
+        order.sales.forEach(sale => {
+          if (sale.itemCode && sale.itemCode.trim() !== '') {
+            itemCodes.add(sale.itemCode);
+          }
+        });
+      }
+    });
+
+    // Filter ra những itemCode chưa có trong cache
+    const itemCodesToFetch = Array.from(itemCodes).filter(code => !productCache.has(code));
+
+    if (itemCodesToFetch.length === 0) {
+      return; // Đã có đủ trong cache
+    }
+
+    setLoadingProducts(true);
+    try {
+      // Fetch tất cả products song song
+      const productPromises = itemCodesToFetch.map(itemCode => 
+        fetchProductFromLoyaltyAPI(itemCode)
+      );
+      
+      await Promise.all(productPromises);
+    } catch (error) {
+      console.error('Error loading products:', error);
+    } finally {
+      setLoadingProducts(false);
+    }
   };
 
   useEffect(() => {
@@ -445,6 +545,19 @@ export default function OrdersPage() {
     const timer = setTimeout(() => setToast(null), 4000);
     return () => clearTimeout(timer);
   }, [toast]);
+
+  // Enrich orders với products từ cache
+  const enrichOrdersWithProducts = (ordersToEnrich: Order[]): Order[] => {
+    return ordersToEnrich.map(order => ({
+      ...order,
+      sales: order.sales?.map(sale => ({
+        ...sale,
+        product: sale.itemCode && productCache.has(sale.itemCode) 
+          ? productCache.get(sale.itemCode) 
+          : sale.product || null,
+      })) || [],
+    }));
+  };
 
   const loadOrders = async () => {
     try {
@@ -454,8 +567,18 @@ export default function OrdersPage() {
         page: 1,
         limit: 1000, // Lấy tất cả để search client-side
       });
-      setAllOrders(response.data.data || []);
-      setOrders(response.data.data || []);
+      const ordersData = response.data.data || [];
+      
+      // Lưu orders gốc
+      setRawOrders(ordersData);
+
+      // Load products cho các itemCode mới
+      await loadProductsForOrders(ordersData);
+
+      // Enrich orders với product từ cache (sau khi đã load products)
+      const enrichedOrders = enrichOrdersWithProducts(ordersData);
+      setAllOrders(enrichedOrders);
+      setOrders(enrichedOrders);
     } catch (error: any) {
       console.error('Error loading orders:', error);
       showToast('error', 'Không thể tải danh sách đơn hàng');
@@ -468,6 +591,15 @@ export default function OrdersPage() {
     loadOrders();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter.brand]);
+
+  // Cập nhật orders khi productCache thay đổi
+  useEffect(() => {
+    if (rawOrders.length > 0) {
+      const enrichedOrders = enrichOrdersWithProducts(rawOrders);
+      setAllOrders(enrichedOrders);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [productCache, rawOrders]);
 
   // Xử lý search và pagination trên client
   useEffect(() => {
