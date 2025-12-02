@@ -143,6 +143,14 @@ interface Order {
       tkGiaVonHangNo?: string;
       tkVatTuHangNo?: string;
     } | null;
+    promotion?: {
+      id?: string;
+      code?: string;
+      name?: string;
+      muaHangGiamGia?: boolean;
+      taiKhoanChiPhiKhuyenMai?: string;
+      [key: string]: any;
+    } | null;
   }>;
 }
 
@@ -267,7 +275,7 @@ type OrderColumn =
 
 const FIELD_LABELS: Record<OrderColumn, string> = {
   partnerCode: '* Mã khách',
-  customerName: '* Tên khách hàng',
+  customerName: 'Tên khách hàng',
   customerMobile: 'Số điện thoại',
   customerSexual: 'Giới tính',
   customerAddress: 'Địa chỉ',
@@ -275,7 +283,7 @@ const FIELD_LABELS: Record<OrderColumn, string> = {
   customerGrade: 'Hạng khách hàng',
   docDate: '* Ngày',
   docCode: '* Số hóa đơn',
-  kyHieu: 'Ký hiệu',
+  kyHieu: '* Ký hiệu',
   description: 'Diễn giải',
   nhanVienBan: 'Nhân viên bán',
   tenNhanVienBan: 'Tên nhân viên bán',
@@ -283,12 +291,12 @@ const FIELD_LABELS: Record<OrderColumn, string> = {
   itemName: 'Tên mặt hàng',
   dvt: 'Đvt',
   loai: 'Loại',
-  promCode: 'Mã khuyến mãi',
+  promCode: 'Khuyến mãi',
   maKho: '* Mã kho',
-  maLo: 'Mã lô',
+  maLo: '* Mã lô',
   qty: 'Số lượng',
   giaBan: 'Giá bán',
-  tienHang: 'Tiền hàng',
+  tienHang: ' Tiền hàng ',
   revenue: 'Doanh thu',
   maNt: 'Mã nt',
   tyGia: 'Tỷ giá',
@@ -298,7 +306,7 @@ const FIELD_LABELS: Record<OrderColumn, string> = {
   tkGiaVon: '* Tk giá vốn',
   tkChiPhiKhuyenMai: '* Tk chi phí khuyến mãi',
   tkThueCo: '* Tk thuế có',
-  cucThue: 'Cục thuế',
+  cucThue: '* Cục thuế',
   maThanhToan: 'Mã thanh toán',
   vuViec: 'Vụ việc',
   boPhan: 'Bộ phận',
@@ -312,7 +320,7 @@ const FIELD_LABELS: Record<OrderColumn, string> = {
   isRewardLine: 'is_reward_line',
   isBundleRewardLine: 'is_bundle_reward_line',
   dongThuocGoi: 'Dòng thuộc gói',
-  trangThai: 'Trạng thái',
+  trangThai: 'Trạng thai',
   barcode: 'Barcode',
   muaHangGiamGia: 'Mua hàng giảm giá',
   chietKhauMuaHangGiamGia: 'Chiết khấu mua hàng giảm giá',
@@ -382,40 +390,98 @@ const FIELD_LABELS: Record<OrderColumn, string> = {
   tkVatTuHangNo: 'Tk vật tư hàng nợ',
 };
 
-// Các cột mặc định (các trường bắt buộc * và tất cả các tài khoản)
+// Các cột mặc định theo thứ tự mới
 const MAIN_COLUMNS: OrderColumn[] = [
-  'partnerCode',      // * Mã khách
-  'customerName',     // * Tên khách hàng
-  'docDate',          // * Ngày
-  'docCode',          // * Số hóa đơn
-  'itemCode',         // * Mã hàng
-  'maKho',            // * Mã kho
-  'maThue',           // * Mã thuế
-  'tkNo',             // * Tk nợ
-  'tkDoanhThu',       // * Tk doanh thu
-  'tkGiaVon',         // * Tk giá vốn
-  'tkChiPhiKhuyenMai',// * Tk chi phí khuyến mãi
-  'tkThueCo',         // * Tk thuế có
-  'cucThue',          // Cục thuế
-  // Các tài khoản từ ProductItem
-  'tkVatTu',          // Tk vật tư
-  'suaTkVatTu',       // Sửa tk vật tư
-  'tkGiaVonBanBuon',  // Tk giá vốn bán buôn
-  'tkDoanhThuBanBuon', // Tk doanh thu bán buôn
-  'tkDoanhThuNoiBo',  // Tk doanh thu nội bộ
-  'tkHangBanTraLai',  // Tk hàng bán trả lại
-  'tkDaiLy',          // Tk đại lý
-  'tkSanPhamDoDang',  // Tk sản phẩm dở dang
-  'tkChenhLechGiaVon', // Tk chênh lệch giá vốn
-  'tkChietKhau',      // Tk chiết khấu
-  'tkChiPhiKhuyenMaiProduct', // Tk chi phí khuyến mãi (từ product)
-  'tkGiaVonBanLe',    // Tk giá vốn bán lẻ
-  'tkDoanhThuBanLe',  // Tk doanh thu bán lẻ
-  'tkChiPhiKhauHaoCCDC', // Tk chi phí khấu hao CCDC
-  'tkChiPhiKhauHaoTSDC', // Tk chi phí khấu hao TSDC
-  'tkDoanhThuHangNo', // Tk doanh thu hàng nợ
-  'tkGiaVonHangNo',   // Tk giá vốn hàng nợ
-  'tkVatTuHangNo',    // Tk vật tư hàng nợ
+  'partnerCode',              // * Mã khách
+  'customerName',             // Tên khách hàng
+  'docDate',                  // * Ngày
+  'docCode',                  // * Số hóa đơn
+  'kyHieu',                   // * Ký hiệu
+  'description',              // Diễn giải
+  'nhanVienBan',              // Nhân viên bán
+  'tenNhanVienBan',           // Tên nhân viên bán
+  'itemCode',                 // * Mã hàng
+  'itemName',                 // Tên mặt hàng
+  'dvt',                      // Đvt
+  'loai',                     // Loại
+  'promCode',                 // Khuyến mãi
+  'maKho',                    // * Mã kho
+  'maLo',                     // * Mã lô
+  'qty',                      // Số lượng
+  'giaBan',                   // Giá bán
+  'tienHang',                 // Tiền hàng
+  'maNt',                     // Mã nt
+  'tyGia',                    // Tỷ giá
+  'maThue',                   // * Mã thuế
+  'tkNo',                     // * Tk nợ
+  'tkDoanhThu',               // * Tk doanh thu
+  'tkGiaVon',                 // * Tk giá vốn
+  'tkChiPhiKhuyenMai',        // * Tk chi phí khuyến mãi
+  'tkThueCo',                 // * Tk thuế có
+  'cucThue',                  // * Cục thuế
+  'maThanhToan',              // Mã thanh toán
+  'vuViec',                   // Vụ việc
+  'boPhan',                   // Bộ phận
+  'lsx',                      // Lsx
+  'sanPham',                  // Sản phẩm
+  'hopDong',                  // Hợp đồng
+  'phi',                      // Phí
+  'kol',                      // KOL
+  'kheUoc',                   // Khế ước
+  'maCa',                     // Mã ca
+  'isRewardLine',             // is_reward_line
+  'isBundleRewardLine',       // is_bundle_reward_line
+  'dongThuocGoi',             // Dòng thuộc gói
+  'trangThai',                // Trạng thai
+  'barcode',                  // Barcode
+  'muaHangGiamGia',           // Mua hàng giảm giá
+  'chietKhauMuaHangGiamGia',  // Chiết khấu mua hàng giảm giá
+  'ckTheoChinhSach',          // CK theo chính sách
+  'chietKhauCkTheoChinhSach', // Chiết khấu ck theo chính sách
+  'muaHangCkVip',             // Mua hàng CK VIP
+  'chietKhauMuaHangCkVip',    // Chiết khấu mua hàng CK VIP
+  'thanhToanCoupon',          // Thanh toán coupon
+  'chietKhauThanhToanCoupon', // Chiết khấu thanh toán coupon
+  'thanhToanVoucher',         // Thanh toán voucher
+  'chietKhauThanhToanVoucher',// Chiết khấu thanh toán voucher
+  'duPhong1',                 // Dự phòng 1
+  'chietKhauDuPhong1',        // Chiết khấu dự phòng 1
+  'duPhong2',                 // Dự phòng 2
+  'chietKhauDuPhong2',        // Chiết khấu dự phòng 2
+  'duPhong3',                 // Dự phòng 3
+  'chietKhauDuPhong3',        // Chiết khấu dự phòng 3
+  'hang',                     // Hãng
+  'chietKhauHang',            // Chiết khấu hãng
+  'thuongBangHang',           // Thưởng bằng hàng
+  'chietKhauThuongMuaBangHang',// Chiết khấu thưởng mua bằng hàng
+  'thanhToanTkTienAo',        // Thanh toán TK tiền ảo
+  'chietKhauThanhToanTkTienAo',// Chiết khấu thanh toán TK tiền ảo
+  'ckThem1',                  // CK thêm 1
+  'chietKhauThem1',           // Chiết khấu thêm 1
+  'ckThem2',                  // CK thêm 2
+  'chietKhauThem2',           // Chiết khấu thêm 2
+  'ckThem3',                  // CK thêm 3
+  'chietKhauThem3',           // Chiết khấu thêm 3
+  'voucherDp1',               // Voucher DP1
+  'chietKhauVoucherDp1',      // Chiết khấu Voucher DP1
+  'voucherDp2',               // Voucher DP2
+  'chietKhauVoucherDp2',      // Chiết khấu Voucher DP2
+  'voucherDp3',               // Voucher DP3
+  'chietKhauVoucherDp3',      // Chiết khấu Voucher DP3
+  'voucherDp4',               // Voucher DP4
+  'chietKhauVoucherDp4',      // Chiết khấu Voucher DP4
+  'voucherDp5',               // Voucher DP5
+  'chietKhauVoucherDp5',      // Chiết khấu Voucher DP5
+  'voucherDp6',               // Voucher DP6
+  'chietKhauVoucherDp6',      // Chiết khấu Voucher DP6
+  'voucherDp7',               // Voucher DP7
+  'chietKhauVoucherDp7',      // Chiết khấu Voucher DP7
+  'voucherDp8',               // Voucher DP8
+  'chietKhauVoucherDp8',      // Chiết khấu Voucher DP8
+  'troGia',                   // Trợ giá
+  'maCtkmTangHang',           // Mã CTKM tặng hàng
+  'maThe',                    // Mã thẻ
+  'soSerial',                 // Số serial
 ];
 
 export default function OrdersPage() {
@@ -437,7 +503,9 @@ export default function OrdersPage() {
   });
   const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
   const [productCache, setProductCache] = useState<Map<string, any>>(new Map());
+  const [promotionCache, setPromotionCache] = useState<Map<string, any>>(new Map());
   const [loadingProducts, setLoadingProducts] = useState(false);
+  const [loadingPromotions, setLoadingPromotions] = useState(false);
 
   const showToast = (type: 'success' | 'error' | 'info', message: string) => {
     setToast({ type, message });
@@ -466,6 +534,70 @@ export default function OrdersPage() {
       theoDoiSerial: apiProduct.trackSerial || false,
       barcode: apiProduct.barcode || null,
     };
+  };
+
+  // Parse promCode từ format "Code-Name" để lấy code
+  const parsePromCode = (promCode: string): string | null => {
+    if (!promCode || promCode.trim() === '') return null;
+    
+    // Nếu có dấu "-", lấy phần trước dấu "-" (code)
+    const dashIndex = promCode.indexOf('-');
+    if (dashIndex > 0) {
+      return promCode.substring(0, dashIndex).trim();
+    }
+    
+    // Nếu không có dấu "-", trả về nguyên promCode
+    return promCode.trim();
+  };
+
+  // Fetch promotion từ Loyalty API
+  const fetchPromotionFromLoyaltyAPI = async (promCode: string): Promise<any | null> => {
+    if (!promCode || promCode.trim() === '') return null;
+
+    // Parse code từ format "Code-Name" để lấy code cho API call
+    const codeForApi = parsePromCode(promCode);
+    if (!codeForApi) return null;
+
+    // Kiểm tra cache trước - sử dụng code từ promCode
+    if (promotionCache.has(codeForApi)) {
+      return promotionCache.get(codeForApi);
+    }
+
+    try {
+      const response = await fetch(
+        `https://loyaltyapi.vmt.vn/promotions/item/code/${codeForApi}`,
+        {
+          headers: { accept: 'application/json' },
+        }
+      );
+
+      
+      if (!response.ok) {
+        console.error(`Lỗi khi lấy promotion từ Loyalty API cho code ${codeForApi}: ${response.statusText}`);
+        return null;
+      }
+      
+      const data = await response.json();
+      // Lưu vào cache - sử dụng code từ response (chính xác hơn)
+      if (data && data.code) {
+        // Cache bằng code từ response và cả code parsed
+        setPromotionCache(prev => {
+          const newCache = new Map(prev);
+          newCache.set(data.code, data);
+          // Nếu code parsed khác code từ response, cache cả hai
+          if (codeForApi !== data.code) {
+            newCache.set(codeForApi, data);
+          }
+          return newCache;
+        });
+        return data;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error(`Lỗi khi lấy promotion từ Loyalty API cho code ${codeForApi}:`, error);
+      return null;
+    }
   };
 
   // Fetch product từ Loyalty API
@@ -540,22 +672,89 @@ export default function OrdersPage() {
     }
   };
 
+  // Load promotions cho tất cả promCode trong orders
+  const loadPromotionsForOrders = async (orders: Order[]): Promise<void> => {
+    // Lấy tất cả promCode unique từ orders (giữ nguyên promCode gốc)
+    const promCodesSet = new Set<string>();
+    const codeSet = new Set<string>(); // Set các code đã có trong cache
+    
+    orders.forEach(order => {
+      if (order.sales) {
+        order.sales.forEach(sale => {
+          if (sale.promCode && sale.promCode.trim() !== '') {
+            promCodesSet.add(sale.promCode);
+            // Kiểm tra cache bằng parsed code
+            const parsedCode = parsePromCode(sale.promCode);
+            if (parsedCode && promotionCache.has(parsedCode)) {
+              codeSet.add(parsedCode);
+            }
+          }
+        });
+      }
+    });
+
+    // Filter ra những promCode chưa có trong cache (dựa trên parsed code)
+    const promCodesToFetch = Array.from(promCodesSet).filter(promCode => {
+      const parsedCode = parsePromCode(promCode);
+      return parsedCode && !codeSet.has(parsedCode);
+    });
+
+    if (promCodesToFetch.length === 0) {
+      return; // Đã có đủ trong cache
+    }
+
+    setLoadingPromotions(true);
+    try {
+      // Fetch tất cả promotions song song - truyền promCode gốc, function sẽ tự parse
+      const promotionPromises = promCodesToFetch.map(promCode => 
+        fetchPromotionFromLoyaltyAPI(promCode)
+      );
+      
+      await Promise.all(promotionPromises);
+    } catch (error) {
+      console.error('Error loading promotions:', error);
+    } finally {
+      setLoadingPromotions(false);
+    }
+  };
+
   useEffect(() => {
     if (!toast) return;
     const timer = setTimeout(() => setToast(null), 4000);
     return () => clearTimeout(timer);
   }, [toast]);
 
-  // Enrich orders với products từ cache
+  // Enrich orders với products và promotions từ cache
   const enrichOrdersWithProducts = (ordersToEnrich: Order[]): Order[] => {
     return ordersToEnrich.map(order => ({
       ...order,
-      sales: order.sales?.map(sale => ({
-        ...sale,
-        product: sale.itemCode && productCache.has(sale.itemCode) 
+      sales: order.sales?.map(sale => {
+        // Enrich product
+        const product = sale.itemCode && productCache.has(sale.itemCode) 
           ? productCache.get(sale.itemCode) 
-          : sale.product || null,
-      })) || [],
+          : sale.product || null;
+
+        // Enrich promotion - tìm bằng code (từ parsed promCode)
+        let promotion = null;
+        if (sale.promCode) {
+          const parsedCode = parsePromCode(sale.promCode);
+          
+          // Tìm promotion trong cache bằng parsed code
+          if (parsedCode && promotionCache.has(parsedCode)) {
+            promotion = promotionCache.get(parsedCode);
+          }
+        }
+
+        return {
+          ...sale,
+          product,
+          promotion,
+          // Lấy muaHangGiamGia từ promotion nếu có
+          muaHangGiamGia: promotion?.muaHangGiamGia !== undefined 
+            ? promotion.muaHangGiamGia 
+            : sale.muaHangGiamGia,
+        };
+      }) || [],
     }));
   };
 
@@ -572,10 +771,13 @@ export default function OrdersPage() {
       // Lưu orders gốc
       setRawOrders(ordersData);
 
-      // Load products cho các itemCode mới
-      await loadProductsForOrders(ordersData);
+      // Load products và promotions cho các itemCode và promCode mới
+      await Promise.all([
+        loadProductsForOrders(ordersData),
+        loadPromotionsForOrders(ordersData),
+      ]);
 
-      // Enrich orders với product từ cache (sau khi đã load products)
+      // Enrich orders với products và promotions từ cache (sau khi đã load)
       const enrichedOrders = enrichOrdersWithProducts(ordersData);
       setAllOrders(enrichedOrders);
       setOrders(enrichedOrders);
@@ -592,14 +794,14 @@ export default function OrdersPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter.brand]);
 
-  // Cập nhật orders khi productCache thay đổi
+  // Cập nhật orders khi productCache hoặc promotionCache thay đổi
   useEffect(() => {
     if (rawOrders.length > 0) {
       const enrichedOrders = enrichOrdersWithProducts(rawOrders);
       setAllOrders(enrichedOrders);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [productCache, rawOrders]);
+  }, [productCache, promotionCache, rawOrders]);
 
   // Xử lý search và pagination trên client
   useEffect(() => {
@@ -812,6 +1014,13 @@ export default function OrdersPage() {
         return <div className="text-sm text-gray-900">{sale?.loai || '-'}</div>;
       case 'promCode':
         return <div className="text-sm text-gray-900">{sale?.promCode || '-'}</div>;
+      case 'muaHangGiamGia':
+        // Lấy code từ promotion API response
+        const promotionCode = sale?.promotion?.code;
+        if (!promotionCode) {
+          return <div className="text-sm text-gray-400 italic">-</div>;
+        }
+        return <div className="text-sm text-gray-900">{promotionCode}</div>;
       case 'maKho':
         return <div className="text-sm text-gray-900">{sale?.maKho || '-'}</div>;
       case 'maLo':
