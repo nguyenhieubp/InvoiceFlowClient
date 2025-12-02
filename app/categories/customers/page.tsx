@@ -1,36 +1,37 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { invoicesApi } from '@/lib/api';
-import Link from 'next/link';
+import React, { useEffect, useState } from 'react';
+import { categoriesApi, syncCustomersApi } from '@/lib/api';
 import { Toast } from '@/components/Toast';
+import Link from 'next/link';
 
-interface Invoice {
-  id: string;
-  key: string;
-  invoiceDate: string;
-  customerCode: string;
-  customerName: string;
-  totalAmount: number;
-  createdAt: string;
-  fastStatus?: 'printed' | 'pending' | 'missing';
-  fastStatusMessage?: string;
+interface Customer {
+  code: string;
+  name: string;
+  mobile?: string;
+  sexual?: string;
+  address?: string;
+  branch_code?: string;
+  birthday?: string;
+  province_name?: string;
+  grade_name?: string;
+  enteredat?: string;
 }
 
-export default function InvoicesPage() {
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [allInvoices, setAllInvoices] = useState<Invoice[]>([]);
-  const [displayedInvoices, setDisplayedInvoices] = useState<Invoice[]>([]);
+export default function CustomersPage() {
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [allCustomers, setAllCustomers] = useState<Customer[]>([]);
+  const [displayedCustomers, setDisplayedCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<{ dateFrom?: string; dateTo?: string; status?: 'printed' | 'pending' | 'missing' }>({});
   const [searchQuery, setSearchQuery] = useState('');
+  const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
+  const [syncing, setSyncing] = useState(false);
   const [pagination, setPagination] = useState({
     page: 1,
-    limit: 10,
+    limit: 50,
     total: 0,
     totalPages: 0,
   });
-  const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
 
   const showToast = (type: 'success' | 'error' | 'info', message: string) => {
     setToast({ type, message });
@@ -43,53 +44,24 @@ export default function InvoicesPage() {
   }, [toast]);
 
   useEffect(() => {
-    loadInvoices();
+    loadCustomers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [pagination.page]);
 
+  // Xử lý search và pagination trên client
   useEffect(() => {
-    // Xử lý search và pagination trên client
-    let filtered = allInvoices;
+    let filtered = allCustomers;
     
     // Filter by search query
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(
-        (invoice) =>
-          invoice.key.toLowerCase().includes(query) ||
-          invoice.customerName.toLowerCase().includes(query) ||
-          invoice.customerCode.toLowerCase().includes(query)
+        (customer) =>
+          customer.code.toLowerCase().includes(query) ||
+          customer.name.toLowerCase().includes(query) ||
+          (customer.mobile && customer.mobile.toLowerCase().includes(query)) ||
+          (customer.address && customer.address.toLowerCase().includes(query))
       );
-    }
-    
-    // Filter by trạng thái FAST
-    if (filter.status) {
-      filtered = filtered.filter(
-        (invoice) => invoice.fastStatus === filter.status,
-      );
-    }
-    
-    // Filter by date range
-    if (filter.dateFrom || filter.dateTo) {
-      const dateFrom = filter.dateFrom ? new Date(filter.dateFrom) : null;
-      const dateTo = filter.dateTo ? new Date(filter.dateTo) : null;
-      
-      if (dateFrom) dateFrom.setHours(0, 0, 0, 0);
-      if (dateTo) dateTo.setHours(23, 59, 59, 999);
-      
-      filtered = filtered.filter((invoice) => {
-        const invoiceDate = new Date(invoice.invoiceDate);
-        invoiceDate.setHours(0, 0, 0, 0);
-        
-        if (dateFrom && dateTo) {
-          return invoiceDate >= dateFrom && invoiceDate <= dateTo;
-        } else if (dateFrom) {
-          return invoiceDate >= dateFrom;
-        } else if (dateTo) {
-          return invoiceDate <= dateTo;
-        }
-        return true;
-      });
     }
     
     // Update pagination info
@@ -106,42 +78,86 @@ export default function InvoicesPage() {
     const endIndex = startIndex + pagination.limit;
     const paginated = filtered.slice(startIndex, endIndex);
     
-    setDisplayedInvoices(paginated);
+    setDisplayedCustomers(paginated);
     
-    // Reset về trang 1 nếu search query hoặc filter thay đổi
-    if ((searchQuery || filter.dateFrom || filter.dateTo || filter.status) && pagination.page !== 1) {
+    // Reset về trang 1 nếu search query thay đổi
+    if (searchQuery && pagination.page !== 1) {
       setPagination((prev) => ({ ...prev, page: 1 }));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery, filter.dateFrom, filter.dateTo, filter.status, allInvoices, pagination.page, pagination.limit]);
+  }, [searchQuery, allCustomers, pagination.page, pagination.limit]);
 
-  useEffect(() => {
-    // Reset về trang 1 khi filter thay đổi
-    if (pagination.page !== 1) {
-      setPagination((prev) => ({ ...prev, page: 1 }));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter.status]);
-
-  const loadInvoices = async () => {
+  const loadCustomers = async () => {
     try {
       setLoading(true);
-      const response = await invoicesApi.getAll();
-      const data = response.data || [];
-      setAllInvoices(data);
-      setInvoices(data);
+      const response = await categoriesApi.getCustomers({
+        page: 1,
+        limit: 10000, // Load tất cả để search
+      });
+      const data = response.data?.data || response.data || [];
+      
+      // Extract unique customers from data
+      const customersMap = new Map<string, Customer>();
+      
+      // If data is array of customer objects
+      if (Array.isArray(data)) {
+        data.forEach((item: any) => {
+          if (item.Personal_Info) {
+            const info = item.Personal_Info;
+            if (info.code && !customersMap.has(info.code)) {
+              customersMap.set(info.code, {
+                code: info.code,
+                name: info.name || '',
+                mobile: info.mobile,
+                sexual: info.sexual,
+                address: info.address,
+                branch_code: info.branch_code,
+                birthday: info.birthday,
+                province_name: info.province_name,
+                grade_name: info.grade_name,
+                enteredat: info.enteredat,
+              });
+            }
+          } else if (item.code) {
+            // Direct customer object
+            if (!customersMap.has(item.code)) {
+              customersMap.set(item.code, item);
+            }
+          }
+        });
+      }
+      
+      const customersList = Array.from(customersMap.values());
+      setAllCustomers(customersList);
+      setCustomers(customersList);
+      
       setPagination((prev) => ({
         ...prev,
-        total: data.length,
-        totalPages: Math.ceil(data.length / prev.limit),
+        total: customersList.length,
+        totalPages: Math.ceil(customersList.length / prev.limit),
       }));
     } catch (error: any) {
-      showToast('error', 'Lỗi khi tải danh sách hóa đơn: ' + (error.response?.data?.message || error.message));
+      showToast('error', 'Lỗi khi tải danh sách khách hàng: ' + (error.response?.data?.message || error.message));
     } finally {
       setLoading(false);
     }
   };
 
+  const handleSyncT8 = async () => {
+    try {
+      setSyncing(true);
+      const response = await syncCustomersApi.syncBrandT8('f3');
+      showToast('success', response.data.message || 'Đồng bộ dữ liệu thành công');
+      // Reload customers after sync
+      setTimeout(() => {
+        loadCustomers();
+      }, 1000);
+    } catch (error: any) {
+      showToast('error', 'Lỗi khi đồng bộ dữ liệu: ' + (error.response?.data?.message || error.message));
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -152,7 +168,31 @@ export default function InvoicesPage() {
         {/* Header */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4">
           <div className="flex flex-col gap-4">
-            <h1 className="text-2xl font-semibold text-gray-900">Danh sách hóa đơn</h1>
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <h1 className="text-2xl font-semibold text-gray-900">Danh mục khách hàng</h1>
+              <button
+                onClick={handleSyncT8}
+                disabled={syncing}
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2 shadow-md hover:shadow-lg"
+              >
+                {syncing ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Đang đồng bộ...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Đồng bộ từ t8
+                  </>
+                )}
+              </button>
+            </div>
 
             {/* Search Bar */}
             <div className="relative">
@@ -163,64 +203,11 @@ export default function InvoicesPage() {
               </div>
               <input
                 type="text"
-                placeholder="Tìm kiếm theo mã hóa đơn, tên khách hàng, mã khách hàng..."
+                placeholder="Tìm kiếm theo mã khách hàng, tên, số điện thoại, địa chỉ..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
               />
-            </div>
-
-            {/* Filters */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <select
-                value={filter.status || ''}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  setFilter({
-                    ...filter,
-                    status:
-                      value === ''
-                        ? undefined
-                        : (value as 'printed' | 'pending' | 'missing'),
-                  });
-                }}
-                className="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-              >
-                <option value="">Tất cả trạng thái</option>
-                <option value="printed">Đã in (FAST)</option>
-                <option value="pending">Chưa xử lý</option>
-                <option value="missing">Không có trên FAST</option>
-              </select>
-              <div className="flex items-center gap-2">
-                <label className="text-sm text-gray-700 whitespace-nowrap">Từ ngày:</label>
-                <input
-                  type="date"
-                  value={filter.dateFrom || ''}
-                  onChange={(e) => setFilter({ ...filter, dateFrom: e.target.value || undefined })}
-                  className="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <label className="text-sm text-gray-700 whitespace-nowrap">Đến ngày:</label>
-                <input
-                  type="date"
-                  value={filter.dateTo || ''}
-                  onChange={(e) => setFilter({ ...filter, dateTo: e.target.value || undefined })}
-                  min={filter.dateFrom || undefined}
-                  className="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                />
-              </div>
-              {(filter.dateFrom || filter.dateTo) && (
-                <button
-                  onClick={() => setFilter({ ...filter, dateFrom: undefined, dateTo: undefined })}
-                  className="px-2 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg"
-                  title="Xóa bộ lọc ngày"
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              )}
             </div>
           </div>
         </div>
@@ -233,15 +220,15 @@ export default function InvoicesPage() {
               <p className="text-sm text-gray-500">Đang tải dữ liệu...</p>
             </div>
           </div>
-        ) : displayedInvoices.length === 0 ? (
+        ) : displayedCustomers.length === 0 ? (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
             <div className="text-center">
               <div className="text-gray-400 mb-3">
                 <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
               </div>
-              <p className="text-gray-500">Không có hóa đơn nào</p>
+              <p className="text-gray-500">Không có khách hàng nào</p>
             </div>
           </div>
         ) : (
@@ -251,19 +238,22 @@ export default function InvoicesPage() {
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Mã hóa đơn
+                      Mã khách hàng
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Ngày
+                      Tên khách hàng
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Khách hàng
+                      Số điện thoại
                     </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Tổng tiền
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Giới tính
                     </th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Trạng thái
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Địa chỉ
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Chi nhánh
                     </th>
                     <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Thao tác
@@ -271,58 +261,33 @@ export default function InvoicesPage() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {displayedInvoices.map((invoice) => (
-                    <tr key={invoice.id} className="hover:bg-gray-50 transition-colors">
+                  {displayedCustomers.map((customer) => (
+                    <tr key={customer.code} className="hover:bg-gray-50 transition-colors">
                       <td className="px-4 py-3 whitespace-nowrap">
-                        <div className="text-sm font-semibold text-gray-900">{invoice.key}</div>
+                        <div className="text-sm font-semibold text-gray-900">{customer.code}</div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="text-sm font-medium text-gray-900">{customer.name}</div>
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">{customer.mobile || '-'}</div>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
                         <div className="text-sm text-gray-900">
-                          {new Date(invoice.invoiceDate).toLocaleString('vi-VN', {
-                            year: 'numeric',
-                            month: '2-digit',
-                            day: '2-digit',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
+                          {customer.sexual === 'NU' ? 'Nữ' : customer.sexual === 'NAM' ? 'Nam' : customer.sexual || '-'}
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <div className="text-sm font-medium text-gray-900">{invoice.customerName}</div>
-                        <div className="text-xs text-gray-500">{invoice.customerCode}</div>
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-right">
-                        <div className="text-sm font-semibold text-gray-900">
-                          {Number(invoice.totalAmount).toLocaleString('vi-VN')} đ
+                        <div className="text-sm text-gray-900 max-w-xs truncate" title={customer.address}>
+                          {customer.address || '-'}
                         </div>
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-center">
-                    <div className="flex flex-col items-center gap-1">
-                      <span
-                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                          invoice.fastStatus === 'printed'
-                            ? 'bg-green-100 text-green-800'
-                            : invoice.fastStatus === 'pending'
-                            ? 'bg-amber-100 text-amber-800'
-                            : 'bg-red-100 text-red-800'
-                        }`}
-                      >
-                        {invoice.fastStatus === 'printed'
-                          ? 'Đã in (FAST)'
-                          : invoice.fastStatus === 'pending'
-                          ? 'Chưa xử lý'
-                          : 'Không có trên FAST'}
-                      </span>
-                      {invoice.fastStatusMessage && (
-                        <span className="text-xs text-gray-500 text-center max-w-[220px]">
-                          {invoice.fastStatusMessage}
-                        </span>
-                      )}
-                    </div>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">{customer.branch_code || '-'}</div>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-center">
                         <Link
-                          href={`/invoices/${invoice.id}`}
+                          href={`/categories/customers/${customer.code}`}
                           className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors"
                         >
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -357,7 +322,7 @@ export default function InvoicesPage() {
                       <option value="50">50</option>
                       <option value="100">100</option>
                     </select>
-                    <span className="text-sm text-gray-700">hóa đơn/trang</span>
+                    <span className="text-sm text-gray-700">khách hàng/trang</span>
                   </div>
                   
                   <div className="flex items-center gap-3">
@@ -366,7 +331,7 @@ export default function InvoicesPage() {
                       <span className="font-medium">
                         {Math.min(pagination.page * pagination.limit, pagination.total)}
                       </span>{' '}
-                      trong tổng số <span className="font-medium">{pagination.total}</span> hóa đơn
+                      trong tổng số <span className="font-medium">{pagination.total}</span> khách hàng
                     </p>
                   </div>
                 </div>

@@ -439,24 +439,24 @@ export default function OrderDetailPage() {
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
-              Quay lại danh sách đơn hàng
+              Quay lại đơn hàng
             </Link>
           </div>
           <h1 className="text-2xl font-bold text-gray-900">Chi tiết đơn hàng</h1>
         </div>
 
-        {/* Thông tin đơn hàng và khách hàng */}
+        {/* Thông tin bảng kê hóa đơn và khách hàng */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-          {/* Thông tin đơn hàng */}
+          {/* Thông tin bảng kê hóa đơn */}
           <div className="bg-white border border-gray-200 rounded-lg p-4">
-            <h2 className="text-sm font-semibold text-gray-700 mb-3 pb-2 border-b">Thông tin đơn hàng</h2>
+            <h2 className="text-sm font-semibold text-gray-700 mb-3 pb-2 border-b">Thông tin bảng kê hóa đơn</h2>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs text-gray-500">Mã đơn hàng</label>
+                <label className="text-xs text-gray-500">Mã bảng kê hóa đơn</label>
                 <p className="text-sm font-semibold text-gray-900 mt-0.5">{order.docCode}</p>
               </div>
               <div>
-                <label className="text-xs text-gray-500">Ngày đơn hàng</label>
+                <label className="text-xs text-gray-500">Ngày bảng kê hóa đơn</label>
                 <p className="text-sm text-gray-900 mt-0.5">
                   {new Date(order.docDate).toLocaleString('vi-VN', {
                     year: 'numeric',

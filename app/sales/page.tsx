@@ -811,7 +811,7 @@ export default function SalesPage() {
         }));
       }
     } catch (error: any) {
-      showToast('error', 'Lỗi khi tải danh sách đơn hàng: ' + (error.response?.data?.message || error.message));
+      showToast('error', 'Lỗi khi tải đơn hàng: ' + (error.response?.data?.message || error.message));
     } finally {
       setLoading(false);
     }
@@ -856,7 +856,7 @@ export default function SalesPage() {
           <div className="flex flex-col gap-4">
             {/* Title and Sync Actions */}
             <div className="flex items-center justify-between flex-wrap gap-3">
-              <h1 className="text-2xl font-bold text-gray-900">Danh sách đơn hàng</h1>
+              <h1 className="text-2xl font-bold text-gray-900">Đơn hàng</h1>
               <div className="flex items-center gap-2 flex-wrap">
                 <button
                   onClick={() => setShowColumnSelector(!showColumnSelector)}

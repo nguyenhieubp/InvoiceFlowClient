@@ -140,5 +140,19 @@ export const categoriesApi = {
       },
     });
   },
+  // Customers
+  getCustomers: (params?: { page?: number; limit?: number; search?: string }) => {
+    return api.get('/categories/customers', { params });
+  },
+  getCustomerByCode: (code: string) => {
+    return api.get(`/categories/customers/${code}`);
+  },
+};
+
+// Sync API - Customers
+export const syncCustomersApi = {
+  syncBrandT8: (brandName: string) => {
+    return api.post(`/sync/brand/${brandName}/t8`);
+  },
 };
 
