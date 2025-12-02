@@ -335,13 +335,12 @@ export default function SalesPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<{ brand?: string; dateFrom?: string; dateTo?: string }>({});
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set());
   const [syncing, setSyncing] = useState(false);
-  const [printing, setPrinting] = useState(false);
   const [syncingBrand, setSyncingBrand] = useState<string | null>(null);
   const [syncResult, setSyncResult] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [selectedColumns, setSelectedColumns] = useState<OrderColumn[]>([...MAIN_COLUMNS]);
   const [showColumnSelector, setShowColumnSelector] = useState(false);
+  const [columnSearchQuery, setColumnSearchQuery] = useState('');
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
@@ -437,30 +436,12 @@ export default function SalesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery, filter.dateFrom, filter.dateTo, allOrders, pagination.page, pagination.limit]);
 
-  const handleSelectOrder = (docCode: string) => {
-    const newSelected = new Set(selectedOrders);
-    if (newSelected.has(docCode)) {
-      newSelected.delete(docCode);
-    } else {
-      newSelected.add(docCode);
-    }
-    setSelectedOrders(newSelected);
-  };
-
-  const handleSelectAll = () => {
-    if (selectedOrders.size === displayedOrders.length) {
-      setSelectedOrders(new Set());
-    } else {
-      setSelectedOrders(new Set(displayedOrders.map((o) => o.docCode)));
-    }
-  };
-
   const toggleColumn = (field: OrderColumn) => {
     setSelectedColumns(prev => {
       const index = prev.indexOf(field);
       if (index > -1) {
         return prev.filter(col => col !== field);
-      } else {
+    } else {
         const allFields = Object.keys(FIELD_LABELS) as OrderColumn[];
         const fieldIndex = allFields.indexOf(field);
         
@@ -546,7 +527,16 @@ export default function SalesPage() {
       case 'tenNhanVienBan':
         return <div className="text-sm text-gray-900">{getSaleValue(order, 'tenNhanVienBan') || '-'}</div>;
       case 'itemCode':
-        return <div className="text-sm font-semibold text-gray-900">{getSaleValue(order, 'itemCode') || '-'}</div>;
+        const itemCode = getSaleValue(order, 'itemCode') || '-';
+        const itemName = firstSale?.product?.tenVatTu || getSaleValue(order, 'itemName') || '';
+        return (
+          <div>
+            <div className="text-sm font-semibold text-gray-900">{itemCode}</div>
+            {itemName && itemName !== '-' && (
+              <div className="text-xs text-gray-500 mt-0.5">{itemName}</div>
+            )}
+          </div>
+        );
       case 'itemName':
         return <div className="text-sm text-gray-900">{firstSale?.product?.tenVatTu || getSaleValue(order, 'itemName') || '-'}</div>;
       case 'dvt':
@@ -744,41 +734,6 @@ export default function SalesPage() {
         return <div className="text-sm text-gray-900">{getSaleValue(order, 'soSerial') || '-'}</div>;
       default:
         return <span className="text-gray-400 italic">-</span>;
-    }
-  };
-
-  const handlePrintInvoices = async () => {
-    if (selectedOrders.size === 0) {
-      showToast('error', 'Vui lòng chọn ít nhất một đơn hàng để in hóa đơn');
-      return;
-    }
-
-    const docCodes = Array.from(selectedOrders);
-
-    try {
-      setPrinting(true);
-      const response = await salesApi.printOrders(docCodes);
-      const { successCount, failureCount, results } = response.data || {};
-
-      let message = `Đã gửi yêu cầu in ${successCount ?? docCodes.length}/${docCodes.length} hóa đơn.`;
-
-      if (failureCount > 0 && Array.isArray(results)) {
-        const errorMessages = results
-          .filter((r: any) => !r.success)
-          .map((r: any) => `${r.docCode}: ${r.error || r.message || 'Không rõ lỗi'}`);
-        if (errorMessages.length > 0) {
-          message += `\nCác hóa đơn lỗi:\n- ${errorMessages.join('\n- ')}`;
-        }
-      }
-
-      showToast(failureCount > 0 ? 'error' : 'success', message);
-      setSelectedOrders(new Set());
-      loadOrders();
-    } catch (error: any) {
-      console.error('Lỗi khi in hóa đơn:', error);
-      showToast('error', 'Lỗi khi in hóa đơn: ' + (error.response?.data?.message || error.message));
-    } finally {
-      setPrinting(false);
     }
   };
 
@@ -1018,21 +973,44 @@ export default function SalesPage() {
                     </button>
                   </div>
                 </div>
+                {/* Search input for columns */}
+                <div className="mb-3">
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="Tìm kiếm cột..."
+                      value={columnSearchQuery}
+                      onChange={(e) => setColumnSearchQuery(e.target.value)}
+                      className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                    />
+                  </div>
+                </div>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-64 overflow-y-auto">
-                  {Object.entries(FIELD_LABELS).map(([key, label]) => (
-                    <label
-                      key={key}
-                      className="flex items-center gap-2 p-2 hover:bg-white rounded cursor-pointer"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedColumns.includes(key as OrderColumn)}
-                        onChange={() => toggleColumn(key as OrderColumn)}
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                      />
-                      <span className="text-sm text-gray-700">{label}</span>
-                    </label>
-                  ))}
+                  {Object.entries(FIELD_LABELS)
+                    .filter(([key, label]) => {
+                      if (!columnSearchQuery.trim()) return true;
+                      const query = columnSearchQuery.toLowerCase();
+                      return label.toLowerCase().includes(query) || key.toLowerCase().includes(query);
+                    })
+                    .map(([key, label]) => (
+                      <label
+                        key={key}
+                        className="flex items-center gap-2 p-2 hover:bg-white rounded cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedColumns.includes(key as OrderColumn)}
+                          onChange={() => toggleColumn(key as OrderColumn)}
+                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        <span className="text-sm text-gray-700">{label}</span>
+                      </label>
+                    ))}
                 </div>
               </div>
             )}
@@ -1099,36 +1077,6 @@ export default function SalesPage() {
               )}
             </div>
 
-            {/* Print Invoice Button */}
-            {selectedOrders.size > 0 && (
-              <div className="flex items-center gap-2">
-                <div className="text-sm text-gray-700 whitespace-nowrap">
-                  Đã chọn <span className="font-semibold text-blue-600">{selectedOrders.size}</span>
-                </div>
-                <button
-                  onClick={handlePrintInvoices}
-                  disabled={printing}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors duration-200 shadow-sm hover:shadow-md whitespace-nowrap disabled:opacity-60 disabled:cursor-not-allowed"
-                >
-                  {printing ? (
-                    <>
-                      <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Đang in...
-                    </>
-                  ) : (
-                    <>
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                      </svg>
-                      In hóa đơn
-                    </>
-                  )}
-                </button>
-              </div>
-            )}
           </div>
         </div>
 
@@ -1157,21 +1105,13 @@ export default function SalesPage() {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-4 py-3 text-center w-12">
-                      <input
-                        type="checkbox"
-                        checked={selectedOrders.size === displayedOrders.length && displayedOrders.length > 0}
-                        onChange={handleSelectAll}
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                      />
-                    </th>
                     {selectedColumns.map((field) => (
                       <th
                         key={field}
                         className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"
                       >
                         {FIELD_LABELS[field]}
-                      </th>
+                    </th>
                     ))}
                     <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Thao tác
@@ -1181,21 +1121,13 @@ export default function SalesPage() {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {displayedOrders.map((order) => (
                     <tr key={order.docCode} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-4 py-3 whitespace-nowrap text-center">
-                        <input
-                          type="checkbox"
-                          checked={selectedOrders.has(order.docCode)}
-                          onChange={() => handleSelectOrder(order.docCode)}
-                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                        />
-                      </td>
                       {selectedColumns.map((field) => (
                         <td
                           key={field}
                           className="px-4 py-3 text-sm text-gray-900"
                         >
                           {renderCellValue(order, field)}
-                        </td>
+                      </td>
                       ))}
                       <td className="px-4 py-3 whitespace-nowrap text-center">
                         <Link

@@ -167,6 +167,7 @@ export default function ProductsPage() {
     [...MAIN_COLUMNS]
   );
   const [showColumnSelector, setShowColumnSelector] = useState(false);
+  const [columnSearchQuery, setColumnSearchQuery] = useState('');
   const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
   const [pagination, setPagination] = useState({
     page: 1,
@@ -512,9 +513,31 @@ export default function ProductsPage() {
                     </button>
                   </div>
                 </div>
+                {/* Search input for columns */}
+                <div className="mb-3">
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="Tìm kiếm cột..."
+                      value={columnSearchQuery}
+                      onChange={(e) => setColumnSearchQuery(e.target.value)}
+                      className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                    />
+                  </div>
+                </div>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-64 overflow-y-auto">
                   {Object.entries(FIELD_LABELS)
                     .filter(([key]) => key !== 'id')
+                    .filter(([key, label]) => {
+                      if (!columnSearchQuery.trim()) return true;
+                      const query = columnSearchQuery.toLowerCase();
+                      return label.toLowerCase().includes(query) || key.toLowerCase().includes(query);
+                    })
                     .map(([key, label]) => (
                       <label
                         key={key}

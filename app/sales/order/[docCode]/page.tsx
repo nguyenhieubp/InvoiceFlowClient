@@ -427,17 +427,6 @@ export default function OrderDetailPage() {
     );
   }
 
-  const handlePrintInvoice = async () => {
-    if (!order) return;
-    
-    try {
-      await salesApi.printOrder(order.docCode);
-      showToast('success', `Đã gửi yêu cầu in hóa đơn cho đơn hàng ${order.docCode} thành công`);
-    } catch (error: any) {
-      showToast('error', 'Lỗi khi in hóa đơn: ' + (error.response?.data?.message || error.message));
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <div className="fixed top-4 right-4 z-50 space-y-3">
@@ -452,15 +441,6 @@ export default function OrderDetailPage() {
               </svg>
               Quay lại danh sách đơn hàng
             </Link>
-            <button
-              onClick={handlePrintInvoice}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors duration-200 shadow-sm hover:shadow-md"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-              </svg>
-              In hóa đơn
-            </button>
           </div>
           <h1 className="text-2xl font-bold text-gray-900">Chi tiết đơn hàng</h1>
         </div>
