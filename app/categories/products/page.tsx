@@ -162,6 +162,7 @@ export default function ProductsPage() {
   const [products, setProducts] = useState<ProductItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [selectedColumns, setSelectedColumns] = useState<(keyof ProductItem)[]>(
     [...MAIN_COLUMNS]
   );
@@ -200,10 +201,20 @@ export default function ProductsPage() {
     return () => clearTimeout(timer);
   }, [toast]);
 
+  // Debounce search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+      setPagination((prev) => ({ ...prev, page: 1 }));
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
   useEffect(() => {
     loadProducts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pagination.page, pagination.limit]);
+  }, [pagination.page, pagination.limit, debouncedSearchQuery]);
 
   const loadProducts = async () => {
     try {
@@ -211,7 +222,7 @@ export default function ProductsPage() {
       const response = await categoriesApi.getProducts({
         page: pagination.page,
         limit: pagination.limit,
-        search: searchQuery || undefined,
+        search: debouncedSearchQuery || undefined,
       });
       const data = response.data.data || response.data || [];
       setProducts(data);
@@ -226,19 +237,6 @@ export default function ProductsPage() {
       setLoading(false);
     }
   };
-
-  // Filter products by search query
-  const filteredProducts = products.filter((product) => {
-    if (!searchQuery.trim()) return true;
-    const query = searchQuery.toLowerCase();
-    return (
-      product.maVatTu?.toLowerCase().includes(query) ||
-      product.tenVatTu?.toLowerCase().includes(query) ||
-      product.barcode?.toLowerCase().includes(query) ||
-      product.maERP?.toLowerCase().includes(query) ||
-      product.maNhanHieu?.toLowerCase().includes(query)
-    );
-  });
 
   const toggleColumn = (field: keyof ProductItem) => {
     setSelectedColumns(prev => {
@@ -548,7 +546,6 @@ export default function ProductsPage() {
                 value={searchQuery}
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
-                  setPagination((prev) => ({ ...prev, page: 1 }));
                 }}
                 className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
               />
@@ -564,7 +561,7 @@ export default function ProductsPage() {
               <p className="text-sm text-gray-500">Đang tải dữ liệu...</p>
             </div>
           </div>
-        ) : filteredProducts.length === 0 ? (
+        ) : products.length === 0 ? (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
             <div className="text-center">
               <div className="text-gray-400 mb-3">
@@ -595,7 +592,7 @@ export default function ProductsPage() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredProducts.map((product, index) => (
+                  {products.map((product, index) => (
                     <tr key={product.id || index} className="hover:bg-gray-50 transition-colors">
                       {visibleColumns.map((field) => (
                         <td

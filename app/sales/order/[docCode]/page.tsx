@@ -20,7 +20,211 @@ interface Sale {
     main?: any;
   } | null;
   isProcessed: boolean;
+  product?: {
+    maVatTu?: string;
+    tenVatTu?: string;
+    maERP?: string;
+    dvt?: string;
+    loaiVatTu?: string;
+  } | null;
+  // Các trường bắt buộc
+  partnerCode?: string;
+  kyHieu?: string;
+  maKho?: string;
+  maLo?: string;
+  maThue?: string;
+  tkNo?: string;
+  tkDoanhThu?: string;
+  tkGiaVon?: string;
+  tkChiPhiKhuyenMai?: string;
+  tkThueCo?: string;
+  cucThue?: string;
+  // Các trường khác
+  nhanVienBan?: string;
+  tenNhanVienBan?: string;
+  dvt?: string;
+  loai?: string;
+  giaBan?: number;
+  tienHang?: number;
+  maNt?: string;
+  tyGia?: number;
+  maThanhToan?: string;
+  vuViec?: string;
+  boPhan?: string;
+  lsx?: string;
+  sanPham?: string;
+  hopDong?: string;
+  phi?: number;
+  kol?: string;
+  kheUoc?: string;
+  maCa?: string;
+  isRewardLine?: boolean;
+  isBundleRewardLine?: boolean;
+  dongThuocGoi?: string;
+  trangThai?: string;
+  barcode?: string;
+  muaHangGiamGia?: number;
+  chietKhauMuaHangGiamGia?: number;
+  ckTheoChinhSach?: string;
+  chietKhauCkTheoChinhSach?: number;
+  muaHangCkVip?: string;
+  chietKhauMuaHangCkVip?: number;
+  thanhToanCoupon?: number;
+  chietKhauThanhToanCoupon?: number;
+  thanhToanVoucher?: number;
+  chietKhauThanhToanVoucher?: number;
+  duPhong1?: number;
+  chietKhauDuPhong1?: number;
+  duPhong2?: number;
+  chietKhauDuPhong2?: number;
+  duPhong3?: number;
+  chietKhauDuPhong3?: number;
+  hang?: string;
+  chietKhauHang?: number;
+  thuongBangHang?: number;
+  chietKhauThuongMuaBangHang?: number;
+  thanhToanTkTienAo?: number;
+  chietKhauThanhToanTkTienAo?: number;
+  ckThem1?: number;
+  chietKhauThem1?: number;
+  ckThem2?: number;
+  chietKhauThem2?: number;
+  ckThem3?: number;
+  chietKhauThem3?: number;
+  voucherDp1?: string;
+  chietKhauVoucherDp1?: number;
+  voucherDp2?: string;
+  chietKhauVoucherDp2?: number;
+  voucherDp3?: string;
+  chietKhauVoucherDp3?: number;
+  voucherDp4?: string;
+  chietKhauVoucherDp4?: number;
+  voucherDp5?: string;
+  chietKhauVoucherDp5?: number;
+  voucherDp6?: string;
+  chietKhauVoucherDp6?: number;
+  voucherDp7?: string;
+  chietKhauVoucherDp7?: number;
+  voucherDp8?: string;
+  chietKhauVoucherDp8?: number;
+  troGia?: number;
+  maCtkmTangHang?: string;
+  maThe?: string;
+  soSerial?: string;
 }
+
+// Định nghĩa labels cho tất cả các trường
+const FIELD_LABELS: Record<keyof Sale, string> = {
+  id: 'ID',
+  itemCode: '* Mã hàng',
+  itemName: 'Tên mặt hàng',
+  qty: 'Số lượng',
+  revenue: 'Doanh thu',
+  description: 'Diễn giải',
+  kenh: 'Kênh',
+  promCode: 'Khuyến mãi',
+  promotion: 'Promotion',
+  isProcessed: 'Đã xử lý',
+  product: 'Sản phẩm',
+  partnerCode: '* Mã khách',
+  kyHieu: '* Ký hiệu',
+  maKho: '* Mã kho',
+  maLo: '* Mã lô',
+  maThue: '* Mã thuế',
+  tkNo: '* Tk nợ',
+  tkDoanhThu: '* Tk doanh thu',
+  tkGiaVon: '* Tk giá vốn',
+  tkChiPhiKhuyenMai: '* Tk chi phí khuyến mãi',
+  tkThueCo: '* Tk thuế có',
+  cucThue: '* Cục thuế',
+  nhanVienBan: 'Nhân viên bán',
+  tenNhanVienBan: 'Tên nhân viên bán',
+  dvt: 'Đvt',
+  loai: 'Loại',
+  giaBan: 'Giá bán',
+  tienHang: 'Tiền hàng',
+  maNt: 'Mã nt',
+  tyGia: 'Tỷ giá',
+  maThanhToan: 'Mã thanh toán',
+  vuViec: 'Vụ việc',
+  boPhan: 'Bộ phận',
+  lsx: 'Lsx',
+  sanPham: 'Sản phẩm',
+  hopDong: 'Hợp đồng',
+  phi: 'Phí',
+  kol: 'KOL',
+  kheUoc: 'Khế ước',
+  maCa: 'Mã ca',
+  isRewardLine: 'is_reward_line',
+  isBundleRewardLine: 'is_bundle_reward_line',
+  dongThuocGoi: 'Dòng thuộc gói',
+  trangThai: 'Trạng thái',
+  barcode: 'Barcode',
+  muaHangGiamGia: 'Mua hàng giảm giá',
+  chietKhauMuaHangGiamGia: 'Chiết khấu mua hàng giảm giá',
+  ckTheoChinhSach: 'CK theo chính sách',
+  chietKhauCkTheoChinhSach: 'Chiết khấu ck theo chính sách',
+  muaHangCkVip: 'Mua hàng CK VIP',
+  chietKhauMuaHangCkVip: 'Chiết khấu mua hàng CK VIP',
+  thanhToanCoupon: 'Thanh toán coupon',
+  chietKhauThanhToanCoupon: 'Chiết khấu thanh toán coupon',
+  thanhToanVoucher: 'Thanh toán voucher',
+  chietKhauThanhToanVoucher: 'Chiết khấu thanh toán voucher',
+  duPhong1: 'Dự phòng 1',
+  chietKhauDuPhong1: 'Chiết khấu dự phòng 1',
+  duPhong2: 'Dự phòng 2',
+  chietKhauDuPhong2: 'Chiết khấu dự phòng 2',
+  duPhong3: 'Dự phòng 3',
+  chietKhauDuPhong3: 'Chiết khấu dự phòng 3',
+  hang: 'Hãng',
+  chietKhauHang: 'Chiết khấu hãng',
+  thuongBangHang: 'Thưởng bằng hàng',
+  chietKhauThuongMuaBangHang: 'Chiết khấu thưởng mua bằng hàng',
+  thanhToanTkTienAo: 'Thanh toán TK tiền ảo',
+  chietKhauThanhToanTkTienAo: 'Chiết khấu thanh toán TK tiền ảo',
+  ckThem1: 'CK thêm 1',
+  chietKhauThem1: 'Chiết khấu thêm 1',
+  ckThem2: 'CK thêm 2',
+  chietKhauThem2: 'Chiết khấu thêm 2',
+  ckThem3: 'CK thêm 3',
+  chietKhauThem3: 'Chiết khấu thêm 3',
+  voucherDp1: 'Voucher DP1',
+  chietKhauVoucherDp1: 'Chiết khấu Voucher DP1',
+  voucherDp2: 'Voucher DP2',
+  chietKhauVoucherDp2: 'Chiết khấu Voucher DP2',
+  voucherDp3: 'Voucher DP3',
+  chietKhauVoucherDp3: 'Chiết khấu Voucher DP3',
+  voucherDp4: 'Voucher DP4',
+  chietKhauVoucherDp4: 'Chiết khấu Voucher DP4',
+  voucherDp5: 'Voucher DP5',
+  chietKhauVoucherDp5: 'Chiết khấu Voucher DP5',
+  voucherDp6: 'Voucher DP6',
+  chietKhauVoucherDp6: 'Chiết khấu Voucher DP6',
+  voucherDp7: 'Voucher DP7',
+  chietKhauVoucherDp7: 'Chiết khấu Voucher DP7',
+  voucherDp8: 'Voucher DP8',
+  chietKhauVoucherDp8: 'Chiết khấu Voucher DP8',
+  troGia: 'Trợ giá',
+  maCtkmTangHang: 'Mã CTKM tặng hàng',
+  maThe: 'Mã thẻ',
+  soSerial: 'Số serial',
+};
+
+// Các cột mặc định (các trường bắt buộc)
+const MAIN_COLUMNS: (keyof Sale)[] = [
+  'partnerCode',
+  'itemCode',
+  'kyHieu',
+  'maKho',
+  'maLo',
+  'maThue',
+  'tkNo',
+  'tkDoanhThu',
+  'tkGiaVon',
+  'tkChiPhiKhuyenMai',
+  'tkThueCo',
+  'cucThue',
+];
 
 interface OrderDetail {
   docCode: string;
@@ -55,6 +259,8 @@ export default function OrderDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
+  const [selectedColumns, setSelectedColumns] = useState<(keyof Sale)[]>([...MAIN_COLUMNS]);
+  const [showColumnSelector, setShowColumnSelector] = useState(false);
 
   const showToast = (type: 'success' | 'error' | 'info', message: string) => {
     setToast({ type, message });
@@ -99,6 +305,105 @@ export default function OrderDetailPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const toggleColumn = (field: keyof Sale) => {
+    setSelectedColumns(prev => {
+      const index = prev.indexOf(field);
+      if (index > -1) {
+        return prev.filter(col => col !== field);
+      } else {
+        const allFields = Object.keys(FIELD_LABELS) as (keyof Sale)[];
+        const fieldIndex = allFields.indexOf(field);
+        
+        let insertIndex = prev.length;
+        for (let i = 0; i < prev.length; i++) {
+          const currentIndex = allFields.indexOf(prev[i]);
+          if (currentIndex > fieldIndex) {
+            insertIndex = i;
+            break;
+          }
+        }
+        
+        const newSelected = [...prev];
+        newSelected.splice(insertIndex, 0, field);
+        return newSelected;
+      }
+    });
+  };
+
+  const formatValue = (value: any, field: keyof Sale): React.ReactNode => {
+    if (value === null || value === undefined || value === '') {
+      return <span className="text-gray-400 italic">-</span>;
+    }
+    
+    if (typeof value === 'boolean') {
+      return (
+        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+          value ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+        }`}>
+          {value ? 'Có' : 'Không'}
+        </span>
+      );
+    }
+    
+    if (typeof value === 'number') {
+      if (value % 1 !== 0) {
+        return value.toLocaleString('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      }
+      return value.toLocaleString('vi-VN');
+    }
+    
+    if (typeof value === 'string') {
+      if (value.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/) || value.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        try {
+          return new Date(value).toLocaleString('vi-VN', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+          });
+        } catch {
+          return value;
+        }
+      }
+    }
+    
+    if (typeof value === 'object' && value !== null) {
+      return <span className="text-xs text-gray-500">[Object]</span>;
+    }
+    
+    return String(value);
+  };
+
+  const renderCellValue = (sale: Sale, field: keyof Sale, order: OrderDetail): React.ReactNode => {
+    // Xử lý các trường đặc biệt từ order
+    if (field === 'partnerCode') {
+      return sale.partnerCode || order.customer.code || '-';
+    }
+    
+    if (field === 'itemName') {
+      return sale.product?.tenVatTu || sale.itemName || '-';
+    }
+    
+    // Lấy giá trị từ sale
+    const value = sale[field];
+    
+    // Nếu là số tiền hoặc số lượng, format đặc biệt
+    if (field === 'qty' || field === 'revenue' || field === 'giaBan' || field === 'tienHang') {
+      if (typeof value === 'number') {
+        return value.toLocaleString('vi-VN');
+      }
+    }
+    
+    if (field === 'revenue' || field === 'giaBan' || field === 'tienHang') {
+      if (typeof value === 'number') {
+        return `${value.toLocaleString('vi-VN')} đ`;
+      }
+    }
+    
+    return formatValue(value, field);
   };
 
   if (loading) {
@@ -581,30 +886,75 @@ export default function OrderDetailPage() {
         {/* Danh sách sản phẩm */}
         <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
           <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white">
-            <h2 className="text-base font-semibold text-gray-900">Danh sách sản phẩm</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-semibold text-gray-900">Danh sách sản phẩm</h2>
+              <button
+                onClick={() => setShowColumnSelector(!showColumnSelector)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors inline-flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                </svg>
+                Chọn cột hiển thị
+              </button>
+            </div>
+            
+            {/* Column Selector */}
+            {showColumnSelector && (
+              <div className="mt-4 border border-gray-200 rounded-lg p-4 bg-gray-50">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold text-gray-700">Chọn cột hiển thị</h3>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setSelectedColumns([...MAIN_COLUMNS])}
+                      className="text-xs px-2 py-1 text-blue-600 hover:bg-blue-50 rounded"
+                    >
+                      Mặc định
+                    </button>
+                    <button
+                      onClick={() => {
+                        const allFields = Object.keys(FIELD_LABELS) as (keyof Sale)[];
+                        setSelectedColumns(allFields.filter(f => f !== 'id' && f !== 'promotion' && f !== 'product' && f !== 'isProcessed'));
+                      }}
+                      className="text-xs px-2 py-1 text-blue-600 hover:bg-blue-50 rounded"
+                    >
+                      Chọn tất cả
+                    </button>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-64 overflow-y-auto">
+                  {Object.entries(FIELD_LABELS)
+                    .filter(([key]) => key !== 'id' && key !== 'promotion' && key !== 'product' && key !== 'isProcessed')
+                    .map(([key, label]) => (
+                      <label
+                        key={key}
+                        className="flex items-center gap-2 p-2 hover:bg-white rounded cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedColumns.includes(key as keyof Sale)}
+                          onChange={() => toggleColumn(key as keyof Sale)}
+                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        <span className="text-sm text-gray-700">{label}</span>
+                      </label>
+                    ))}
+                </div>
+              </div>
+            )}
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gradient-to-r from-gray-50 to-gray-100/50">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Mã SP
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Tên sản phẩm
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Khuyến mại
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Số lượng
-                  </th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Doanh thu
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Kênh
-                  </th>
+                  {selectedColumns.map((field) => (
+                    <th
+                      key={field}
+                      className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider whitespace-nowrap"
+                    >
+                      {FIELD_LABELS[field]}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-100">
@@ -613,50 +963,16 @@ export default function OrderDetailPage() {
                     key={sale.id} 
                     className="hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-purple-50/30 transition-all duration-150 border-l-4 border-l-transparent hover:border-l-blue-400"
                   >
-                    <td className="px-4 py-3">
-                      <div className="text-sm font-semibold text-gray-900 break-words" title={sale.itemCode}>
-                        {sale.itemCode}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="text-sm font-medium text-gray-900">{sale.itemName}</div>
-                      {sale.description && (
-                        <div className="text-xs text-gray-500 mt-1 leading-relaxed">{sale.description}</div>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      {sale.promCode ? (
-                        <span className="group inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 text-blue-700 border border-blue-200/60 shadow-sm hover:shadow-md hover:border-blue-300 transition-all duration-200 hover:scale-[1.02] cursor-default break-words" title={sale.promCode}>
-                          <svg className="w-3.5 h-3.5 text-blue-600 group-hover:text-blue-700 transition-colors flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                          </svg>
-                          <span className="font-medium whitespace-normal break-words">{sale.promCode}</span>
-                        </span>
-                      ) : (
-                        <span className="text-xs text-gray-400 italic">-</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <div className="text-sm text-center font-medium text-gray-900">
-                        {Number(sale.qty).toLocaleString('vi-VN')}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <div className="text-sm text-right font-semibold text-gray-900">
-                        {Number(sale.revenue).toLocaleString('vi-VN')} đ
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <div className="text-sm text-gray-600">
-                        {sale.kenh ? (
-                          <span className="inline-flex items-center px-2 py-1 rounded-md bg-gray-100 text-gray-700 text-xs font-medium">
-                            {sale.kenh}
-                          </span>
-                        ) : (
-                          <span className="text-gray-400 italic">-</span>
-                        )}
-                      </div>
-                    </td>
+                    {selectedColumns.map((field) => (
+                      <td
+                        key={field}
+                        className="px-4 py-3 text-sm text-gray-900"
+                      >
+                        <div className="max-w-xs truncate" title={String(renderCellValue(sale, field, order))}>
+                          {renderCellValue(sale, field, order)}
+                        </div>
+                      </td>
+                    ))}
                   </tr>
                 ))}
               </tbody>
