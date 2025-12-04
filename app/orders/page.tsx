@@ -1161,6 +1161,7 @@ export default function OrdersPage() {
         }
 
         // Nếu giá bán = 0 và ordertype là NORMAL, BAN_ECOIN, hoặc SAN_TMDT thì hiển thị "1"
+        // Ngược lại bỏ trống
         const ordertypeForPromCode = sale?.ordertype;
         if (giaBanForPromCode === 0 && ordertypeForPromCode && 
             (ordertypeForPromCode === ORDER_TYPE_NORMAL || 
@@ -1169,8 +1170,8 @@ export default function OrdersPage() {
           return <div className="text-sm text-gray-900">1</div>;
         }
 
-        // Ngược lại hiển thị giá trị bình thường
-        return <div className="text-sm text-gray-900">{sale?.promCode || '-'}</div>;
+        // Ngược lại bỏ trống
+        return <div className="text-sm text-gray-900">-</div>;
       case 'muaHangGiamGia':
         // Lấy code từ promotion API response
         const promotionCode = sale?.promotion?.code;
