@@ -445,7 +445,6 @@ const FIELD_LABELS: Record<OrderColumn, string> = {
 // Các cột mặc định theo thứ tự mới
 const MAIN_COLUMNS: OrderColumn[] = [
   'partnerCode',              // * Mã khách
-  'customerName',             // Tên khách hàng
   'docDate',                  // * Ngày
   'docCode',                  // * Số hóa đơn
   'kyHieu',                   // * Ký hiệu
@@ -453,7 +452,6 @@ const MAIN_COLUMNS: OrderColumn[] = [
   'itemCode',                 // * Mã hàng
   'itemName',                 // Tên mặt hàng
   'dvt',                      // Đvt
-  'loai',                     // Loại
   'promCode',                 // Khuyến mãi
   'maKho',                    // * Mã kho
   'maLo',                     // * Mã lô
@@ -1095,12 +1093,10 @@ export default function OrdersPage() {
       case 'docDate':
         return (
           <div className="text-sm text-gray-900">
-            {new Date(order.docDate).toLocaleString('vi-VN', {
+            {new Date(order.docDate).toLocaleDateString('vi-VN', {
               year: 'numeric',
               month: '2-digit',
               day: '2-digit',
-              hour: '2-digit',
-              minute: '2-digit',
             })}
           </div>
         );
