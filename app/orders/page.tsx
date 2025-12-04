@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { salesApi } from '@/lib/api';
 import { Toast } from '@/components/Toast';
+import { TAX_CODE, DEBIT_ACCOUNT } from '@/lib/constants/accounting.constants';
 
 interface Order {
   docCode: string;
@@ -35,6 +36,9 @@ interface Order {
     itemName?: string;
     description?: string;
     partnerCode?: string;
+    ordertype?: string;
+    branchCode?: string;
+    serial?: string;
     kyHieu?: string;
     maKho?: string;
     maLo?: string;
@@ -118,6 +122,33 @@ interface Order {
     maThe?: string;
     soSerial?: string;
     revenue?: number;
+    // Các trường bổ sung từ API
+    cat1?: string;
+    cat2?: string;
+    cat3?: string;
+    catcode1?: string;
+    catcode2?: string;
+    catcode3?: string;
+    ck_tm?: number | null;
+    ck_dly?: number | null;
+    docid?: number;
+    cm_code?: string | null;
+    line_id?: number;
+    disc_amt?: number;
+    docmonth?: string;
+    itemcost?: number;
+    linetotal?: number;
+    totalcost?: number;
+    crm_emp_id?: number;
+    doctype_name?: string;
+    order_source?: string | null;
+    partner_name?: string;
+    crm_branch_id?: number;
+    grade_discamt?: number;
+    revenue_wsale?: number;
+    saleperson_id?: number;
+    revenue_retail?: number;
+    paid_by_voucher_ecode_ecoin_bp?: number;
     product?: {
       maVatTu?: string;
       tenVatTu?: string;
@@ -151,10 +182,45 @@ interface Order {
       taiKhoanChiPhiKhuyenMai?: string;
       [key: string]: any;
     } | null;
+    department?: {
+      id?: string;
+      ma_bp?: string;
+      ten_bp?: string;
+      type?: string;
+      [key: string]: any;
+    } | null;
   }>;
 }
 
 type SaleItem = NonNullable<Order['sales']>[number];
+
+// Map ordertype sang L hoặc B
+const getOrderTypePrefix = (ordertype: string | null | undefined): string | null => {
+  if (!ordertype) return null;
+  
+  // Kiểu L: 02. Làm dịch vụ, 04. Đổi DV, 08. Tách thẻ, Đổi thẻ KEEP->Thẻ DV
+  const typeL = ['LAM_DV', 'DOI_VO_LAY_DV', 'KEEP_TO_SVC', 'LAM_THE_DV', 'SUA_THE_DV', 'DOI_THE_DV', 'LAM_DV_LE', 'LAM_THE_KEEP', 'NOI_THE_KEEP', 'RENAME_CARD'];
+  
+  // Kiểu B: 01.Thường, 03. Đổi điểm, 05. Tặng sinh nhật, 06. Đầu tư, 07. Bán tài khoản, 9. Sàn TMD
+  const typeB = ['NORMAL', 'KM_TRA_DL', 'BIRTHDAY_PROM', 'BP_TO_ITEM', 'BAN_ECOIN', 'SAN_TMDT', 'SO_DL', 'SO_HTDT_HB', 'SO_HTDT_HK', 'SO_HTDT_HL_CB', 'SO_HTDT_HL_HB', 'SO_HTDT_HL_KM', 'SO_HTDT_HT', 'ZERO_CTY', 'ZERO_SHOP'];
+  
+  if (typeL.includes(ordertype)) {
+    return 'L';
+  } else if (typeB.includes(ordertype)) {
+    return 'B';
+  }
+  
+  return null; // Không khớp thì bỏ
+};
+
+// Tính mã kho từ ordertype + branch_code
+const calculateMaKho = (ordertype: string | null | undefined, branchCode: string | null | undefined): string | null => {
+  const prefix = getOrderTypePrefix(ordertype);
+  if (!prefix || !branchCode) {
+    return null;
+  }
+  return prefix + branchCode;
+};
 
 // Định nghĩa các cột có thể hiển thị
 type OrderColumn = 
@@ -462,7 +528,6 @@ const MAIN_COLUMNS: OrderColumn[] = [
   'chietKhauThem2',           // Chiết khấu thêm 2
   'ckThem3',                  // CK thêm 3
   'chietKhauThem3',           // Chiết khấu thêm 3
-  'voucherDp1',               // Voucher DP1
   'chietKhauVoucherDp1',      // Chiết khấu Voucher DP1
   'voucherDp2',               // Voucher DP2
   'chietKhauVoucherDp2',      // Chiết khấu Voucher DP2
@@ -485,7 +550,6 @@ const MAIN_COLUMNS: OrderColumn[] = [
 ];
 
 export default function OrdersPage() {
-  const [orders, setOrders] = useState<Order[]>([]);
   const [allOrders, setAllOrders] = useState<Order[]>([]);
   const [rawOrders, setRawOrders] = useState<Order[]>([]); // Orders gốc từ backend (chưa có product)
   const [displayedOrders, setDisplayedOrders] = useState<Order[]>([]);
@@ -504,8 +568,10 @@ export default function OrdersPage() {
   const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
   const [productCache, setProductCache] = useState<Map<string, any>>(new Map());
   const [promotionCache, setPromotionCache] = useState<Map<string, any>>(new Map());
+  const [departmentCache, setDepartmentCache] = useState<Map<string, any>>(new Map());
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [loadingPromotions, setLoadingPromotions] = useState(false);
+  const [loadingDepartments, setLoadingDepartments] = useState(false);
 
   const showToast = (type: 'success' | 'error' | 'info', message: string) => {
     setToast({ type, message });
@@ -596,6 +662,45 @@ export default function OrdersPage() {
       return null;
     } catch (error) {
       console.error(`Lỗi khi lấy promotion từ Loyalty API cho code ${codeForApi}:`, error);
+      return null;
+    }
+  };
+
+  // Fetch department từ Loyalty API
+  const fetchDepartmentFromLoyaltyAPI = async (maBp: string): Promise<any | null> => {
+    if (!maBp || maBp.trim() === '') return null;
+
+    // Kiểm tra cache trước
+    if (departmentCache.has(maBp)) {
+      return departmentCache.get(maBp);
+    }
+
+    try {
+      const response = await fetch(
+        `https://loyaltyapi.vmt.vn/departments?page=1&limit=25&ma_bp=${maBp}`,
+        {
+          headers: { accept: 'application/json' },
+        }
+      );
+
+      if (!response.ok) {
+        console.error(`Lỗi khi lấy department từ Loyalty API cho ma_bp ${maBp}: ${response.statusText}`);
+        return null;
+      }
+
+      const data = await response.json();
+      // Lấy department đầu tiên từ items
+      const department = data?.data?.items?.[0] || null;
+
+      if (department) {
+        // Lưu vào cache
+        setDepartmentCache(prev => new Map(prev).set(maBp, department));
+        return department;
+      }
+
+      return null;
+    } catch (error) {
+      console.error(`Lỗi khi lấy department từ Loyalty API cho ma_bp ${maBp}:`, error);
       return null;
     }
   };
@@ -718,44 +823,104 @@ export default function OrdersPage() {
     }
   };
 
+  // Load departments cho tất cả branch_code trong orders
+  const loadDepartmentsForOrders = async (orders: Order[]): Promise<void> => {
+    // Lấy tất cả branch_code unique từ orders
+    const branchCodes = new Set<string>();
+    
+    orders.forEach(order => {
+      // Lấy branch_code từ customer
+      const branchCode = order.customer.branch_code;
+      if (branchCode && branchCode.trim() !== '') {
+        branchCodes.add(branchCode);
+      }
+      
+      // Lấy branch_code từ sale
+      if (order.sales) {
+        order.sales.forEach(sale => {
+          const saleBranchCode = sale.branchCode;
+          if (saleBranchCode && saleBranchCode.trim() !== '') {
+            branchCodes.add(saleBranchCode);
+          }
+        });
+      }
+    });
+
+    // Filter ra những branch_code chưa có trong cache
+    const branchCodesToFetch = Array.from(branchCodes).filter(code => !departmentCache.has(code));
+
+    if (branchCodesToFetch.length === 0) {
+      return; // Đã có đủ trong cache
+    }
+
+    setLoadingDepartments(true);
+    try {
+      // Fetch tất cả departments song song
+      const departmentPromises = branchCodesToFetch.map(branchCode => 
+        fetchDepartmentFromLoyaltyAPI(branchCode)
+      );
+      
+      await Promise.all(departmentPromises);
+    } catch (error) {
+      console.error('Error loading departments:', error);
+    } finally {
+      setLoadingDepartments(false);
+    }
+  };
+
   useEffect(() => {
     if (!toast) return;
     const timer = setTimeout(() => setToast(null), 4000);
     return () => clearTimeout(timer);
   }, [toast]);
 
-  // Enrich orders với products và promotions từ cache
+  // Enrich orders với products, promotions và departments từ cache
   const enrichOrdersWithProducts = (ordersToEnrich: Order[]): Order[] => {
-    return ordersToEnrich.map(order => ({
-      ...order,
-      sales: order.sales?.map(sale => {
-        // Enrich product
-        const product = sale.itemCode && productCache.has(sale.itemCode) 
-          ? productCache.get(sale.itemCode) 
-          : sale.product || null;
+    return ordersToEnrich.map(order => {
+      // Lấy department cho order dựa trên branch_code
+      const orderBranchCode = order.customer.branch_code;
+      const orderDepartment = orderBranchCode && departmentCache.has(orderBranchCode)
+        ? departmentCache.get(orderBranchCode)
+        : null;
 
-        // Enrich promotion - tìm bằng code (từ parsed promCode)
-        let promotion = null;
-        if (sale.promCode) {
-          const parsedCode = parsePromCode(sale.promCode);
-          
-          // Tìm promotion trong cache bằng parsed code
-          if (parsedCode && promotionCache.has(parsedCode)) {
-            promotion = promotionCache.get(parsedCode);
+      return {
+        ...order,
+        sales: order.sales?.map(sale => {
+          // Enrich product
+          const product = sale.itemCode && productCache.has(sale.itemCode) 
+            ? productCache.get(sale.itemCode) 
+            : sale.product || null;
+
+          // Enrich promotion - tìm bằng code (từ parsed promCode)
+          let promotion = null;
+          if (sale.promCode) {
+            const parsedCode = parsePromCode(sale.promCode);
+            
+            // Tìm promotion trong cache bằng parsed code
+            if (parsedCode && promotionCache.has(parsedCode)) {
+              promotion = promotionCache.get(parsedCode);
+            }
           }
-        }
 
-        return {
-          ...sale,
-          product,
-          promotion,
-          // Lấy muaHangGiamGia từ promotion nếu có
-          muaHangGiamGia: promotion?.muaHangGiamGia !== undefined 
-            ? promotion.muaHangGiamGia 
-            : sale.muaHangGiamGia,
-        };
-      }) || [],
-    }));
+          // Enrich department - ưu tiên từ sale.branchCode, nếu không có thì dùng order branch_code
+          const saleBranchCode = sale.branchCode || orderBranchCode;
+          const saleDepartment = saleBranchCode && departmentCache.has(saleBranchCode)
+            ? departmentCache.get(saleBranchCode)
+            : orderDepartment;
+
+          return {
+            ...sale,
+            product,
+            promotion,
+            department: saleDepartment,
+            // Lấy muaHangGiamGia từ promotion nếu có
+            muaHangGiamGia: promotion?.muaHangGiamGia !== undefined 
+              ? promotion.muaHangGiamGia 
+              : sale.muaHangGiamGia,
+          };
+        }) || [],
+      };
+    });
   };
 
   const loadOrders = async () => {
@@ -771,16 +936,16 @@ export default function OrdersPage() {
       // Lưu orders gốc
       setRawOrders(ordersData);
 
-      // Load products và promotions cho các itemCode và promCode mới
+      // Load products, promotions và departments cho các itemCode, promCode và branch_code mới
       await Promise.all([
         loadProductsForOrders(ordersData),
         loadPromotionsForOrders(ordersData),
+        loadDepartmentsForOrders(ordersData),
       ]);
 
-      // Enrich orders với products và promotions từ cache (sau khi đã load)
+      // Enrich orders với products, promotions và departments từ cache (sau khi đã load)
       const enrichedOrders = enrichOrdersWithProducts(ordersData);
       setAllOrders(enrichedOrders);
-      setOrders(enrichedOrders);
     } catch (error: any) {
       console.error('Error loading orders:', error);
       showToast('error', 'Không thể tải danh sách đơn hàng');
@@ -794,14 +959,14 @@ export default function OrdersPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter.brand]);
 
-  // Cập nhật orders khi productCache hoặc promotionCache thay đổi
+  // Cập nhật orders khi productCache, promotionCache hoặc departmentCache thay đổi
   useEffect(() => {
     if (rawOrders.length > 0) {
       const enrichedOrders = enrichOrdersWithProducts(rawOrders);
       setAllOrders(enrichedOrders);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [productCache, promotionCache, rawOrders]);
+  }, [productCache, promotionCache, departmentCache, rawOrders]);
 
   // Xử lý search và pagination trên client
   useEffect(() => {
@@ -984,11 +1149,14 @@ export default function OrdersPage() {
       case 'customerGrade':
         return <div className="text-sm text-gray-900">{order.customer.grade_name || '-'}</div>;
       case 'kyHieu':
-        return <div className="text-sm text-gray-900">{sale?.kyHieu || '-'}</div>;
+        // Ưu tiên lấy branchCode từ sale, nếu không có mới lấy từ customer
+        return <div className="text-sm text-gray-900">{sale?.branchCode ||  '-'}</div>;
       case 'description':
-        return <div className="text-sm text-gray-900">{sale?.description || '-'}</div>;
+        return <div className="text-sm text-gray-900">{order.docCode || '-'}</div>;
       case 'nhanVienBan':
-        return <div className="text-sm text-gray-900">{sale?.nhanVienBan || '-'}</div>;
+        // Ưu tiên saleperson_id hoặc crm_emp_id, nếu không có thì dùng nhanVienBan
+        const nhanVienBanValue = sale?.saleperson_id?.toString() || sale?.crm_emp_id?.toString() || sale?.nhanVienBan;
+        return <div className="text-sm text-gray-900">{nhanVienBanValue || '-'}</div>;
       case 'tenNhanVienBan':
         return <div className="text-sm text-gray-900">{sale?.tenNhanVienBan || '-'}</div>;
       case 'itemCode':
@@ -1011,7 +1179,11 @@ export default function OrdersPage() {
       case 'dvt':
         return <div className="text-sm text-gray-900">{sale?.product?.dvt || sale?.dvt || '-'}</div>;
       case 'loai':
-        return <div className="text-sm text-gray-900">{sale?.loai || '-'}</div>;
+        // Map từ cat1, cat2, cat3 hoặc catcode1, catcode2, catcode3
+        const loaiValue = sale?.loai || 
+          (sale?.cat1 ? `${sale.cat1}${sale.cat2 ? ` / ${sale.cat2}` : ''}${sale.cat3 ? ` / ${sale.cat3}` : ''}` : null) ||
+          (sale?.catcode1 ? `${sale.catcode1}${sale.catcode2 ? ` / ${sale.catcode2}` : ''}${sale.catcode3 ? ` / ${sale.catcode3}` : ''}` : null);
+        return <div className="text-sm text-gray-900">{loaiValue || '-'}</div>;
       case 'promCode':
         return <div className="text-sm text-gray-900">{sale?.promCode || '-'}</div>;
       case 'muaHangGiamGia':
@@ -1022,15 +1194,35 @@ export default function OrdersPage() {
         }
         return <div className="text-sm text-gray-900">{promotionCode}</div>;
       case 'maKho':
-        return <div className="text-sm text-gray-900">{sale?.maKho || '-'}</div>;
+        // branch_code là branchCode của sale, không phải của customer
+        const branchCode = sale?.branchCode || order.customer.branch_code;
+        const calculatedMaKho = sale?.ordertype && branchCode
+          ? calculateMaKho(sale.ordertype, branchCode) 
+          : null;
+        return <div className="text-sm text-gray-900">{calculatedMaKho || sale?.maKho || '-'}</div>;
       case 'maLo':
-        return <div className="text-sm text-gray-900">{sale?.maLo || '-'}</div>;
+        // Mã lô là giá trị serial từ sales
+        return <div className="text-sm text-gray-900">{sale?.serial || sale?.maLo || '-'}</div>;
       case 'qty':
         return <div className="text-sm text-gray-900">{formatValue(sale?.qty)}</div>;
       case 'giaBan':
-        return <div className="text-sm text-gray-900">{formatValue(sale?.giaBan)}</div>;
+        // Giá bán = tiền hàng (linetotal hoặc tienHang) / số lượng (qty)
+        const tienHangForGiaBan = sale?.linetotal ?? sale?.tienHang;
+        const qtyForGiaBan = sale?.qty;
+        
+        let giaBan: number | null = null;
+        if (tienHangForGiaBan != null && qtyForGiaBan != null && qtyForGiaBan > 0) {
+          giaBan = tienHangForGiaBan / qtyForGiaBan;
+        } else {
+          // Nếu không tính được thì dùng giá trị gốc, mặc định là 0
+          giaBan = sale?.giaBan ?? 0;
+        }
+        
+        return <div className="text-sm text-gray-900">{formatValue(giaBan)}</div>;
       case 'tienHang':
-        return <div className="text-sm text-gray-900">{formatValue(sale?.tienHang)}</div>;
+        // Ưu tiên linetotal (thành tiền của dòng), nếu không có thì dùng tienHang
+        const tienHangValue = sale?.linetotal ?? sale?.tienHang;
+        return <div className="text-sm text-gray-900">{formatValue(tienHangValue)}</div>;
       case 'revenue':
         return <div className="text-sm text-gray-900">{formatValue(sale?.revenue)}</div>;
       case 'maNt':
@@ -1038,13 +1230,27 @@ export default function OrdersPage() {
       case 'tyGia':
         return <div className="text-sm text-gray-900">{formatValue(sale?.tyGia)}</div>;
       case 'maThue':
-        return <div className="text-sm text-gray-900">{sale?.maThue || '-'}</div>;
+        return <div className="text-sm text-gray-900">{sale?.maThue || TAX_CODE}</div>;
       case 'tkNo':
-        return <div className="text-sm text-gray-900">{sale?.tkNo || '-'}</div>;
+        return <div className="text-sm text-gray-900">{sale?.tkNo || DEBIT_ACCOUNT}</div>;
       case 'tkDoanhThu':
-        return <div className="text-sm text-gray-900">{sale?.tkDoanhThu || '-'}</div>;
+        // Lấy type từ department để quyết định dùng bán lẻ hay bán buôn
+        const deptTypeDoanhThu = sale?.department?.type;
+        const tkDoanhThu = deptTypeDoanhThu === 'Bán lẻ'
+          ? (sale?.product?.tkDoanhThuBanLe || sale?.tkDoanhThu || '-')
+          : deptTypeDoanhThu === 'Bán buôn'
+          ? (sale?.product?.tkDoanhThuBanBuon || sale?.tkDoanhThu || '-')
+          : (sale?.tkDoanhThu || '-');
+        return <div className="text-sm text-gray-900">{tkDoanhThu}</div>;
       case 'tkGiaVon':
-        return <div className="text-sm text-gray-900">{sale?.tkGiaVon || '-'}</div>;
+        // Lấy type từ department để quyết định dùng bán lẻ hay bán buôn
+        const deptTypeGiaVon = sale?.department?.type;
+        const tkGiaVon = deptTypeGiaVon === 'Bán lẻ'
+          ? (sale?.product?.tkGiaVonBanLe || sale?.tkGiaVon || '-')
+          : deptTypeGiaVon === 'Bán buôn'
+          ? (sale?.product?.tkGiaVonBanBuon || sale?.tkGiaVon || '-')
+          : (sale?.tkGiaVon || '-');
+        return <div className="text-sm text-gray-900">{tkGiaVon}</div>;
       case 'tkChiPhiKhuyenMai':
         return <div className="text-sm text-gray-900">{sale?.tkChiPhiKhuyenMai || '-'}</div>;
       case 'tkThueCo':
@@ -1087,6 +1293,80 @@ export default function OrdersPage() {
         return <div className="text-sm text-gray-900">{sale?.product?.tkGiaVonHangNo || '-'}</div>;
       case 'tkVatTuHangNo':
         return <div className="text-sm text-gray-900">{sale?.product?.tkVatTuHangNo || '-'}</div>;
+      case 'boPhan':
+        // Ưu tiên lấy branchCode từ sale, nếu không có mới lấy từ customer
+        return <div className="text-sm text-gray-900">{sale?.branchCode || order.customer.branch_code || sale?.boPhan || '-'}</div>;
+      case 'chietKhauMuaHangGiamGia':
+        // Map từ disc_amt (số tiền giảm giá), nếu không có thì dùng chietKhauMuaHangGiamGia, mặc định là 0
+        const chietKhauMuaHangGiamGia = sale?.disc_amt ?? sale?.chietKhauMuaHangGiamGia ?? 0;
+        return <div className="text-sm text-gray-900">{formatValue(chietKhauMuaHangGiamGia)}</div>;
+      case 'chietKhauMuaHangCkVip':
+        // Nếu không có giá trị thì hiển thị 0
+        const chietKhauMuaHangCkVip = sale?.chietKhauMuaHangCkVip ?? 0;
+        return <div className="text-sm text-gray-900">{formatValue(chietKhauMuaHangCkVip)}</div>;
+      case 'chietKhauThanhToanVoucher':
+        // Map từ paid_by_voucher_ecode_ecoin_bp (tổng tiền thanh toán bằng voucher/ecode/ecoin/BP), nếu không có thì dùng chietKhauThanhToanVoucher, mặc định là 0
+        const chietKhauThanhToanVoucher = sale?.paid_by_voucher_ecode_ecoin_bp ?? sale?.chietKhauThanhToanVoucher ?? 0;
+        return <div className="text-sm text-gray-900">{formatValue(chietKhauThanhToanVoucher)}</div>;
+      case 'thanhToanVoucher':
+        // Logic xác định loại voucher dựa trên cat1, itemcode, và paid_by_voucher_ecode_ecoin_bp
+        const paidByVoucher = sale?.paid_by_voucher_ecode_ecoin_bp ?? 0;
+        const revenueValue = sale?.revenue ?? 0;
+        const linetotalValue = sale?.linetotal ?? sale?.tienHang ?? 0;
+        const cat1Value = sale?.cat1 || sale?.catcode1 || '';
+        const itemCodeValue = sale?.itemCode || '';
+        
+        // Nếu revenue = 0 và linetotal = 0 → không gắn nhãn
+        if (revenueValue === 0 && linetotalValue === 0) {
+          return <div className="text-sm text-gray-400 italic">-</div>;
+        }
+        
+        // Nếu không có paid_by_voucher → không gắn nhãn
+        if (paidByVoucher <= 0) {
+          return <div className="text-sm text-gray-400 italic">-</div>;
+        }
+        
+        // Tập hợp các nhãn sẽ hiển thị
+        const labels: string[] = [];
+        
+        // FBV và TT luôn hiển thị nếu có paid_by_voucher > 0
+        labels.push('FBV');
+        labels.push('TT');
+        
+        // VCHH: Nếu cat1 = "CHANDO" hoặc itemcode bắt đầu bằng "S" hoặc "H"
+        if (cat1Value === 'CHANDO' || itemCodeValue.toUpperCase().startsWith('S') || itemCodeValue.toUpperCase().startsWith('H')) {
+          labels.push('VCHH');
+        }
+        
+        // VCDV: Nếu cat1 = "FACIALBAR" hoặc itemcode bắt đầu bằng "F" hoặc "V"
+        if (cat1Value === 'FACIALBAR' || itemCodeValue.toUpperCase().startsWith('F') || itemCodeValue.toUpperCase().startsWith('V')) {
+          labels.push('VCDV');
+        }
+        
+        // Hiển thị các nhãn, cách nhau bằng dấu cách
+        return <div className="text-sm text-gray-900">{labels.join(' ')}</div>;
+      case 'maThe':
+        // Nếu có mã lô (serial) → Bỏ trống
+        if (sale?.serial) {
+          return <div className="text-sm text-gray-400 italic">-</div>;
+        }
+        
+        // Nếu ordertype = "NORMAL" → Mã thẻ = branch_code/line_id
+        // Nếu ordertype = "LAM_DV" → Bỏ trống
+        const ordertypeForThe = sale?.ordertype;
+        const branchCodeForThe = sale?.branchCode || order.customer.branch_code;
+        const lineIdForThe = sale?.line_id;
+        
+        if (ordertypeForThe === 'NORMAL' && branchCodeForThe && lineIdForThe) {
+          return <div className="text-sm text-gray-900">{branchCodeForThe}/{lineIdForThe}</div>;
+        }
+        
+        if (ordertypeForThe === 'LAM_DV') {
+          return <div className="text-sm text-gray-400 italic">-</div>;
+        }
+        
+        // Các trường hợp khác: hiển thị giá trị gốc hoặc "-"
+        return <div className="text-sm text-gray-900">{sale?.maThe || '-'}</div>;
       default:
         // Xử lý các trường còn lại
         const value = sale?.[field as keyof typeof sale];
