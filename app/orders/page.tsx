@@ -5,6 +5,7 @@ import { salesApi } from '@/lib/api';
 import { Toast } from '@/components/Toast';
 import { TAX_CODE, DEBIT_ACCOUNT } from '@/lib/constants/accounting.constants';
 import { getOrderTypePrefix, ORDER_TYPE_NORMAL, ORDER_TYPE_LAM_DV, ORDER_TYPE_BAN_ECOIN, ORDER_TYPE_SAN_TMDT } from '@/lib/constants/order-type.constants';
+import { calculateThanhToanVoucher } from '@/lib/utils/voucher.utils';
 
 interface Order {
   docCode: string;
@@ -198,13 +199,13 @@ interface Order {
 type SaleItem = NonNullable<Order['sales']>[number];
 
 
-// Tính mã kho từ ordertype + branch_code
-const calculateMaKho = (ordertype: string | null | undefined, branchCode: string | null | undefined): string | null => {
+// Tính mã kho từ ordertype + ma_bp (bộ phận)
+const calculateMaKho = (ordertype: string | null | undefined, maBp: string | null | undefined): string | null => {
   const prefix = getOrderTypePrefix(ordertype);
-  if (!prefix || !branchCode) {
+  if (!prefix || !maBp) {
     return null;
   }
-  return prefix + branchCode;
+  return prefix + maBp;
 };
 
 // Định nghĩa các cột có thể hiển thị
@@ -1182,10 +1183,10 @@ export default function OrdersPage() {
         }
         return <div className="text-sm text-gray-900">{promotionCode}</div>;
       case 'maKho':
-        // branch_code là branchCode của sale, không phải của customer
-        const branchCode = sale?.branchCode || order.customer.branch_code;
-        const calculatedMaKho = sale?.ordertype && branchCode
-          ? calculateMaKho(sale.ordertype, branchCode)
+        // Lấy ma_bp từ department (bộ phận) thay vì branchCode
+        const maBpForMaKho = sale?.department?.ma_bp;
+        const calculatedMaKho = sale?.ordertype && maBpForMaKho
+          ? calculateMaKho(sale.ordertype, maBpForMaKho)
           : null;
         return <div className="text-sm text-gray-900">{calculatedMaKho || '-'}</div>;
       case 'maLo':
@@ -1298,42 +1299,11 @@ export default function OrdersPage() {
         const chietKhauThanhToanVoucher = sale?.paid_by_voucher_ecode_ecoin_bp ?? sale?.chietKhauThanhToanVoucher ?? 0;
         return <div className="text-sm text-gray-900">{formatValue(chietKhauThanhToanVoucher)}</div>;
       case 'thanhToanVoucher':
-        // Logic xác định loại voucher dựa trên cat1, itemcode, và paid_by_voucher_ecode_ecoin_bp
-        const paidByVoucher = sale?.paid_by_voucher_ecode_ecoin_bp ?? 0;
-        const revenueValue = sale?.revenue ?? 0;
-        const linetotalValue = sale?.linetotal ?? sale?.tienHang ?? 0;
-        const cat1Value = sale?.cat1 || sale?.catcode1 || '';
-        const itemCodeValue = sale?.itemCode || '';
-
-        // Nếu revenue = 0 và linetotal = 0 → không gắn nhãn
-        if (revenueValue === 0 && linetotalValue === 0) {
+        const voucherLabels = calculateThanhToanVoucher(sale);
+        if (!voucherLabels) {
           return <div className="text-sm text-gray-400 italic">-</div>;
         }
-
-        // Nếu không có paid_by_voucher → không gắn nhãn
-        if (paidByVoucher <= 0) {
-          return <div className="text-sm text-gray-400 italic">-</div>;
-        }
-
-        // Tập hợp các nhãn sẽ hiển thị
-        const labels: string[] = [];
-
-        // FBV và TT luôn hiển thị nếu có paid_by_voucher > 0
-        labels.push('FBV');
-        labels.push('TT');
-
-        // VCHH: Nếu cat1 = "CHANDO" hoặc itemcode bắt đầu bằng "S" hoặc "H"
-        if (cat1Value === 'CHANDO' || itemCodeValue.toUpperCase().startsWith('S') || itemCodeValue.toUpperCase().startsWith('H')) {
-          labels.push('VCHH');
-        }
-
-        // VCDV: Nếu cat1 = "FACIALBAR" hoặc itemcode bắt đầu bằng "F" hoặc "V"
-        if (cat1Value === 'FACIALBAR' || itemCodeValue.toUpperCase().startsWith('F') || itemCodeValue.toUpperCase().startsWith('V')) {
-          labels.push('VCDV');
-        }
-
-        // Hiển thị các nhãn, cách nhau bằng dấu cách
-        return <div className="text-sm text-gray-900">{labels.join(' ')}</div>;
+        return <div className="text-sm text-gray-900">{voucherLabels}</div>;
       case 'maThe':
         // Nếu có mã lô (serial) → Bỏ trống
         if (sale?.serial) {
