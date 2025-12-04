@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { salesApi } from '@/lib/api';
 import { Toast } from '@/components/Toast';
 import { TAX_CODE, DEBIT_ACCOUNT } from '@/lib/constants/accounting.constants';
+import { getOrderTypePrefix, ORDER_TYPE_NORMAL, ORDER_TYPE_LAM_DV, ORDER_TYPE_BAN_ECOIN, ORDER_TYPE_SAN_TMDT } from '@/lib/constants/order-type.constants';
 
 interface Order {
   docCode: string;
@@ -196,24 +197,6 @@ interface Order {
 
 type SaleItem = NonNullable<Order['sales']>[number];
 
-// Map ordertype sang L hoặc B
-const getOrderTypePrefix = (ordertype: string | null | undefined): string | null => {
-  if (!ordertype) return null;
-
-  // Kiểu L: 02. Làm dịch vụ, 04. Đổi DV, 08. Tách thẻ, Đổi thẻ KEEP->Thẻ DV
-  const typeL = ['LAM_DV', 'DOI_VO_LAY_DV', 'KEEP_TO_SVC', 'LAM_THE_DV', 'SUA_THE_DV', 'DOI_THE_DV', 'LAM_DV_LE', 'LAM_THE_KEEP', 'NOI_THE_KEEP', 'RENAME_CARD'];
-
-  // Kiểu B: 01.Thường, 03. Đổi điểm, 05. Tặng sinh nhật, 06. Đầu tư, 07. Bán tài khoản, 9. Sàn TMD
-  const typeB = ['NORMAL', 'KM_TRA_DL', 'BIRTHDAY_PROM', 'BP_TO_ITEM', 'BAN_ECOIN', 'SAN_TMDT', 'SO_DL', 'SO_HTDT_HB', 'SO_HTDT_HK', 'SO_HTDT_HL_CB', 'SO_HTDT_HL_HB', 'SO_HTDT_HL_KM', 'SO_HTDT_HT', 'ZERO_CTY', 'ZERO_SHOP'];
-
-  if (typeL.includes(ordertype)) {
-    return 'L';
-  } else if (typeB.includes(ordertype)) {
-    return 'B';
-  }
-
-  return null; // Không khớp thì bỏ
-};
 
 // Tính mã kho từ ordertype + branch_code
 const calculateMaKho = (ordertype: string | null | undefined, branchCode: string | null | undefined): string | null => {
@@ -1170,6 +1153,26 @@ export default function OrdersPage() {
           (sale?.catcode1 ? `${sale.catcode1}${sale.catcode2 ? ` / ${sale.catcode2}` : ''}${sale.catcode3 ? ` / ${sale.catcode3}` : ''}` : null);
         return <div className="text-sm text-gray-900">{loaiValue || '-'}</div>;
       case 'promCode':
+        // Tính giá bán
+        const tienHangForPromCode = sale?.linetotal ?? sale?.tienHang;
+        const qtyForPromCode = sale?.qty;
+        let giaBanForPromCode: number = 0;
+        if (tienHangForPromCode != null && qtyForPromCode != null && qtyForPromCode > 0) {
+          giaBanForPromCode = tienHangForPromCode / qtyForPromCode;
+        } else {
+          giaBanForPromCode = sale?.giaBan ?? 0;
+        }
+
+        // Nếu giá bán = 0 và ordertype là NORMAL, BAN_ECOIN, hoặc SAN_TMDT thì hiển thị "1"
+        const ordertypeForPromCode = sale?.ordertype;
+        if (giaBanForPromCode === 0 && ordertypeForPromCode && 
+            (ordertypeForPromCode === ORDER_TYPE_NORMAL || 
+             ordertypeForPromCode === ORDER_TYPE_BAN_ECOIN || 
+             ordertypeForPromCode === ORDER_TYPE_SAN_TMDT)) {
+          return <div className="text-sm text-gray-900">1</div>;
+        }
+
+        // Ngược lại hiển thị giá trị bình thường
         return <div className="text-sm text-gray-900">{sale?.promCode || '-'}</div>;
       case 'muaHangGiamGia':
         // Lấy code từ promotion API response
@@ -1343,11 +1346,11 @@ export default function OrdersPage() {
         const branchCodeForThe = sale?.branchCode || order.customer.branch_code;
         const lineIdForThe = sale?.line_id;
 
-        if (ordertypeForThe === 'NORMAL' && branchCodeForThe && lineIdForThe) {
+        if (ordertypeForThe === ORDER_TYPE_NORMAL && branchCodeForThe && lineIdForThe) {
           return <div className="text-sm text-gray-900">{branchCodeForThe}/{lineIdForThe}</div>;
         }
 
-        if (ordertypeForThe === 'LAM_DV') {
+        if (ordertypeForThe === ORDER_TYPE_LAM_DV) {
           return <div className="text-sm text-gray-400 italic">-</div>;
         }
 
