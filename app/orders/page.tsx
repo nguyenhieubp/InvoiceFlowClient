@@ -150,6 +150,7 @@ interface Order {
     revenue_retail?: number;
     paid_by_voucher_ecode_ecoin_bp?: number;
     product?: {
+      materialCode?: string;
       maVatTu?: string;
       tenVatTu?: string;
       maERP?: string;
@@ -186,6 +187,7 @@ interface Order {
       id?: string;
       ma_bp?: string;
       ten_bp?: string;
+      branchcode?: string;
       type?: string;
       [key: string]: any;
     } | null;
@@ -197,19 +199,19 @@ type SaleItem = NonNullable<Order['sales']>[number];
 // Map ordertype sang L hoặc B
 const getOrderTypePrefix = (ordertype: string | null | undefined): string | null => {
   if (!ordertype) return null;
-  
+
   // Kiểu L: 02. Làm dịch vụ, 04. Đổi DV, 08. Tách thẻ, Đổi thẻ KEEP->Thẻ DV
   const typeL = ['LAM_DV', 'DOI_VO_LAY_DV', 'KEEP_TO_SVC', 'LAM_THE_DV', 'SUA_THE_DV', 'DOI_THE_DV', 'LAM_DV_LE', 'LAM_THE_KEEP', 'NOI_THE_KEEP', 'RENAME_CARD'];
-  
+
   // Kiểu B: 01.Thường, 03. Đổi điểm, 05. Tặng sinh nhật, 06. Đầu tư, 07. Bán tài khoản, 9. Sàn TMD
   const typeB = ['NORMAL', 'KM_TRA_DL', 'BIRTHDAY_PROM', 'BP_TO_ITEM', 'BAN_ECOIN', 'SAN_TMDT', 'SO_DL', 'SO_HTDT_HB', 'SO_HTDT_HK', 'SO_HTDT_HL_CB', 'SO_HTDT_HL_HB', 'SO_HTDT_HL_KM', 'SO_HTDT_HT', 'ZERO_CTY', 'ZERO_SHOP'];
-  
+
   if (typeL.includes(ordertype)) {
     return 'L';
   } else if (typeB.includes(ordertype)) {
     return 'B';
   }
-  
+
   return null; // Không khớp thì bỏ
 };
 
@@ -223,7 +225,7 @@ const calculateMaKho = (ordertype: string | null | undefined, branchCode: string
 };
 
 // Định nghĩa các cột có thể hiển thị
-type OrderColumn = 
+type OrderColumn =
   | 'partnerCode'      // * Mã khách
   | 'customerName'     // * Tên khách hàng
   | 'customerMobile'   // Số điện thoại
@@ -464,8 +466,6 @@ const MAIN_COLUMNS: OrderColumn[] = [
   'docCode',                  // * Số hóa đơn
   'kyHieu',                   // * Ký hiệu
   'description',              // Diễn giải
-  'nhanVienBan',              // Nhân viên bán
-  'tenNhanVienBan',           // Tên nhân viên bán
   'itemCode',                 // * Mã hàng
   'itemName',                 // Tên mặt hàng
   'dvt',                      // Đvt
@@ -572,6 +572,7 @@ export default function OrdersPage() {
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [loadingPromotions, setLoadingPromotions] = useState(false);
   const [loadingDepartments, setLoadingDepartments] = useState(false);
+  const [selectedRowKey, setSelectedRowKey] = useState<string | null>(null);
 
   const showToast = (type: 'success' | 'error' | 'info', message: string) => {
     setToast({ type, message });
@@ -580,8 +581,9 @@ export default function OrdersPage() {
   // Helper function để map API response từ Loyalty API sang cấu trúc product
   const mapLoyaltyApiProductToProductItem = (apiProduct: any) => {
     if (!apiProduct) return null;
-    
+
     return {
+      materialCode: apiProduct.materialCode || null, // Thêm materialCode để dùng cho hiển thị
       maERP: apiProduct.materialCode || null,
       maVatTu: apiProduct.materialCode || null,
       tenVatTu: apiProduct.name || apiProduct.invoiceName || apiProduct.alternativeName || null,
@@ -605,13 +607,13 @@ export default function OrdersPage() {
   // Parse promCode từ format "Code-Name" để lấy code
   const parsePromCode = (promCode: string): string | null => {
     if (!promCode || promCode.trim() === '') return null;
-    
+
     // Nếu có dấu "-", lấy phần trước dấu "-" (code)
     const dashIndex = promCode.indexOf('-');
     if (dashIndex > 0) {
       return promCode.substring(0, dashIndex).trim();
     }
-    
+
     // Nếu không có dấu "-", trả về nguyên promCode
     return promCode.trim();
   };
@@ -637,12 +639,12 @@ export default function OrdersPage() {
         }
       );
 
-      
+
       if (!response.ok) {
         console.error(`Lỗi khi lấy promotion từ Loyalty API cho code ${codeForApi}: ${response.statusText}`);
         return null;
       }
-      
+
       const data = await response.json();
       // Lưu vào cache - sử dụng code từ response (chính xác hơn)
       if (data && data.code) {
@@ -658,7 +660,7 @@ export default function OrdersPage() {
         });
         return data;
       }
-      
+
       return null;
     } catch (error) {
       console.error(`Lỗi khi lấy promotion từ Loyalty API cho code ${codeForApi}:`, error);
@@ -677,7 +679,7 @@ export default function OrdersPage() {
 
     try {
       const response = await fetch(
-        `https://loyaltyapi.vmt.vn/departments?page=1&limit=25&ma_bp=${maBp}`,
+        `https://loyaltyapi.vmt.vn/departments?page=1&limit=25&branchcode=${maBp}`,
         {
           headers: { accept: 'application/json' },
         }
@@ -719,7 +721,7 @@ export default function OrdersPage() {
           headers: { accept: 'application/json' },
         }
       );
-      
+
       if (!response.ok) {
         console.error(`Lỗi khi lấy product từ Loyalty API cho materialCode ${materialCode}: ${response.statusText}`);
         return null;
@@ -727,13 +729,13 @@ export default function OrdersPage() {
 
       const data = await response.json();
       const mappedProduct = mapLoyaltyApiProductToProductItem(data);
-      
+
       // Lưu vào cache
       if (mappedProduct) {
         setProductCache(prev => new Map(prev).set(materialCode, mappedProduct));
         return mappedProduct;
       }
-      
+
       return null;
     } catch (error) {
       console.error(`Lỗi khi lấy product từ Loyalty API cho materialCode ${materialCode}:`, error);
@@ -764,12 +766,14 @@ export default function OrdersPage() {
 
     setLoadingProducts(true);
     try {
-      // Fetch tất cả products song song
-      const productPromises = itemCodesToFetch.map(itemCode => 
-        fetchProductFromLoyaltyAPI(itemCode)
-      );
-      
-      await Promise.all(productPromises);
+      // Giới hạn số requests đồng thời để tránh lag (batch 10 requests mỗi lần)
+      const BATCH_SIZE = 10;
+      for (let i = 0; i < itemCodesToFetch.length; i += BATCH_SIZE) {
+        const batch = itemCodesToFetch.slice(i, i + BATCH_SIZE);
+        await Promise.all(
+          batch.map(itemCode => fetchProductFromLoyaltyAPI(itemCode))
+        );
+      }
     } catch (error) {
       console.error('Error loading products:', error);
     } finally {
@@ -782,7 +786,7 @@ export default function OrdersPage() {
     // Lấy tất cả promCode unique từ orders (giữ nguyên promCode gốc)
     const promCodesSet = new Set<string>();
     const codeSet = new Set<string>(); // Set các code đã có trong cache
-    
+
     orders.forEach(order => {
       if (order.sales) {
         order.sales.forEach(sale => {
@@ -810,12 +814,14 @@ export default function OrdersPage() {
 
     setLoadingPromotions(true);
     try {
-      // Fetch tất cả promotions song song - truyền promCode gốc, function sẽ tự parse
-      const promotionPromises = promCodesToFetch.map(promCode => 
-        fetchPromotionFromLoyaltyAPI(promCode)
-      );
-      
-      await Promise.all(promotionPromises);
+      // Giới hạn số requests đồng thời để tránh lag (batch 10 requests mỗi lần)
+      const BATCH_SIZE = 10;
+      for (let i = 0; i < promCodesToFetch.length; i += BATCH_SIZE) {
+        const batch = promCodesToFetch.slice(i, i + BATCH_SIZE);
+        await Promise.all(
+          batch.map(promCode => fetchPromotionFromLoyaltyAPI(promCode))
+        );
+      }
     } catch (error) {
       console.error('Error loading promotions:', error);
     } finally {
@@ -823,19 +829,13 @@ export default function OrdersPage() {
     }
   };
 
-  // Load departments cho tất cả branch_code trong orders
+  // Load departments cho tất cả branch_code trong orders (tối ưu với batch và giới hạn concurrent)
   const loadDepartmentsForOrders = async (orders: Order[]): Promise<void> => {
-    // Lấy tất cả branch_code unique từ orders
+    // Lấy tất cả branch_code unique từ sales (bỏ customer branch_code vì không dùng)
     const branchCodes = new Set<string>();
-    
+
     orders.forEach(order => {
-      // Lấy branch_code từ customer
-      const branchCode = order.customer.branch_code;
-      if (branchCode && branchCode.trim() !== '') {
-        branchCodes.add(branchCode);
-      }
-      
-      // Lấy branch_code từ sale
+      // Chỉ lấy branch_code từ sale (vì department được enrich vào sale)
       if (order.sales) {
         order.sales.forEach(sale => {
           const saleBranchCode = sale.branchCode;
@@ -855,12 +855,14 @@ export default function OrdersPage() {
 
     setLoadingDepartments(true);
     try {
-      // Fetch tất cả departments song song
-      const departmentPromises = branchCodesToFetch.map(branchCode => 
-        fetchDepartmentFromLoyaltyAPI(branchCode)
-      );
-      
-      await Promise.all(departmentPromises);
+      // Giới hạn số requests đồng thời để tránh lag (batch 5 requests mỗi lần)
+      const BATCH_SIZE = 5;
+      for (let i = 0; i < branchCodesToFetch.length; i += BATCH_SIZE) {
+        const batch = branchCodesToFetch.slice(i, i + BATCH_SIZE);
+        await Promise.all(
+          batch.map(branchCode => fetchDepartmentFromLoyaltyAPI(branchCode))
+        );
+      }
     } catch (error) {
       console.error('Error loading departments:', error);
     } finally {
@@ -876,37 +878,31 @@ export default function OrdersPage() {
 
   // Enrich orders với products, promotions và departments từ cache
   const enrichOrdersWithProducts = (ordersToEnrich: Order[]): Order[] => {
-    return ordersToEnrich.map(order => {
-      // Lấy department cho order dựa trên branch_code
-      const orderBranchCode = order.customer.branch_code;
-      const orderDepartment = orderBranchCode && departmentCache.has(orderBranchCode)
-        ? departmentCache.get(orderBranchCode)
-        : null;
+    return ordersToEnrich.map(order => ({
+      ...order,
+      sales: order.sales?.map(sale => {
+        // Enrich product
+        const product = sale.itemCode && productCache.has(sale.itemCode)
+          ? productCache.get(sale.itemCode)
+          : sale.product || null;
 
-      return {
-        ...order,
-        sales: order.sales?.map(sale => {
-          // Enrich product
-          const product = sale.itemCode && productCache.has(sale.itemCode) 
-            ? productCache.get(sale.itemCode) 
-            : sale.product || null;
+        // Enrich promotion - tìm bằng code (từ parsed promCode)
+        let promotion = null;
+        if (sale.promCode) {
+          const parsedCode = parsePromCode(sale.promCode);
 
-          // Enrich promotion - tìm bằng code (từ parsed promCode)
-          let promotion = null;
-          if (sale.promCode) {
-            const parsedCode = parsePromCode(sale.promCode);
-            
-            // Tìm promotion trong cache bằng parsed code
-            if (parsedCode && promotionCache.has(parsedCode)) {
-              promotion = promotionCache.get(parsedCode);
-            }
+          // Tìm promotion trong cache bằng parsed code
+          if (parsedCode && promotionCache.has(parsedCode)) {
+            promotion = promotionCache.get(parsedCode);
           }
+        }
 
-          // Enrich department - ưu tiên từ sale.branchCode, nếu không có thì dùng order branch_code
-          const saleBranchCode = sale.branchCode || orderBranchCode;
-          const saleDepartment = saleBranchCode && departmentCache.has(saleBranchCode)
-            ? departmentCache.get(saleBranchCode)
-            : orderDepartment;
+        // Enrich department - lấy từ sale.branchCode
+        const saleBranchCode = sale.branchCode;
+        const saleDepartment = saleBranchCode && departmentCache.has(saleBranchCode)
+          ? departmentCache.get(saleBranchCode)
+          : null;
+          
 
           return {
             ...sale,
@@ -914,13 +910,12 @@ export default function OrdersPage() {
             promotion,
             department: saleDepartment,
             // Lấy muaHangGiamGia từ promotion nếu có
-            muaHangGiamGia: promotion?.muaHangGiamGia !== undefined 
-              ? promotion.muaHangGiamGia 
+            muaHangGiamGia: promotion?.muaHangGiamGia !== undefined
+              ? promotion.muaHangGiamGia
               : sale.muaHangGiamGia,
           };
         }) || [],
-      };
-    });
+    }));
   };
 
   const loadOrders = async () => {
@@ -932,7 +927,7 @@ export default function OrdersPage() {
         limit: 1000, // Lấy tất cả để search client-side
       });
       const ordersData = response.data.data || [];
-      
+
       // Lưu orders gốc
       setRawOrders(ordersData);
 
@@ -971,7 +966,7 @@ export default function OrdersPage() {
   // Xử lý search và pagination trên client
   useEffect(() => {
     let filtered = allOrders;
-    
+
     // Filter by search query
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
@@ -983,19 +978,19 @@ export default function OrdersPage() {
           (order.customer.mobile && order.customer.mobile.toLowerCase().includes(query))
       );
     }
-    
+
     // Filter by date range
     if (filter.dateFrom || filter.dateTo) {
       const dateFrom = filter.dateFrom ? new Date(filter.dateFrom) : null;
       const dateTo = filter.dateTo ? new Date(filter.dateTo) : null;
-      
+
       if (dateFrom) dateFrom.setHours(0, 0, 0, 0);
       if (dateTo) dateTo.setHours(23, 59, 59, 999);
-      
+
       filtered = filtered.filter((order) => {
         const orderDate = new Date(order.docDate);
         orderDate.setHours(0, 0, 0, 0);
-        
+
         if (dateFrom && dateTo) {
           return orderDate >= dateFrom && orderDate <= dateTo;
         } else if (dateFrom) {
@@ -1006,7 +1001,7 @@ export default function OrdersPage() {
         return true;
       });
     }
-    
+
     // Flatten orders thành rows (mỗi sale là một row)
     const allRows: Array<{ order: Order; sale: SaleItem | null }> = [];
     filtered.forEach((order) => {
@@ -1018,7 +1013,7 @@ export default function OrdersPage() {
         allRows.push({ order, sale: null });
       }
     });
-    
+
     // Update pagination info dựa trên số rows
     const total = allRows.length;
     const totalPages = Math.ceil(total / pagination.limit);
@@ -1027,12 +1022,12 @@ export default function OrdersPage() {
       total,
       totalPages,
     }));
-    
+
     // Pagination trên rows
     const startIndex = (pagination.page - 1) * pagination.limit;
     const endIndex = startIndex + pagination.limit;
     const paginatedRows = allRows.slice(startIndex, endIndex);
-    
+
     // Chuyển rows về orders để hiển thị
     const orderMap = new Map<string, Order>();
     paginatedRows.forEach((row) => {
@@ -1045,9 +1040,9 @@ export default function OrdersPage() {
         order.sales.push(row.sale);
       }
     });
-    
+
     setDisplayedOrders(Array.from(orderMap.values()));
-    
+
     // Reset về trang 1 nếu search query hoặc filter thay đổi
     if ((searchQuery || filter.dateFrom || filter.dateTo) && pagination.page !== 1) {
       setPagination((prev) => ({ ...prev, page: 1 }));
@@ -1063,7 +1058,7 @@ export default function OrdersPage() {
       } else {
         const allFields = Object.keys(FIELD_LABELS) as OrderColumn[];
         const fieldIndex = allFields.indexOf(field);
-        
+
         let insertIndex = prev.length;
         for (let i = 0; i < prev.length; i++) {
           const currentIndex = allFields.indexOf(prev[i]);
@@ -1072,7 +1067,7 @@ export default function OrdersPage() {
             break;
           }
         }
-        
+
         const newSelected = [...prev];
         newSelected.splice(insertIndex, 0, field);
         return newSelected;
@@ -1086,9 +1081,8 @@ export default function OrdersPage() {
     }
     if (typeof value === 'boolean') {
       return (
-        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-          value ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
-        }`}>
+        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${value ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+          }`}>
           {value ? 'Có' : 'Không'}
         </span>
       );
@@ -1127,15 +1121,11 @@ export default function OrdersPage() {
           </div>
         );
       case 'partnerCode':
-        return <div className="text-sm text-gray-900">{sale?.partnerCode || order.customer.code || '-'}</div>;
+        return <div className="text-sm text-gray-900">{sale?.partnerCode || '-'}</div>;
       case 'customerName':
         return (
           <div>
             <div className="text-sm font-medium text-gray-900">{order.customer.name}</div>
-            <div className="text-xs text-gray-500">{order.customer.code}</div>
-            {order.customer.brand && (
-              <div className="text-xs text-gray-400 capitalize">{order.customer.brand}</div>
-            )}
           </div>
         );
       case 'customerMobile':
@@ -1149,38 +1139,33 @@ export default function OrdersPage() {
       case 'customerGrade':
         return <div className="text-sm text-gray-900">{order.customer.grade_name || '-'}</div>;
       case 'kyHieu':
-        // Ưu tiên lấy branchCode từ sale, nếu không có mới lấy từ customer
-        return <div className="text-sm text-gray-900">{sale?.branchCode ||  '-'}</div>;
+        // Lấy branchcode từ department API (mã chi nhánh), nếu không có thì fallback về branchCode
+        return <div className="text-sm text-gray-900">{sale?.department?.branchcode || sale?.branchCode || '-'}</div>;
       case 'description':
         return <div className="text-sm text-gray-900">{order.docCode || '-'}</div>;
       case 'nhanVienBan':
         // Ưu tiên saleperson_id hoặc crm_emp_id, nếu không có thì dùng nhanVienBan
-        const nhanVienBanValue = sale?.saleperson_id?.toString() || sale?.crm_emp_id?.toString() || sale?.nhanVienBan;
+        const nhanVienBanValue = sale?.saleperson_id?.toString();
         return <div className="text-sm text-gray-900">{nhanVienBanValue || '-'}</div>;
       case 'tenNhanVienBan':
         return <div className="text-sm text-gray-900">{sale?.tenNhanVienBan || '-'}</div>;
       case 'itemCode':
-        const itemCode = sale?.itemCode || '-';
-        const itemName = sale?.product?.tenVatTu || sale?.itemName || '';
+        // Ưu tiên lấy maVatTu từ product (từ API response), nếu không có mới lấy từ sale.itemCode
+        const itemCode = sale?.product?.maVatTu;
         return (
           <div className="max-w-[120px]">
             <div className="text-sm font-semibold text-gray-900 truncate" title={itemCode}>
               {itemCode}
             </div>
-            {itemName && itemName !== '-' && (
-              <div className="text-xs text-gray-500 mt-0.5 truncate" title={itemName}>
-                {itemName}
-              </div>
-            )}
           </div>
         );
       case 'itemName':
-        return <div className="text-sm text-gray-900">{sale?.product?.tenVatTu || sale?.itemName || '-'}</div>;
+        return <div className="text-sm text-gray-900">{sale?.product?.tenVatTu || '-'}</div>;
       case 'dvt':
-        return <div className="text-sm text-gray-900">{sale?.product?.dvt || sale?.dvt || '-'}</div>;
+        return <div className="text-sm text-gray-900">{sale?.product?.dvt || '-'}</div>;
       case 'loai':
         // Map từ cat1, cat2, cat3 hoặc catcode1, catcode2, catcode3
-        const loaiValue = sale?.loai || 
+        const loaiValue = sale?.loai ||
           (sale?.cat1 ? `${sale.cat1}${sale.cat2 ? ` / ${sale.cat2}` : ''}${sale.cat3 ? ` / ${sale.cat3}` : ''}` : null) ||
           (sale?.catcode1 ? `${sale.catcode1}${sale.catcode2 ? ` / ${sale.catcode2}` : ''}${sale.catcode3 ? ` / ${sale.catcode3}` : ''}` : null);
         return <div className="text-sm text-gray-900">{loaiValue || '-'}</div>;
@@ -1197,19 +1182,19 @@ export default function OrdersPage() {
         // branch_code là branchCode của sale, không phải của customer
         const branchCode = sale?.branchCode || order.customer.branch_code;
         const calculatedMaKho = sale?.ordertype && branchCode
-          ? calculateMaKho(sale.ordertype, branchCode) 
+          ? calculateMaKho(sale.ordertype, branchCode)
           : null;
-        return <div className="text-sm text-gray-900">{calculatedMaKho || sale?.maKho || '-'}</div>;
+        return <div className="text-sm text-gray-900">{calculatedMaKho || '-'}</div>;
       case 'maLo':
         // Mã lô là giá trị serial từ sales
-        return <div className="text-sm text-gray-900">{sale?.serial || sale?.maLo || '-'}</div>;
+        return <div className="text-sm text-gray-900">{sale?.serial || '-'}</div>;
       case 'qty':
         return <div className="text-sm text-gray-900">{formatValue(sale?.qty)}</div>;
       case 'giaBan':
         // Giá bán = tiền hàng (linetotal hoặc tienHang) / số lượng (qty)
         const tienHangForGiaBan = sale?.linetotal ?? sale?.tienHang;
         const qtyForGiaBan = sale?.qty;
-        
+
         let giaBan: number | null = null;
         if (tienHangForGiaBan != null && qtyForGiaBan != null && qtyForGiaBan > 0) {
           giaBan = tienHangForGiaBan / qtyForGiaBan;
@@ -1217,7 +1202,7 @@ export default function OrdersPage() {
           // Nếu không tính được thì dùng giá trị gốc, mặc định là 0
           giaBan = sale?.giaBan ?? 0;
         }
-        
+
         return <div className="text-sm text-gray-900">{formatValue(giaBan)}</div>;
       case 'tienHang':
         // Ưu tiên linetotal (thành tiền của dòng), nếu không có thì dùng tienHang
@@ -1237,19 +1222,19 @@ export default function OrdersPage() {
         // Lấy type từ department để quyết định dùng bán lẻ hay bán buôn
         const deptTypeDoanhThu = sale?.department?.type;
         const tkDoanhThu = deptTypeDoanhThu === 'Bán lẻ'
-          ? (sale?.product?.tkDoanhThuBanLe || sale?.tkDoanhThu || '-')
+          ? (sale?.product?.tkDoanhThuBanLe || '-')
           : deptTypeDoanhThu === 'Bán buôn'
-          ? (sale?.product?.tkDoanhThuBanBuon || sale?.tkDoanhThu || '-')
-          : (sale?.tkDoanhThu || '-');
+            ? (sale?.product?.tkDoanhThuBanBuon || '-')
+            : '-';
         return <div className="text-sm text-gray-900">{tkDoanhThu}</div>;
       case 'tkGiaVon':
         // Lấy type từ department để quyết định dùng bán lẻ hay bán buôn
         const deptTypeGiaVon = sale?.department?.type;
         const tkGiaVon = deptTypeGiaVon === 'Bán lẻ'
-          ? (sale?.product?.tkGiaVonBanLe || sale?.tkGiaVon || '-')
+          ? (sale?.product?.tkGiaVonBanLe || '-')
           : deptTypeGiaVon === 'Bán buôn'
-          ? (sale?.product?.tkGiaVonBanBuon || sale?.tkGiaVon || '-')
-          : (sale?.tkGiaVon || '-');
+            ? (sale?.product?.tkGiaVonBanBuon || '-')
+            : '-';
         return <div className="text-sm text-gray-900">{tkGiaVon}</div>;
       case 'tkChiPhiKhuyenMai':
         return <div className="text-sm text-gray-900">{sale?.tkChiPhiKhuyenMai || '-'}</div>;
@@ -1294,8 +1279,9 @@ export default function OrdersPage() {
       case 'tkVatTuHangNo':
         return <div className="text-sm text-gray-900">{sale?.product?.tkVatTuHangNo || '-'}</div>;
       case 'boPhan':
-        // Ưu tiên lấy branchCode từ sale, nếu không có mới lấy từ customer
-        return <div className="text-sm text-gray-900">{sale?.branchCode || order.customer.branch_code || sale?.boPhan || '-'}</div>;
+        // Lấy ma_bp từ department API (mã bộ phận), nếu không có thì fallback về branchCode
+
+        return <div className="text-sm text-gray-900">{sale?.department?.ma_bp || sale?.branchCode || '-'}</div>;
       case 'chietKhauMuaHangGiamGia':
         // Map từ disc_amt (số tiền giảm giá), nếu không có thì dùng chietKhauMuaHangGiamGia, mặc định là 0
         const chietKhauMuaHangGiamGia = sale?.disc_amt ?? sale?.chietKhauMuaHangGiamGia ?? 0;
@@ -1315,34 +1301,34 @@ export default function OrdersPage() {
         const linetotalValue = sale?.linetotal ?? sale?.tienHang ?? 0;
         const cat1Value = sale?.cat1 || sale?.catcode1 || '';
         const itemCodeValue = sale?.itemCode || '';
-        
+
         // Nếu revenue = 0 và linetotal = 0 → không gắn nhãn
         if (revenueValue === 0 && linetotalValue === 0) {
           return <div className="text-sm text-gray-400 italic">-</div>;
         }
-        
+
         // Nếu không có paid_by_voucher → không gắn nhãn
         if (paidByVoucher <= 0) {
           return <div className="text-sm text-gray-400 italic">-</div>;
         }
-        
+
         // Tập hợp các nhãn sẽ hiển thị
         const labels: string[] = [];
-        
+
         // FBV và TT luôn hiển thị nếu có paid_by_voucher > 0
         labels.push('FBV');
         labels.push('TT');
-        
+
         // VCHH: Nếu cat1 = "CHANDO" hoặc itemcode bắt đầu bằng "S" hoặc "H"
         if (cat1Value === 'CHANDO' || itemCodeValue.toUpperCase().startsWith('S') || itemCodeValue.toUpperCase().startsWith('H')) {
           labels.push('VCHH');
         }
-        
+
         // VCDV: Nếu cat1 = "FACIALBAR" hoặc itemcode bắt đầu bằng "F" hoặc "V"
         if (cat1Value === 'FACIALBAR' || itemCodeValue.toUpperCase().startsWith('F') || itemCodeValue.toUpperCase().startsWith('V')) {
           labels.push('VCDV');
         }
-        
+
         // Hiển thị các nhãn, cách nhau bằng dấu cách
         return <div className="text-sm text-gray-900">{labels.join(' ')}</div>;
       case 'maThe':
@@ -1350,21 +1336,21 @@ export default function OrdersPage() {
         if (sale?.serial) {
           return <div className="text-sm text-gray-400 italic">-</div>;
         }
-        
+
         // Nếu ordertype = "NORMAL" → Mã thẻ = branch_code/line_id
         // Nếu ordertype = "LAM_DV" → Bỏ trống
         const ordertypeForThe = sale?.ordertype;
         const branchCodeForThe = sale?.branchCode || order.customer.branch_code;
         const lineIdForThe = sale?.line_id;
-        
+
         if (ordertypeForThe === 'NORMAL' && branchCodeForThe && lineIdForThe) {
           return <div className="text-sm text-gray-900">{branchCodeForThe}/{lineIdForThe}</div>;
         }
-        
+
         if (ordertypeForThe === 'LAM_DV') {
           return <div className="text-sm text-gray-400 italic">-</div>;
         }
-        
+
         // Các trường hợp khác: hiển thị giá trị gốc hoặc "-"
         return <div className="text-sm text-gray-900">{sale?.maThe || '-'}</div>;
       default:
@@ -1387,7 +1373,7 @@ export default function OrdersPage() {
   });
 
   const filteredColumns = Object.entries(FIELD_LABELS).filter(([key]) =>
-    columnSearchQuery.trim() === '' || 
+    columnSearchQuery.trim() === '' ||
     FIELD_LABELS[key as OrderColumn].toLowerCase().includes(columnSearchQuery.toLowerCase()) ||
     key.toLowerCase().includes(columnSearchQuery.toLowerCase())
   );
@@ -1564,15 +1550,27 @@ export default function OrdersPage() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {flattenedRows.map((row, index) => (
-                    <tr key={`${row.order.docCode}-${row.sale?.id || index}`} className="hover:bg-gray-50 transition-colors">
-                      {selectedColumns.map((column) => (
-                        <td key={column} className="px-4 py-3 whitespace-nowrap">
-                          {renderCellValue(row.order, row.sale, column)}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
+                  {flattenedRows.map((row, index) => {
+                    const rowKey = `${row.order.docCode}-${row.sale?.id || index}`;
+                    const isSelected = selectedRowKey === rowKey;
+                    return (
+                      <tr
+                        key={rowKey}
+                        onDoubleClick={() => setSelectedRowKey(isSelected ? null : rowKey)}
+                        className={`transition-colors cursor-pointer ${
+                          isSelected
+                            ? 'bg-blue-100 hover:bg-blue-200'
+                            : 'hover:bg-gray-50'
+                        }`}
+                      >
+                        {selectedColumns.map((column) => (
+                          <td key={column} className="px-4 py-3 whitespace-nowrap">
+                            {renderCellValue(row.order, row.sale, column)}
+                          </td>
+                        ))}
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -1598,7 +1596,7 @@ export default function OrdersPage() {
                     </select>
                     <span className="text-sm text-gray-700">bản ghi/trang</span>
                   </div>
-                  
+
                   <div className="flex items-center gap-3">
                     <p className="text-sm text-gray-700">
                       Hiển thị <span className="font-medium">{(pagination.page - 1) * pagination.limit + 1}</span> đến{' '}
@@ -1609,7 +1607,7 @@ export default function OrdersPage() {
                     </p>
                   </div>
                 </div>
-                
+
                 <div className="flex items-center gap-3">
                   <button
                     onClick={() => setPagination((prev) => ({ ...prev, page: Math.max(1, prev.page - 1) }))}
@@ -1620,11 +1618,11 @@ export default function OrdersPage() {
                       <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
                     </svg>
                   </button>
-                  
+
                   <span className="text-sm text-gray-700 font-medium">
                     Trang {pagination.page}/{pagination.totalPages || 1}
                   </span>
-                  
+
                   <button
                     onClick={() => setPagination((prev) => ({ ...prev, page: Math.min(prev.totalPages, prev.page + 1) }))}
                     disabled={pagination.page === pagination.totalPages || pagination.totalPages === 0}
