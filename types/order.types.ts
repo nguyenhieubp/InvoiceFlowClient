@@ -184,6 +184,7 @@ export interface SaleItem {
   saleperson_id?: number;
   revenue_retail?: number;
   paid_by_voucher_ecode_ecoin_bp?: number;
+  docsourcetype?: string;
   product?: OrderProduct | null;
   promotion?: OrderPromotion | null;
   department?: OrderDepartment | null;

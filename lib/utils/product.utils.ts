@@ -12,19 +12,30 @@ export const mapLoyaltyApiProductToProductItem = (apiProduct: any): OrderProduct
   if (!apiProduct) return null;
 
   return {
-    materialCode: apiProduct.materialCode || null,
-    maERP: apiProduct.materialCode || null,
-    maVatTu: apiProduct.materialCode || null,
+    materialCode: apiProduct.materialCode || apiProduct.code || null,
+    maERP: apiProduct.code || apiProduct.materialCode || null,
+    maVatTu: apiProduct.materialCode || apiProduct.code || null,
     tenVatTu: apiProduct.name || apiProduct.invoiceName || apiProduct.alternativeName || null,
-    dvt: apiProduct.dvt || apiProduct.unit || null,
+    dvt: apiProduct.unit || apiProduct.dvt || null, // Ưu tiên unit trước
     loaiVatTu: apiProduct.materialType || null,
     tkVatTu: apiProduct.materialAccount || null,
     tkGiaVonBanBuon: apiProduct.wholesaleCostAccount || null,
     tkDoanhThuBanBuon: apiProduct.wholesaleRevenueAccount || null,
     tkGiaVonBanLe: apiProduct.retailCostAccount || null,
     tkDoanhThuBanLe: apiProduct.retailRevenueAccount || null,
-    tkChiPhiKhuyenMai: null, // API không có trường này, để null
-    // Các trường khác không có trong OrderProduct interface sẽ không được map
+    tkChiPhiKhuyenMai: apiProduct.promotionCostAccount || null,
+    // Các trường khác nếu có trong OrderProduct interface
+    tkDoanhThuNoiBo: apiProduct.internalRevenueAccount || null,
+    tkHangBanTraLai: apiProduct.returnSalesAccount || null,
+    tkDaiLy: apiProduct.agentAccount || null,
+    tkSanPhamDoDang: apiProduct.workInProgressAccount || null,
+    tkChenhLechGiaVon: apiProduct.costVarianceAccount || null,
+    tkChietKhau: apiProduct.discountAccount || null,
+    tkChiPhiKhauHaoCCDC: apiProduct.depreciationCcdcAccount || null,
+    tkChiPhiKhauHaoTSDC: apiProduct.depreciationTsdcAccount || null,
+    tkDoanhThuHangNo: apiProduct.debtRevenueAccount || null,
+    tkGiaVonHangNo: apiProduct.debtCostAccount || null,
+    tkVatTuHangNo: apiProduct.debtMaterialAccount || null,
   };
 };
 

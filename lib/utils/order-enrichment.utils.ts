@@ -18,7 +18,7 @@ export const enrichOrdersWithProducts = (
   return ordersToEnrich.map(order => ({
     ...order,
     sales: order.sales?.map(sale => {
-      // Enrich product
+      // Enrich product - tìm trong cache bằng itemCode
       const product = sale.itemCode && productCache.has(sale.itemCode)
         ? productCache.get(sale.itemCode)!
         : sale.product || null;

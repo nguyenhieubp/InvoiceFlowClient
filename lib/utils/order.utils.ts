@@ -61,3 +61,35 @@ export const getFirstValue = (...values: Array<any>): any => {
   return null;
 };
 
+/**
+ * Tính mã lô từ serial dựa trên catcode1 và catcode2
+ * @param serial - Giá trị serial gốc
+ * @param catcode1 - Catcode1 (ví dụ: "MENARD")
+ * @param catcode2 - Catcode2 (ví dụ: "001_SKIN", "003_TPCN")
+ * @returns Mã lô đã được tính toán hoặc null
+ */
+export const calculateMaLo = (
+  serial: string | null | undefined,
+  catcode1: string | null | undefined,
+  catcode2: string | null | undefined
+): string | null => {
+  // Nếu không có serial, trả về null
+  if (!serial || serial.trim() === '') {
+    return null;
+  }
+
+  // Nếu catcode1 = "MENARD", áp dụng logic đặc biệt
+  if (catcode1 === 'MENARD') {
+    // Nếu catcode2 = "003_TPCN" => lấy 8 ký tự cuối
+    if (catcode2 === '003_TPCN') {
+      return serial.length >= 8 ? serial.slice(-8) : serial;
+    }
+    
+    // Nếu catcode2 = "001_SKIN" hoặc các trường hợp khác => lấy 4 ký tự cuối
+    return serial.length >= 4 ? serial.slice(-4) : serial;
+  }
+
+  // Các trường hợp khác, trả về serial gốc
+  return serial;
+};
+

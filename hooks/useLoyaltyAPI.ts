@@ -9,6 +9,7 @@ import { mapLoyaltyApiProductToProductItem } from '@/lib/utils/product.utils';
 import { parsePromCode } from '@/lib/utils/order.utils';
 import { extractUniqueItemCodes, extractUniquePromCodes, extractUniqueBranchCodes } from '@/lib/utils/order-enrichment.utils';
 import { Order } from '@/types/order.types';
+import { LOYALTY_API_BASE_URL, LOYALTY_API_ENDPOINTS } from '@/lib/constants/loyalty-api.constants';
 
 const BATCH_SIZE_PRODUCTS = 10;
 const BATCH_SIZE_PROMOTIONS = 10;
@@ -20,7 +21,7 @@ const BATCH_SIZE_DEPARTMENTS = 5;
 const fetchProductFromAPI = async (materialCode: string): Promise<OrderProduct | null> => {
   try {
     const response = await fetch(
-      `https://loyaltyapi.vmt.vn/products/material-code/${materialCode}`,
+      `${LOYALTY_API_BASE_URL}${LOYALTY_API_ENDPOINTS.PRODUCTS}/${materialCode}`,
       {
         headers: { accept: 'application/json' },
       }
@@ -43,7 +44,7 @@ const fetchProductFromAPI = async (materialCode: string): Promise<OrderProduct |
 const fetchPromotionFromAPI = async (code: string): Promise<OrderPromotion | null> => {
   try {
     const response = await fetch(
-      `https://loyaltyapi.vmt.vn/promotions/item/code/${code}`,
+      `${LOYALTY_API_BASE_URL}${LOYALTY_API_ENDPOINTS.PROMOTIONS}/${code}`,
       {
         headers: { accept: 'application/json' },
       }
@@ -67,10 +68,12 @@ const fetchDepartmentFromAPI = async (branchcode: string): Promise<OrderDepartme
   try {
     const response = await fetch(
       `https://loyaltyapi.vmt.vn/departments?page=1&limit=25&branchcode=${branchcode}`,
+      // `${LOYALTY_API_BASE_URL}${LOYALTY_API_ENDPOINTS.DEPARTMENTS}?page=1&limit=25&branchcode=${branchcode}`,
       {
         headers: { accept: 'application/json' },
       }
     );
+    console.log("===================",response)
 
     if (!response.ok) {
       return null;
