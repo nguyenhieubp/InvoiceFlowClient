@@ -647,9 +647,9 @@ export default function OrdersPage() {
         const chietKhauMuaHangGiamGia = sale?.disc_amt ?? sale?.chietKhauMuaHangGiamGia ?? 0;
         return <div className="text-sm text-gray-900">{formatValue(chietKhauMuaHangGiamGia)}</div>;
       case 'chietKhauMuaHangCkVip':
-        // Nếu không có giá trị thì hiển thị 0
-        const chietKhauMuaHangCkVip = sale?.chietKhauMuaHangCkVip ?? 0;
-        return <div className="text-sm text-gray-900">{formatValue(chietKhauMuaHangCkVip)}</div>;
+        // Lấy giá trị từ grade_discamt trong đơn hàng
+        const gradeDiscamt = sale?.grade_discamt ?? sale?.chietKhauMuaHangCkVip ?? 0;
+        return <div className="text-sm text-gray-900">{formatValue(gradeDiscamt)}</div>;
       case 'chietKhauThanhToanVoucher':
         // Map từ paid_by_voucher_ecode_ecoin_bp (tổng tiền thanh toán bằng voucher/ecode/ecoin/BP), nếu không có thì dùng chietKhauThanhToanVoucher, mặc định là 0
         const chietKhauThanhToanVoucher = sale?.paid_by_voucher_ecode_ecoin_bp ?? sale?.chietKhauThanhToanVoucher ?? 0;
