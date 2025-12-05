@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { salesApi } from '@/lib/api';
 import { Toast } from '@/components/Toast';
 import { TAX_CODE, DEBIT_ACCOUNT } from '@/lib/constants/accounting.constants';
-import { ORDER_TYPE_NORMAL, ORDER_TYPE_LAM_DV, ORDER_TYPE_BAN_ECOIN, ORDER_TYPE_SAN_TMDT } from '@/lib/constants/order-type.constants';
+import { ORDER_TYPE_NORMAL, ORDER_TYPE_LAM_DV, ORDER_TYPE_BAN_ECOIN, ORDER_TYPE_SAN_TMDT, mapOrderTypeNameToCode } from '@/lib/constants/order-type.constants';
 import { calculateThanhToanVoucher } from '@/lib/utils/voucher.utils';
 import { Order, SaleItem } from '@/types/order.types';
 import { OrderColumn, FIELD_LABELS, MAIN_COLUMNS } from '@/lib/constants/order-columns.constants';
@@ -34,6 +34,17 @@ export default function OrdersPage() {
   });
   const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
   const [selectedRowKey, setSelectedRowKey] = useState<string | null>(null);
+  const [columnFilters, setColumnFilters] = useState<Record<OrderColumn, string>>({} as Record<OrderColumn, string>);
+  const [syncing, setSyncing] = useState(false);
+  const [syncDate, setSyncDate] = useState<string>(() => {
+    // Format ngày hiện tại thành DDMMMYYYY (ví dụ: 04DEC2025)
+    const now = new Date();
+    const day = now.getDate().toString().padStart(2, '0');
+    const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+    const month = months[now.getMonth()];
+    const year = now.getFullYear();
+    return `${day}${month}${year}`;
+  });
 
   // Bỏ cache - chỉ dùng data trực tiếp từ backend order API
 
@@ -41,11 +52,56 @@ export default function OrdersPage() {
     setToast({ type, message });
   };
 
+  // Map company từ department sang brand
+  const mapCompanyToBrand = (company: string | null | undefined): string | undefined => {
+    if (!company) return undefined;
+    
+    const companyUpper = company.toUpperCase();
+    const brandMap: Record<string, string> = {
+      'F3': 'f3',
+      'FACIALBAR': 'f3',
+      'MENARD': 'menard',
+      'CHANDO': 'chando',
+      'LABHAIR': 'labhair',
+      'YAMAN': 'yaman',
+    };
+    
+    return brandMap[companyUpper] || company.toLowerCase();
+  };
+
+  // Hàm đồng bộ từ Zappy
+  const handleSyncFromZappy = async () => {
+    if (!syncDate.trim()) {
+      showToast('error', 'Vui lòng nhập ngày cần đồng bộ (format: DDMMMYYYY, ví dụ: 04DEC2025)');
+      return;
+    }
+
+    try {
+      setSyncing(true);
+      const response = await salesApi.syncFromZappy(syncDate.trim().toUpperCase());
+      const data = response.data;
+      
+      if (data.success) {
+        showToast('success', `${data.message}. Đã đồng bộ ${data.ordersCount} đơn hàng, ${data.salesCount} dòng bán hàng mới, ${data.customersCount} khách hàng mới.`);
+        // Reload orders sau khi đồng bộ thành công
+        await loadOrders();
+      } else {
+        showToast('error', data.message || 'Đồng bộ thất bại');
+      }
+    } catch (error: any) {
+      console.error('Error syncing from Zappy:', error);
+      showToast('error', error?.response?.data?.message || 'Lỗi khi đồng bộ dữ liệu từ Zappy');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   // Fetch product từ Loyalty API (đơn giản, không cache)
   const fetchProduct = async (itemCode: string): Promise<OrderProduct | null> => {
     if (!itemCode) return null;
     try {
-      const url = `${LOYALTY_API_BASE_URL}${LOYALTY_API_ENDPOINTS.PRODUCTS}?page=1&limit=10&sortBy=createdAt&sortOrder=DESC&search=${itemCode}`;
+      // Sử dụng endpoint mới: /products/code/{itemCode}
+      const url = `${LOYALTY_API_BASE_URL}${LOYALTY_API_ENDPOINTS.PRODUCT_BY_CODE}/${encodeURIComponent(itemCode)}`;
       console.log('Fetching product from:', url);
       
       const response = await fetch(url, {
@@ -72,22 +128,15 @@ export default function OrdersPage() {
       
       try {
         const responseData = JSON.parse(text);
-        // API trả về { data: { items: [...] } }
-        const items = responseData?.data?.items || [];
-        if (items.length === 0) {
-          console.warn(`No products found for ${itemCode}`);
-          return null;
+        
+        // API trả về { data: { item: {...} } } - một object duy nhất
+        if (responseData?.data?.item) {
+          const product = responseData.data.item;
+          return mapLoyaltyApiProductToProductItem(product);
         }
         
-        // Tìm item khớp với itemCode (có thể là code hoặc materialCode)
-        const matchedProduct = items.find((item: any) => 
-          item.code === itemCode || 
-          item.materialCode === itemCode ||
-          item.code?.toUpperCase() === itemCode.toUpperCase() ||
-          item.materialCode?.toUpperCase() === itemCode.toUpperCase()
-        ) || items[0]; // Nếu không tìm thấy chính xác, lấy item đầu tiên
-        
-        return mapLoyaltyApiProductToProductItem(matchedProduct);
+        console.warn(`No product found for ${itemCode}`);
+        return null;
       } catch (parseError) {
         console.error(`Failed to parse JSON for product ${itemCode}:`, parseError);
         console.error('Response text:', text);
@@ -202,6 +251,17 @@ export default function OrdersPage() {
     const enrichedOrders = orders.map(order => {
       if (!order.sales || order.sales.length === 0) return order;
       
+      // Tìm department đầu tiên để lấy company/brand
+      let departmentForBrand: OrderDepartment | null = null;
+      if (order.sales.length > 0 && order.sales[0].branchCode) {
+        departmentForBrand = departmentCache.get(order.sales[0].branchCode) || null;
+      }
+      
+      // Map company từ department sang brand cho customer
+      const brandFromDepartment = departmentForBrand?.company 
+        ? mapCompanyToBrand(departmentForBrand.company)
+        : undefined;
+      
       const enrichedSales = order.sales.map(sale => {
         let enrichedSale = { ...sale };
         
@@ -235,6 +295,11 @@ export default function OrdersPage() {
       
       return {
         ...order,
+        customer: {
+          ...order.customer,
+          // Cập nhật brand từ department.company nếu có
+          brand: brandFromDepartment || order.customer.brand || '',
+        },
         sales: enrichedSales,
       };
     });
@@ -326,8 +391,30 @@ export default function OrdersPage() {
       }
     });
 
-    // Update pagination info dựa trên số rows
-    const total = allRows.length;
+    // Apply column filters
+    const filteredRows = allRows.filter((row) => {
+      return selectedColumns.every((column) => {
+        const filterValue = columnFilters[column];
+        if (!filterValue || filterValue.trim() === '') {
+          return true; // Không có filter cho cột này
+        }
+
+        const cellValue = getCellRawValue(row.order, row.sale, column);
+        const searchValue = filterValue.toLowerCase().trim();
+        const cellValueLower = cellValue.toLowerCase();
+
+        // Hỗ trợ tìm kiếm số (so sánh chính xác hoặc chứa)
+        if (!isNaN(Number(searchValue)) && !isNaN(Number(cellValue))) {
+          return cellValue === searchValue || cellValueLower.includes(searchValue);
+        }
+
+        // Tìm kiếm text (chứa)
+        return cellValueLower.includes(searchValue);
+      });
+    });
+
+    // Update pagination info dựa trên số rows đã filter
+    const total = filteredRows.length;
     const totalPages = Math.ceil(total / pagination.limit);
     setPagination((prev) => ({
       ...prev,
@@ -335,10 +422,10 @@ export default function OrdersPage() {
       totalPages,
     }));
 
-    // Pagination trên rows
+    // Pagination trên rows đã filter
     const startIndex = (pagination.page - 1) * pagination.limit;
     const endIndex = startIndex + pagination.limit;
-    const paginatedRows = allRows.slice(startIndex, endIndex);
+    const paginatedRows = filteredRows.slice(startIndex, endIndex);
 
     // Chuyển rows về orders để hiển thị
     const orderMap = new Map<string, Order>();
@@ -355,12 +442,13 @@ export default function OrdersPage() {
 
     setDisplayedOrders(Array.from(orderMap.values()));
 
-    // Reset về trang 1 nếu search query hoặc filter thay đổi
-    if ((searchQuery || filter.dateFrom || filter.dateTo) && pagination.page !== 1) {
+    // Reset về trang 1 nếu search query, filter hoặc column filters thay đổi
+    const hasColumnFilters = Object.values(columnFilters).some(v => v && v.trim() !== '');
+    if ((searchQuery || filter.dateFrom || filter.dateTo || hasColumnFilters) && pagination.page !== 1) {
       setPagination((prev) => ({ ...prev, page: 1 }));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery, filter.dateFrom, filter.dateTo, allOrders, pagination.page, pagination.limit]);
+  }, [searchQuery, filter.dateFrom, filter.dateTo, columnFilters, allOrders, pagination.page, pagination.limit, selectedColumns]);
 
   // Enrich products chỉ cho displayedOrders (theo phân trang)
   useEffect(() => {
@@ -389,6 +477,12 @@ export default function OrdersPage() {
     setSelectedColumns(prev => {
       const index = prev.indexOf(field);
       if (index > -1) {
+        // Xóa filter của cột khi ẩn cột
+        setColumnFilters((prevFilters) => {
+          const newFilters = { ...prevFilters };
+          delete newFilters[field];
+          return newFilters;
+        });
         return prev.filter(col => col !== field);
       } else {
         const allFields = Object.keys(FIELD_LABELS) as OrderColumn[];
@@ -410,6 +504,23 @@ export default function OrdersPage() {
     });
   };
 
+  // Xóa filter của các cột không còn được hiển thị
+  useEffect(() => {
+    setColumnFilters((prevFilters) => {
+      const newFilters = { ...prevFilters };
+      let hasChanges = false;
+      
+      Object.keys(newFilters).forEach((column) => {
+        if (!selectedColumns.includes(column as OrderColumn)) {
+          delete newFilters[column as OrderColumn];
+          hasChanges = true;
+        }
+      });
+      
+      return hasChanges ? newFilters : prevFilters;
+    });
+  }, [selectedColumns]);
+
   const formatValue = (value: any): React.ReactNode => {
     if (value === null || value === undefined || value === '') {
       return <span className="text-gray-400 italic">-</span>;
@@ -429,6 +540,170 @@ export default function OrdersPage() {
       return value.toLocaleString('vi-VN');
     }
     return String(value);
+  };
+
+  // Hàm helper để lấy giá trị thô của cell (dùng cho filter)
+  const getCellRawValue = (order: Order, sale: SaleItem | null, field: OrderColumn): string => {
+    if (!sale && field !== 'docCode' && field !== 'docDate' && field !== 'customerName' && field !== 'partnerCode') {
+      return '';
+    }
+
+    switch (field) {
+      case 'docCode':
+        return order.docCode || '';
+      case 'docDate':
+        return new Date(order.docDate).toLocaleDateString('vi-VN', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+        });
+      case 'partnerCode':
+        return sale?.partnerCode || '';
+      case 'customerName':
+        return order.customer.name || '';
+      case 'customerMobile':
+        return order.customer.mobile || '';
+      case 'customerSexual':
+        return order.customer.sexual || '';
+      case 'customerAddress':
+        return order.customer.address || '';
+      case 'customerProvince':
+        return order.customer.province_name || '';
+      case 'customerGrade':
+        return order.customer.grade_name || '';
+      case 'kyHieu':
+        return sale?.department?.branchcode || sale?.branchCode || '';
+      case 'description':
+        return order.docCode || '';
+      case 'nhanVienBan':
+        return sale?.saleperson_id?.toString() || '';
+      case 'tenNhanVienBan':
+        return sale?.tenNhanVienBan || '';
+      case 'itemCode':
+        return sale?.product?.maVatTu || sale?.itemCode || '';
+      case 'itemName':
+        return sale?.product?.tenVatTu || sale?.itemName || '';
+      case 'dvt':
+        return sale?.product?.dvt || sale?.dvt || '';
+      case 'loai':
+        const loaiValue = sale?.loai ||
+          (sale?.cat1 ? `${sale.cat1}${sale.cat2 ? ` / ${sale.cat2}` : ''}${sale.cat3 ? ` / ${sale.cat3}` : ''}` : null) ||
+          (sale?.catcode1 ? `${sale.catcode1}${sale.catcode2 ? ` / ${sale.catcode2}` : ''}${sale.catcode3 ? ` / ${sale.catcode3}` : ''}` : null);
+        return loaiValue || '';
+      case 'promCode':
+        const tienHangForPromCode = sale?.linetotal ?? sale?.tienHang;
+        const qtyForPromCode = sale?.qty;
+        let giaBanForPromCode: number = 0;
+        if (tienHangForPromCode != null && qtyForPromCode != null && qtyForPromCode > 0) {
+          giaBanForPromCode = tienHangForPromCode / qtyForPromCode;
+        } else {
+          giaBanForPromCode = sale?.giaBan ?? 0;
+        }
+        const ordertypeForPromCode = mapOrderTypeNameToCode(sale?.ordertype) || sale?.ordertype;
+        if (giaBanForPromCode === 0 && ordertypeForPromCode && 
+            (ordertypeForPromCode === ORDER_TYPE_NORMAL || 
+             ordertypeForPromCode === ORDER_TYPE_BAN_ECOIN || 
+             ordertypeForPromCode === ORDER_TYPE_SAN_TMDT)) {
+          return '1';
+        }
+        return '';
+      case 'muaHangGiamGia':
+        return sale?.promCode || '';
+      case 'maKho':
+        const maBpForMaKho = sale?.department?.ma_bp;
+        const calculatedMaKho = sale?.ordertype && maBpForMaKho
+          ? calculateMaKho(sale.ordertype, maBpForMaKho)
+          : null;
+        return calculatedMaKho || '';
+      case 'maLo':
+        const maLo = calculateMaLo(sale?.serial, sale?.catcode1, sale?.catcode2);
+        return maLo || '';
+      case 'qty':
+        return sale?.qty?.toString() || '';
+      case 'giaBan':
+        const tienHangForGiaBan = sale?.linetotal ?? sale?.tienHang;
+        const qtyForGiaBan = sale?.qty;
+        let giaBan: number | null = null;
+        if (tienHangForGiaBan != null && qtyForGiaBan != null && qtyForGiaBan > 0) {
+          giaBan = tienHangForGiaBan / qtyForGiaBan;
+        } else {
+          giaBan = sale?.giaBan ?? 0;
+        }
+        return giaBan?.toString() || '';
+      case 'tienHang':
+        const tienHangValue = sale?.linetotal ?? sale?.tienHang;
+        return tienHangValue?.toString() || '';
+      case 'revenue':
+        return sale?.revenue?.toString() || '';
+      case 'maNt':
+        return sale?.maNt || '';
+      case 'tyGia':
+        return sale?.tyGia?.toString() || '';
+      case 'maThue':
+        return sale?.maThue || TAX_CODE;
+      case 'tkNo':
+        return sale?.tkNo || DEBIT_ACCOUNT;
+      case 'tkDoanhThu':
+        const deptTypeDoanhThu = sale?.department?.type;
+        let tkDoanhThu = '';
+        // So sánh không phân biệt hoa thường
+        if (deptTypeDoanhThu?.toLowerCase() === 'bán lẻ') {
+          tkDoanhThu = sale?.product?.tkDoanhThuBanLe || '';
+        } else if (deptTypeDoanhThu?.toLowerCase() === 'bán buôn') {
+          tkDoanhThu = sale?.product?.tkDoanhThuBanBuon || '';
+        }
+        return tkDoanhThu;
+      case 'tkGiaVon':
+        const deptTypeGiaVon = sale?.department?.type;
+        let tkGiaVon = '';
+        // So sánh không phân biệt hoa thường
+        if (deptTypeGiaVon?.toLowerCase() === 'bán lẻ') {
+          tkGiaVon = sale?.product?.tkGiaVonBanLe || '';
+        } else if (deptTypeGiaVon?.toLowerCase() === 'bán buôn') {
+          tkGiaVon = sale?.product?.tkGiaVonBanBuon || '';
+        }
+        return tkGiaVon;
+      case 'tkChiPhiKhuyenMai':
+        return sale?.tkChiPhiKhuyenMai || '';
+      case 'tkThueCo':
+        return sale?.tkThueCo || '';
+      case 'cucThue':
+        return sale?.cucThue || '';
+      case 'boPhan':
+        return sale?.department?.ma_bp || sale?.branchCode || '';
+      case 'chietKhauMuaHangGiamGia':
+        const chietKhauMuaHangGiamGia = sale?.disc_amt ?? sale?.chietKhauMuaHangGiamGia ?? 0;
+        return chietKhauMuaHangGiamGia.toString();
+      case 'chietKhauMuaHangCkVip':
+        const gradeDiscamt = sale?.grade_discamt ?? sale?.chietKhauMuaHangCkVip ?? 0;
+        return gradeDiscamt.toString();
+      case 'chietKhauThanhToanVoucher':
+        const chietKhauThanhToanVoucher = sale?.paid_by_voucher_ecode_ecoin_bp ?? sale?.chietKhauThanhToanVoucher ?? 0;
+        return chietKhauThanhToanVoucher.toString();
+      case 'thanhToanVoucher':
+        const voucherLabels = calculateThanhToanVoucher(sale);
+        return voucherLabels || '';
+      case 'maThe':
+        if (sale?.serial) {
+          return '';
+        }
+        const ordertypeForThe = mapOrderTypeNameToCode(sale?.ordertype) || sale?.ordertype;
+        const branchCodeForThe = sale?.branchCode || order.customer.branch_code;
+        const lineIdForThe = sale?.line_id;
+        if (ordertypeForThe === ORDER_TYPE_NORMAL && branchCodeForThe && lineIdForThe) {
+          return `${branchCodeForThe}/${lineIdForThe}`;
+        }
+        if (ordertypeForThe === ORDER_TYPE_LAM_DV) {
+          return '';
+        }
+        return sale?.maThe || '';
+      default:
+        const value = sale?.[field as keyof typeof sale];
+        if (value === null || value === undefined || value === '') {
+          return '';
+        }
+        return String(value);
+    }
   };
 
   const renderCellValue = (order: Order, sale: SaleItem | null, field: OrderColumn): React.ReactNode => {
@@ -494,7 +769,12 @@ export default function OrdersPage() {
         );
       case 'itemName':
         // Ưu tiên lấy từ product (đã được enrich), nếu không có thì lấy từ sale
-        return <div className="text-sm text-gray-900">{sale?.product?.tenVatTu || sale?.itemName || '-'}</div>;
+        // Nếu không có giá trị thì ẩn đi (không hiển thị gì)
+        const itemName = sale?.product?.tenVatTu || sale?.itemName;
+        if (!itemName) {
+          return null;
+        }
+        return <div className="text-sm text-gray-900">{itemName}</div>;
       case 'dvt':
         // Ưu tiên lấy từ product (đã được enrich), nếu không có thì lấy từ sale
         return <div className="text-sm text-gray-900">{sale?.product?.dvt || sale?.dvt || '-'}</div>;
@@ -517,7 +797,7 @@ export default function OrdersPage() {
 
         // Nếu giá bán = 0 và ordertype là NORMAL, BAN_ECOIN, hoặc SAN_TMDT thì hiển thị "1"
         // Ngược lại bỏ trống
-        const ordertypeForPromCode = sale?.ordertype;
+        const ordertypeForPromCode = mapOrderTypeNameToCode(sale?.ordertype) || sale?.ordertype;
         if (giaBanForPromCode === 0 && ordertypeForPromCode && 
             (ordertypeForPromCode === ORDER_TYPE_NORMAL || 
              ordertypeForPromCode === ORDER_TYPE_BAN_ECOIN || 
@@ -576,25 +856,27 @@ export default function OrdersPage() {
       case 'tkNo':
         return <div className="text-sm text-gray-900">{sale?.tkNo || DEBIT_ACCOUNT}</div>;
       case 'tkDoanhThu':
-        // Nếu department.type = "Bán lẻ" → hiển thị retailRevenueAccount (tkDoanhThuBanLe = "51111")
-        // Nếu department.type = "Bán buôn" → hiển thị wholesaleRevenueAccount (tkDoanhThuBanBuon = "51112")
+        // Nếu department.type = "bán lẻ" → hiển thị retailRevenueAccount (tkDoanhThuBanLe)
+        // Nếu department.type = "bán buôn" → hiển thị wholesaleRevenueAccount (tkDoanhThuBanBuon)
         const deptTypeDoanhThu = sale?.department?.type;
         let tkDoanhThu = '-';
-        if (deptTypeDoanhThu === 'Bán lẻ') {
-          tkDoanhThu = sale?.product?.tkDoanhThuBanLe || '-'; // retailRevenueAccount: "51111"
-        } else if (deptTypeDoanhThu === 'Bán buôn') {
-          tkDoanhThu = sale?.product?.tkDoanhThuBanBuon || '-'; // wholesaleRevenueAccount: "51112"
+        // So sánh không phân biệt hoa thường
+        if (deptTypeDoanhThu?.toLowerCase() === 'bán lẻ') {
+          tkDoanhThu = sale?.product?.tkDoanhThuBanLe || '-';
+        } else if (deptTypeDoanhThu?.toLowerCase() === 'bán buôn') {
+          tkDoanhThu = sale?.product?.tkDoanhThuBanBuon || '-';
         }
         return <div className="text-sm text-gray-900">{tkDoanhThu}</div>;
       case 'tkGiaVon':
-        // Nếu department.type = "Bán lẻ" → hiển thị retailCostAccount (tkGiaVonBanLe = "63211")
-        // Nếu department.type = "Bán buôn" → hiển thị wholesaleCostAccount (tkGiaVonBanBuon = "63212")
+        // Nếu department.type = "bán lẻ" → hiển thị retailCostAccount (tkGiaVonBanLe)
+        // Nếu department.type = "bán buôn" → hiển thị wholesaleCostAccount (tkGiaVonBanBuon)
         const deptTypeGiaVon = sale?.department?.type;
         let tkGiaVon = '-';
-        if (deptTypeGiaVon === 'Bán lẻ') {
-          tkGiaVon = sale?.product?.tkGiaVonBanLe || '-'; // retailCostAccount: "63211"
-        } else if (deptTypeGiaVon === 'Bán buôn') {
-          tkGiaVon = sale?.product?.tkGiaVonBanBuon || '-'; // wholesaleCostAccount: "63212"
+        // So sánh không phân biệt hoa thường
+        if (deptTypeGiaVon?.toLowerCase() === 'bán lẻ') {
+          tkGiaVon = sale?.product?.tkGiaVonBanLe || '-';
+        } else if (deptTypeGiaVon?.toLowerCase() === 'bán buôn') {
+          tkGiaVon = sale?.product?.tkGiaVonBanBuon || '-';
         }
         return <div className="text-sm text-gray-900">{tkGiaVon}</div>;
       case 'tkChiPhiKhuyenMai':
@@ -668,7 +950,7 @@ export default function OrdersPage() {
 
         // Nếu ordertype = "NORMAL" → Mã thẻ = branch_code/line_id
         // Nếu ordertype = "LAM_DV" → Bỏ trống
-        const ordertypeForThe = sale?.ordertype;
+        const ordertypeForThe = mapOrderTypeNameToCode(sale?.ordertype) || sale?.ordertype;
         const branchCodeForThe = sale?.branchCode || order.customer.branch_code;
         const lineIdForThe = sale?.line_id;
 
@@ -721,7 +1003,51 @@ export default function OrdersPage() {
             {/* Title and Actions */}
             <div className="flex items-center justify-between flex-wrap gap-3">
               <h1 className="text-2xl font-bold text-gray-900">Đơn hàng</h1>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* Sync from Zappy */}
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    placeholder="DDMMMYYYY (VD: 04DEC2025)"
+                    value={syncDate}
+                    onChange={(e) => setSyncDate(e.target.value)}
+                    className="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all w-40"
+                    disabled={syncing}
+                  />
+                  <button
+                    onClick={handleSyncFromZappy}
+                    disabled={syncing || !syncDate.trim()}
+                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-blue-600 rounded-lg hover:bg-blue-700 transition-colors inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Đồng bộ dữ liệu từ Zappy"
+                  >
+                    {syncing ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        Đang đồng bộ...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        Đồng bộ từ Zappy
+                      </>
+                    )}
+                  </button>
+                </div>
+                <button
+                  onClick={() => {
+                    setColumnFilters({} as Record<OrderColumn, string>);
+                    setPagination((prev) => ({ ...prev, page: 1 }));
+                  }}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors inline-flex items-center gap-2"
+                  title="Xóa tất cả bộ lọc cột"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  Xóa bộ lọc
+                </button>
                 <button
                   onClick={() => setShowColumnSelector(!showColumnSelector)}
                   className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors inline-flex items-center gap-2"
@@ -856,12 +1182,6 @@ export default function OrdersPage() {
               <p className="text-gray-500">Đang tải dữ liệu...</p>
             </div>
           </div>
-        ) : flattenedRows.length === 0 ? (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
-            <div className="text-center text-gray-500">
-              Không có dữ liệu
-            </div>
-          </div>
         ) : (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
             <div className="overflow-x-auto">
@@ -877,29 +1197,58 @@ export default function OrdersPage() {
                       </th>
                     ))}
                   </tr>
+                  <tr className="bg-gray-100 border-b border-gray-200">
+                    {selectedColumns.map((column) => (
+                      <th
+                        key={`filter-${column}`}
+                        className="px-4 py-2"
+                      >
+                        <input
+                          type="text"
+                          placeholder={`Lọc ${FIELD_LABELS[column]}`}
+                          value={columnFilters[column] || ''}
+                          onChange={(e) => {
+                            setColumnFilters((prev) => ({
+                              ...prev,
+                              [column]: e.target.value,
+                            }));
+                          }}
+                          className="w-full px-2 py-1 text-xs border border-gray-300 rounded-md bg-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </th>
+                    ))}
+                  </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {flattenedRows.map((row, index) => {
-                    const rowKey = `${row.order.docCode}-${row.sale?.id || index}`;
-                    const isSelected = selectedRowKey === rowKey;
-                    return (
-                      <tr
-                        key={rowKey}
-                        onDoubleClick={() => setSelectedRowKey(isSelected ? null : rowKey)}
-                        className={`transition-colors cursor-pointer ${
-                          isSelected
-                            ? 'bg-blue-100 hover:bg-blue-200'
-                            : 'hover:bg-gray-50'
-                        }`}
-                      >
-                        {selectedColumns.map((column) => (
-                          <td key={column} className="px-4 py-3 whitespace-nowrap">
-                            {renderCellValue(row.order, row.sale, column)}
-                          </td>
-                        ))}
-                      </tr>
-                    );
-                  })}
+                  {flattenedRows.length === 0 ? (
+                    <tr>
+                      <td colSpan={selectedColumns.length} className="px-4 py-8 text-center text-gray-500">
+                        Không có dữ liệu
+                      </td>
+                    </tr>
+                  ) : (
+                    flattenedRows.map((row, index) => {
+                      const rowKey = `${row.order.docCode}-${row.sale?.id || index}`;
+                      const isSelected = selectedRowKey === rowKey;
+                      return (
+                        <tr
+                          key={rowKey}
+                          onDoubleClick={() => setSelectedRowKey(isSelected ? null : rowKey)}
+                          className={`transition-colors cursor-pointer ${
+                            isSelected
+                              ? 'bg-blue-100 hover:bg-blue-200'
+                              : 'hover:bg-gray-50'
+                          }`}
+                        >
+                          {selectedColumns.map((column) => (
+                            <td key={column} className="px-4 py-3 whitespace-nowrap">
+                              {renderCellValue(row.order, row.sale, column)}
+                            </td>
+                          ))}
+                        </tr>
+                      );
+                    })
+                  )}
                 </tbody>
               </table>
             </div>

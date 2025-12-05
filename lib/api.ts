@@ -26,8 +26,11 @@ export const salesApi = {
   printOrders: (docCodes: string[]) => {
     return api.post('/sales/orders/print', { docCodes });
   },
-  getAllOrders: (params?: { brand?: string; processed?: boolean; page?: number; limit?: number }) => {
+  getAllOrders: (params?: { brand?: string; processed?: boolean; page?: number; limit?: number; date?: string }) => {
     return api.get('/sales', { params: { ...params, groupBy: 'order' } });
+  },
+  syncFromZappy: (date: string) => {
+    return api.post('/sales/sync-from-zappy', { date });
   },
 };
 

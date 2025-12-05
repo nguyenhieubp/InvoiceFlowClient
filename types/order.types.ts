@@ -61,6 +61,7 @@ export interface OrderDepartment {
   ten_bp?: string;
   branchcode?: string;
   type?: string;
+  company?: string; // F3, MENARD, etc.
   [key: string]: any;
 }
 
