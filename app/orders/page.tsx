@@ -17,7 +17,7 @@ import { OrderProduct, OrderDepartment } from '@/types/order.types';
 
 export default function OrdersPage() {
   const [allOrders, setAllOrders] = useState<Order[]>([]);
-  const [rawOrders, setRawOrders] = useState<Order[]>([]); 
+  const [rawOrders, setRawOrders] = useState<Order[]>([]);
   const [displayedOrders, setDisplayedOrders] = useState<Order[]>([]);
   const [enrichedDisplayedOrders, setEnrichedDisplayedOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -55,7 +55,7 @@ export default function OrdersPage() {
   // Map company từ department sang brand
   const mapCompanyToBrand = (company: string | null | undefined): string | undefined => {
     if (!company) return undefined;
-    
+
     const companyUpper = company.toUpperCase();
     const brandMap: Record<string, string> = {
       'F3': 'f3',
@@ -65,7 +65,7 @@ export default function OrdersPage() {
       'LABHAIR': 'labhair',
       'YAMAN': 'yaman',
     };
-    
+
     return brandMap[companyUpper] || company.toLowerCase();
   };
 
@@ -80,7 +80,7 @@ export default function OrdersPage() {
       setSyncing(true);
       const response = await salesApi.syncFromZappy(syncDate.trim().toUpperCase());
       const data = response.data;
-      
+
       if (data.success) {
         showToast('success', `${data.message}. Đã đồng bộ ${data.ordersCount} đơn hàng, ${data.salesCount} dòng bán hàng mới, ${data.customersCount} khách hàng mới.`);
         // Reload orders sau khi đồng bộ thành công
@@ -102,39 +102,37 @@ export default function OrdersPage() {
     try {
       // Sử dụng endpoint mới: /products/code/{itemCode}
       const url = `${LOYALTY_API_BASE_URL}${LOYALTY_API_ENDPOINTS.PRODUCT_BY_CODE}/${encodeURIComponent(itemCode)}`;
-      console.log('Fetching product from:', url);
-      
       const response = await fetch(url, {
         headers: { accept: 'application/json' },
       });
-      
+
       if (!response.ok) {
         console.error(`Failed to fetch product ${itemCode}:`, response.status, response.statusText);
         return null;
       }
-      
+
       // Kiểm tra content type và response text trước khi parse JSON
       const contentType = response.headers.get('content-type');
       if (!contentType || !contentType.includes('application/json')) {
         console.warn(`Product ${itemCode} response is not JSON:`, contentType);
         return null;
       }
-      
+
       const text = await response.text();
       if (!text || text.trim() === '') {
         console.warn(`Product ${itemCode} response is empty`);
         return null;
       }
-      
+
       try {
         const responseData = JSON.parse(text);
-        
+
         // API trả về { data: { item: {...} } } - một object duy nhất
         if (responseData?.data?.item) {
           const product = responseData.data.item;
           return mapLoyaltyApiProductToProductItem(product);
         }
-        
+
         console.warn(`No product found for ${itemCode}`);
         return null;
       } catch (parseError) {
@@ -153,37 +151,32 @@ export default function OrdersPage() {
     if (!branchcode) return null;
     try {
       const url = `${LOYALTY_API_BASE_URL}${LOYALTY_API_ENDPOINTS.DEPARTMENTS}?page=1&limit=25&branchcode=${branchcode}`;
-      console.log('Fetching department from:', url);
-      
       const response = await fetch(url, {
         headers: { accept: 'application/json' },
       });
-      
+
       if (!response.ok) {
         console.error(`Failed to fetch department ${branchcode}:`, response.status, response.statusText);
         return null;
       }
-      
+
       const contentType = response.headers.get('content-type');
       if (!contentType || !contentType.includes('application/json')) {
         console.warn(`Department ${branchcode} response is not JSON:`, contentType);
         return null;
       }
-      
+
       const text = await response.text();
       if (!text || text.trim() === '') {
         console.warn(`Department ${branchcode} response is empty`);
         return null;
       }
-      
+
       try {
         const data = JSON.parse(text);
         const department = data?.data?.items?.[0] || null;
-        console.log(`Department ${branchcode} fetched:`, department);
         return department;
       } catch (parseError) {
-        console.error(`Failed to parse JSON for department ${branchcode}:`, parseError);
-        console.error('Response text:', text);
         return null;
       }
     } catch (error) {
@@ -197,7 +190,7 @@ export default function OrdersPage() {
     // Collect tất cả itemCodes và branchCodes cần fetch
     const itemCodesToFetch = new Set<string>();
     const branchCodesToFetch = new Set<string>();
-    
+
     orders.forEach(order => {
       order.sales?.forEach(sale => {
         if (sale.itemCode) {
@@ -213,13 +206,13 @@ export default function OrdersPage() {
     const BATCH_SIZE = 10;
     const itemCodesArray = Array.from(itemCodesToFetch);
     const productCache = new Map<string, OrderProduct>();
-    
+
     for (let i = 0; i < itemCodesArray.length; i += BATCH_SIZE) {
       const batch = itemCodesArray.slice(i, i + BATCH_SIZE);
       const products = await Promise.all(
         batch.map(itemCode => fetchProduct(itemCode))
       );
-      
+
       batch.forEach((itemCode, index) => {
         const product = products[index];
         if (product) {
@@ -232,13 +225,13 @@ export default function OrdersPage() {
     const BATCH_SIZE_DEPT = 5;
     const branchCodesArray = Array.from(branchCodesToFetch);
     const departmentCache = new Map<string, OrderDepartment>();
-    
+
     for (let i = 0; i < branchCodesArray.length; i += BATCH_SIZE_DEPT) {
       const batch = branchCodesArray.slice(i, i + BATCH_SIZE_DEPT);
       const departments = await Promise.all(
         batch.map(branchCode => fetchDepartment(branchCode))
       );
-      
+
       batch.forEach((branchCode, index) => {
         const department = departments[index];
         if (department) {
@@ -250,21 +243,21 @@ export default function OrdersPage() {
     // Enrich orders với products và departments từ cache
     const enrichedOrders = orders.map(order => {
       if (!order.sales || order.sales.length === 0) return order;
-      
+
       // Tìm department đầu tiên để lấy company/brand
       let departmentForBrand: OrderDepartment | null = null;
       if (order.sales.length > 0 && order.sales[0].branchCode) {
         departmentForBrand = departmentCache.get(order.sales[0].branchCode) || null;
       }
-      
+
       // Map company từ department sang brand cho customer
-      const brandFromDepartment = departmentForBrand?.company 
+      const brandFromDepartment = departmentForBrand?.company
         ? mapCompanyToBrand(departmentForBrand.company)
         : undefined;
-      
+
       const enrichedSales = order.sales.map(sale => {
         let enrichedSale = { ...sale };
-        
+
         // Enrich product
         if (sale.itemCode) {
           const product = productCache.get(sale.itemCode);
@@ -278,7 +271,7 @@ export default function OrdersPage() {
             };
           }
         }
-        
+
         // Enrich department
         if (sale.branchCode) {
           const department = departmentCache.get(sale.branchCode);
@@ -289,10 +282,10 @@ export default function OrdersPage() {
             };
           }
         }
-        
+
         return enrichedSale;
       });
-      
+
       return {
         ...order,
         customer: {
@@ -303,7 +296,7 @@ export default function OrdersPage() {
         sales: enrichedSales,
       };
     });
-    
+
     return enrichedOrders;
   };
 
@@ -317,7 +310,7 @@ export default function OrdersPage() {
         limit: 1000, // Lấy tất cả để search client-side
       });
       const rawData = response.data.data || [];
-      
+
       // Normalize dữ liệu - hỗ trợ cả format cũ và format mới từ ERP
       const ordersData = normalizeOrderData(rawData);
 
@@ -457,11 +450,9 @@ export default function OrdersPage() {
       return;
     }
 
-    console.log('Starting enrich for displayedOrders:', displayedOrders.length, 'orders');
     const enrichDisplayed = async () => {
       try {
         const enriched = await enrichOrdersWithProducts(displayedOrders);
-        console.log('Enrichment completed, enriched orders:', enriched.length);
         setEnrichedDisplayedOrders(enriched);
       } catch (error) {
         console.error('Error enriching orders:', error);
@@ -509,14 +500,14 @@ export default function OrdersPage() {
     setColumnFilters((prevFilters) => {
       const newFilters = { ...prevFilters };
       let hasChanges = false;
-      
+
       Object.keys(newFilters).forEach((column) => {
         if (!selectedColumns.includes(column as OrderColumn)) {
           delete newFilters[column as OrderColumn];
           hasChanges = true;
         }
       });
-      
+
       return hasChanges ? newFilters : prevFilters;
     });
   }, [selectedColumns]);
@@ -600,10 +591,10 @@ export default function OrdersPage() {
           giaBanForPromCode = sale?.giaBan ?? 0;
         }
         const ordertypeForPromCode = mapOrderTypeNameToCode(sale?.ordertype) || sale?.ordertype;
-        if (giaBanForPromCode === 0 && ordertypeForPromCode && 
-            (ordertypeForPromCode === ORDER_TYPE_NORMAL || 
-             ordertypeForPromCode === ORDER_TYPE_BAN_ECOIN || 
-             ordertypeForPromCode === ORDER_TYPE_SAN_TMDT)) {
+        if (giaBanForPromCode === 0 && ordertypeForPromCode &&
+          (ordertypeForPromCode === ORDER_TYPE_NORMAL ||
+            ordertypeForPromCode === ORDER_TYPE_BAN_ECOIN ||
+            ordertypeForPromCode === ORDER_TYPE_SAN_TMDT)) {
           return '1';
         }
         return '';
@@ -798,10 +789,10 @@ export default function OrdersPage() {
         // Nếu giá bán = 0 và ordertype là NORMAL, BAN_ECOIN, hoặc SAN_TMDT thì hiển thị "1"
         // Ngược lại bỏ trống
         const ordertypeForPromCode = mapOrderTypeNameToCode(sale?.ordertype) || sale?.ordertype;
-        if (giaBanForPromCode === 0 && ordertypeForPromCode && 
-            (ordertypeForPromCode === ORDER_TYPE_NORMAL || 
-             ordertypeForPromCode === ORDER_TYPE_BAN_ECOIN || 
-             ordertypeForPromCode === ORDER_TYPE_SAN_TMDT)) {
+        if (giaBanForPromCode === 0 && ordertypeForPromCode &&
+          (ordertypeForPromCode === ORDER_TYPE_NORMAL ||
+            ordertypeForPromCode === ORDER_TYPE_BAN_ECOIN ||
+            ordertypeForPromCode === ORDER_TYPE_SAN_TMDT)) {
           return <div className="text-sm text-gray-900">1</div>;
         }
 
@@ -925,9 +916,9 @@ export default function OrdersPage() {
         // Lấy ma_bp từ department API (mã bộ phận), nếu không có thì fallback về branchCode
         return <div className="text-sm text-gray-900">{sale?.department?.ma_bp || sale?.branchCode || '-'}</div>;
       case 'chietKhauMuaHangGiamGia':
-        // Map từ disc_amt (số tiền giảm giá), nếu không có thì dùng chietKhauMuaHangGiamGia, mặc định là 0
-        const chietKhauMuaHangGiamGia = sale?.disc_amt ?? sale?.chietKhauMuaHangGiamGia ?? 0;
-        return <div className="text-sm text-gray-900">{formatValue(chietKhauMuaHangGiamGia)}</div>;
+     
+        const other_discamt = sale?.other_discamt ?? 0;
+        return <div className="text-sm text-gray-900">{formatValue(other_discamt)}</div>;
       case 'chietKhauMuaHangCkVip':
         // Lấy giá trị từ grade_discamt trong đơn hàng
         const gradeDiscamt = sale?.grade_discamt ?? sale?.chietKhauMuaHangCkVip ?? 0;
@@ -1234,11 +1225,10 @@ export default function OrdersPage() {
                         <tr
                           key={rowKey}
                           onDoubleClick={() => setSelectedRowKey(isSelected ? null : rowKey)}
-                          className={`transition-colors cursor-pointer ${
-                            isSelected
+                          className={`transition-colors cursor-pointer ${isSelected
                               ? 'bg-blue-100 hover:bg-blue-200'
                               : 'hover:bg-gray-50'
-                          }`}
+                            }`}
                         >
                           {selectedColumns.map((column) => (
                             <td key={column} className="px-4 py-3 whitespace-nowrap">

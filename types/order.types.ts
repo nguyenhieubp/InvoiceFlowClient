@@ -181,6 +181,7 @@ export interface SaleItem {
   partner_name?: string;
   crm_branch_id?: number;
   grade_discamt?: number;
+  other_discamt?: number;
   revenue_wsale?: number;
   saleperson_id?: number;
   revenue_retail?: number;
