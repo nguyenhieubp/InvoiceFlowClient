@@ -674,7 +674,13 @@ export default function OrdersPage() {
       case 'thanhToanVoucher':
         const voucherLabels = calculateThanhToanVoucher(sale);
         return voucherLabels || '';
+      case 'soSerial':
+        return sale?.serial || '';
       case 'maThe':
+        // Ưu tiên mvc_serial (từ Zappy API), nếu không có thì dùng maThe
+        if (sale?.mvc_serial) {
+          return sale.mvc_serial;
+        }
         if (sale?.serial) {
           return '';
         }
@@ -933,28 +939,12 @@ export default function OrdersPage() {
           return <div className="text-sm text-gray-400 italic">-</div>;
         }
         return <div className="text-sm text-gray-900">{voucherLabels}</div>;
+      case 'soSerial':
+        // Lấy từ serial (backend lưu vào sale.serial)
+        return <div className="text-sm text-gray-900">{sale?.serial || '-'}</div>;
       case 'maThe':
-        // Nếu có mã lô (serial) → Bỏ trống
-        if (sale?.serial) {
-          return <div className="text-sm text-gray-400 italic">-</div>;
-        }
-
-        // Nếu ordertype = "NORMAL" → Mã thẻ = branch_code/line_id
-        // Nếu ordertype = "LAM_DV" → Bỏ trống
-        const ordertypeForThe = mapOrderTypeNameToCode(sale?.ordertype) || sale?.ordertype;
-        const branchCodeForThe = sale?.branchCode || order.customer.branch_code;
-        const lineIdForThe = sale?.line_id;
-
-        if (ordertypeForThe === ORDER_TYPE_NORMAL && branchCodeForThe && lineIdForThe) {
-          return <div className="text-sm text-gray-900">{branchCodeForThe}/{lineIdForThe}</div>;
-        }
-
-        if (ordertypeForThe === ORDER_TYPE_LAM_DV) {
-          return <div className="text-sm text-gray-400 italic">-</div>;
-        }
-
-        // Các trường hợp khác: hiển thị giá trị gốc hoặc "-"
-        return <div className="text-sm text-gray-900">{sale?.maThe || '-'}</div>;
+        // Ưu tiên mvc_serial (từ Zappy API)
+          return <div className="text-sm text-gray-900">{sale?.maThe ?? '-'}</div>;
       default:
         // Xử lý các trường còn lại
         const value = sale?.[field as keyof typeof sale];

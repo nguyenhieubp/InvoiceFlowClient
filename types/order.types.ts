@@ -179,6 +179,7 @@ export interface SaleItem {
   doctype_name?: string;
   order_source?: string | null;
   partner_name?: string;
+  mvc_serial?: string; // Mã thẻ từ Zappy API
   crm_branch_id?: number;
   grade_discamt?: number;
   other_discamt?: number;
