@@ -9,76 +9,50 @@ import { mapLoyaltyApiProductToProductItem } from '@/lib/utils/product.utils';
 import { parsePromCode } from '@/lib/utils/order.utils';
 import { extractUniqueItemCodes, extractUniquePromCodes, extractUniqueBranchCodes } from '@/lib/utils/order-enrichment.utils';
 import { Order } from '@/types/order.types';
-import { LOYALTY_API_BASE_URL } from '@/lib/constants/loyalty-api.constants';
+import { categoriesApi } from '@/lib/api';
 
 const BATCH_SIZE_PRODUCTS = 10;
 const BATCH_SIZE_PROMOTIONS = 10;
 const BATCH_SIZE_DEPARTMENTS = 5;
 
 /**
- * Fetch product từ Loyalty API
+ * Fetch product từ backend API (proxy đến Loyalty API)
  */
 const fetchProductFromAPI = async (materialCode: string): Promise<OrderProduct | null> => {
   try {
-    const response = await fetch(
-      `${LOYALTY_API_BASE_URL}${'products/code/'}/${materialCode}`,
-      {
-        headers: { accept: 'application/json' },
-      }
-    );
-
-    if (!response.ok) {
-      return null;
+    const response = await categoriesApi.getProductByCode(materialCode);
+    const product = response.data;
+    
+    if (product) {
+      return mapLoyaltyApiProductToProductItem(product);
     }
-
-    const data = await response.json();
-    return mapLoyaltyApiProductToProductItem(data);
+    
+    return null;
   } catch (error) {
     return null;
   }
 };
 
 /**
- * Fetch promotion từ Loyalty API
+ * Fetch promotion từ backend API (proxy đến Loyalty API)
  */
 const fetchPromotionFromAPI = async (code: string): Promise<OrderPromotion | null> => {
   try {
-    const response = await fetch(
-      `${LOYALTY_API_BASE_URL}${'promotions/item/code/'}/${code}`,
-      {
-        headers: { accept: 'application/json' },
-      }
-    );
-
-    if (!response.ok) {
-      return null;
-    }
-
-    const data = await response.json();
-    return data && data.code ? data : null;
+    const response = await categoriesApi.getPromotionByCode(code);
+    const promotion = response.data;
+    return promotion && promotion.code ? promotion : null;
   } catch (error) {
     return null;
   }
 };
 
 /**
- * Fetch department từ Loyalty API
+ * Fetch department từ backend API (proxy đến Loyalty API)
  */
 const fetchDepartmentFromAPI = async (branchcode: string): Promise<OrderDepartment | null> => {
   try {
-    const response = await fetch(
-      `${LOYALTY_API_BASE_URL}${'departments?page=1&limit=25&branchcode='}/${branchcode}`,
-      {
-        headers: { accept: 'application/json' },
-      }
-    );
-
-    if (!response.ok) {
-      return null;
-    }
-
-    const data = await response.json();
-    return data?.data?.items?.[0] || null;
+    const response = await categoriesApi.getDepartmentByBranchCode(branchcode);
+    return response.data || null;
   } catch (error) {
     return null;
   }

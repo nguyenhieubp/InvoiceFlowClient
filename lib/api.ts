@@ -32,6 +32,12 @@ export const salesApi = {
   syncFromZappy: (date: string) => {
     return api.post('/sales/sync-from-zappy', { date });
   },
+  createInvoiceViaFastApi: (docCode: string) => {
+    return api.post(`/sales/order/${docCode}/create-invoice-fast`);
+  },
+  createMultipleInvoicesViaFastApi: (docCodes: string[]) => {
+    return api.post('/sales/orders/create-invoice-fast', { docCodes });
+  },
 };
 
 // Invoices API
@@ -149,6 +155,16 @@ export const categoriesApi = {
   },
   getCustomerByCode: (code: string) => {
     return api.get(`/categories/customers/${code}`);
+  },
+  // Loyalty API Proxy
+  getProductByCode: (itemCode: string) => {
+    return api.get(`/categories/loyalty/products/code/${encodeURIComponent(itemCode)}`);
+  },
+  getDepartmentByBranchCode: (branchcode: string) => {
+    return api.get(`/categories/loyalty/departments?branchcode=${branchcode}`);
+  },
+  getPromotionByCode: (code: string) => {
+    return api.get(`/categories/loyalty/promotions/item/code/${encodeURIComponent(code)}`);
   },
 };
 
