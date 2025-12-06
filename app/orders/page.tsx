@@ -45,6 +45,7 @@ export default function OrdersPage() {
     const year = now.getFullYear();
     return `${day}${month}${year}`;
   });
+  const [submittingInvoice, setSubmittingInvoice] = useState(false);
 
   // Bỏ cache - chỉ dùng data trực tiếp từ backend order API
 
@@ -952,7 +953,401 @@ export default function OrdersPage() {
     }
   };
 
+  // Hàm login để lấy token
+  const loginToGetToken = async (): Promise<string | null> => {
+    try {
+      const response = await fetch('http://103.145.79.169:6688/Fast/Login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          UserName: 'F3',
+          Password: 'F3@$^2024!#',
+        }),
+      });
+
+      if (!response.ok) {
+        console.error('Login failed:', response.status, response.statusText);
+        return null;
+      }
+
+      const data = await response.json();
+      return data.token || null;
+    } catch (error) {
+      console.error('Error logging in:', error);
+      return null;
+    }
+  };
+
+  // Hàm gọi API salesInvoice
+  const submitSalesInvoice = async (invoiceData: any) => {
+    try {
+      // Lấy token trước
+      const token = await loginToGetToken();
+      if (!token) {
+        showToast('error', 'Không thể lấy token đăng nhập');
+        return;
+      }
+
+      // Gọi API salesInvoice với token
+      const response = await fetch('http://103.145.79.169:6688/Fast/salesInvoice', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(invoiceData),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Sales invoice API failed:', response.status, response.statusText, errorText);
+        showToast('error', `Lỗi khi gửi hóa đơn: ${response.status} ${response.statusText}`);
+        return;
+      }
+
+      const result = await response.json();
+      console.log('Sales invoice response:', result);
+      showToast('success', 'Gửi hóa đơn thành công');
+      return result;
+    } catch (error: any) {
+      console.error('Error submitting sales invoice:', error);
+      showToast('error', `Lỗi khi gửi hóa đơn: ${error.message || 'Lỗi không xác định'}`);
+    }
+  };
+
   // Flatten enrichedDisplayedOrders thành rows (mỗi sale là một row)
+  // Helper function để chuyển đổi giá trị thành số an toàn
+  const toNumber = (value: any, defaultValue: number = 0): number => {
+    if (value === null || value === undefined || value === '') {
+      return defaultValue;
+    }
+    const num = Number(value);
+    return isNaN(num) ? defaultValue : num;
+  };
+
+  // Format ngày cho .NET DateTime (ISO 8601 format đơn giản)
+  // Thử format đơn giản: YYYY-MM-DDTHH:mm:ss (không có milliseconds)
+  const formatDateForSQL = (date: Date): string => {
+    // Đảm bảo date hợp lệ
+    if (isNaN(date.getTime())) {
+      console.error('Invalid date:', date);
+      throw new Error('Invalid date');
+    }
+    
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+    // Format: YYYY-MM-DDTHH:mm:ss (ISO 8601 format đơn giản)
+    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+  };
+
+  // Validate và format ngày
+  const validateAndFormatDate = (docDate: string | null | undefined): { ngayCt: string; ngayLct: string } | null => {
+    let date: Date;
+    
+    try {
+      if (docDate) {
+        date = new Date(docDate);
+        if (isNaN(date.getTime())) {
+          console.error('Invalid docDate:', docDate);
+          showToast('error', 'Ngày đơn hàng không hợp lệ');
+          return null;
+        }
+      } else {
+        date = new Date();
+      }
+      
+      // Đảm bảo ngày trong khoảng cho phép của SQL Server DateTime
+      // SQL Server DateTime: 1/1/1753 12:00:00 AM to 12/31/9999 11:59:59 PM
+      const minDate = new Date('1753-01-01T00:00:00');
+      const maxDate = new Date('9999-12-31T23:59:59');
+      
+      if (date < minDate || date > maxDate) {
+        console.error('Date out of range:', date, 'Min:', minDate, 'Max:', maxDate);
+        showToast('error', `Ngày đơn hàng nằm ngoài khoảng cho phép: ${date.toISOString()}`);
+        return null;
+      }
+      
+      // Format với datetime đầy đủ (có time)
+      const formatted = formatDateForSQL(date);
+      console.log('Formatted date:', formatted, 'from original:', docDate);
+      return { ngayCt: formatted, ngayLct: formatted };
+    } catch (error) {
+      console.error('Error formatting date:', error, 'docDate:', docDate);
+      showToast('error', 'Lỗi khi format ngày');
+      return null;
+    }
+  };
+
+  // Tính toán các giá trị từ sale
+  const calculateSaleValues = (sale: SaleItem) => {
+    const maKho = sale.maKho || (sale.ordertype && sale.department?.ma_bp ? calculateMaKho(sale.ordertype, sale.department.ma_bp) : '') || '';
+    const maLo = sale.maLo || calculateMaLo(sale.serial, sale.catcode1, sale.catcode2) || '';
+    const tienHang = toNumber(sale.tienHang || sale.linetotal, 0);
+    const tienHangForGiaBan = sale.linetotal ?? sale.tienHang;
+    const qtyForGiaBan = toNumber(sale.qty, 0);
+    let giaBan = toNumber(sale.giaBan, 0);
+    if (tienHangForGiaBan != null && qtyForGiaBan > 0) {
+      giaBan = toNumber(tienHangForGiaBan, 0) / qtyForGiaBan;
+    }
+    const maThe = sale.maThe || sale.mvc_serial || '';
+    const soSerial = sale.serial || sale.soSerial || '';
+    
+    return { maKho, maLo, tienHang, giaBan, maThe, soSerial };
+  };
+
+  // Tính toán các chiết khấu
+  const calculateDiscounts = (sale: SaleItem) => {
+    const ck01_nt = toNumber(sale.other_discamt || sale.chietKhauMuaHangGiamGia, 0);
+    const ck02_nt = toNumber(sale.chietKhauCkTheoChinhSach, 0);
+    const ck03_nt = toNumber(sale.chietKhauMuaHangCkVip || sale.grade_discamt, 0);
+    const ck04_nt = toNumber(sale.chietKhauThanhToanVoucher, 0);
+    const ck05_nt = toNumber(sale.chietKhauThanhToanTkTienAo, 0);
+    const ck06_nt = toNumber(sale.chietKhauVoucherDp1, 0);
+    const ck07_nt = toNumber(sale.chietKhauVoucherDp2, 0);
+    const ck08_nt = toNumber(sale.chietKhauVoucherDp3, 0);
+    const totalCk = ck01_nt + ck02_nt + ck03_nt + ck04_nt + ck05_nt + ck06_nt + ck07_nt + ck08_nt;
+    
+    return { ck01_nt, ck02_nt, ck03_nt, ck04_nt, ck05_nt, ck06_nt, ck07_nt, ck08_nt, totalCk };
+  };
+
+  // Xác định loai_gd dựa trên ordertype
+  const determineLoaiGd = (ordertype: string | null | undefined): string => {
+    const ordertypeForLoaiGd = mapOrderTypeNameToCode(ordertype) || ordertype || '';
+    
+    if (ordertypeForLoaiGd === ORDER_TYPE_LAM_DV) return 'LAM_DV';
+    if (ordertypeForLoaiGd === ORDER_TYPE_NORMAL) return 'NORMAL';
+    if (ordertypeForLoaiGd === ORDER_TYPE_BAN_ECOIN) return 'BAN_ECOIN';
+    if (ordertypeForLoaiGd === ORDER_TYPE_SAN_TMDT) return 'SAN_TMDT';
+    
+    return ordertypeForLoaiGd || 'NORMAL';
+  };
+
+  // Build invoice data object
+  const buildInvoiceData = (
+    order: Order,
+    sale: SaleItem,
+    saleValues: ReturnType<typeof calculateSaleValues>,
+    discounts: ReturnType<typeof calculateDiscounts>,
+    dates: { ngayCt: string; ngayLct: string }
+  ) => {
+    const { maKho, maLo, tienHang, giaBan, maThe, soSerial } = saleValues;
+    const { ck01_nt, ck02_nt, ck03_nt, ck04_nt, ck05_nt, ck06_nt, ck07_nt, ck08_nt, totalCk } = discounts;
+    const maKenh = (sale as any).kenh || sale.branchCode || order.branchCode || '';
+    const soSeri = sale.kyHieu || sale.branchCode || order.branchCode || 'DEFAULT';
+    const loaiGd = determineLoaiGd(sale.ordertype);
+
+    return {
+      ma_dvcs: order.customer.brand || order.branchCode || '',
+      ma_kh: order.customer.code || '',
+      ong_ba: order.customer.name || '',
+      ma_ca: sale.maCa || '',
+      ngay_lct: dates.ngayLct,
+      ngay_ct: dates.ngayCt,
+      so_ct: order.docCode || '',
+      so_seri: soSeri,
+      ma_kenh: maKenh,
+      ma_bp: sale.department?.ma_bp || sale.branchCode || '',
+      ma_nvbh: sale.saleperson_id?.toString() || sale.tenNhanVienBan || '',
+      detail: [{
+        ma_vt: sale.itemCode || sale.product?.maVatTu || '',
+        dvt: sale.dvt || sale.product?.dvt || '',
+        so_serial: soSerial,
+        ma_ctkm_th: sale.maCtkmTangHang || '',
+        ma_kho: maKho,
+        so_luong: toNumber(sale.qty, 0),
+        gia_ban: giaBan,
+        tien_hang: tienHang,
+        loai_gd: loaiGd,
+        is_reward_line: sale.isRewardLine ? 1 : 0,
+        is_bundle_reward_line: sale.isBundleRewardLine ? 1 : 0,
+        km_yn: sale.promCode ? 1 : 0,
+        dong_thuoc_goi: sale.dongThuocGoi || '',
+        trang_thai: sale.trangThai || '',
+        barcode: sale.barcode || '',
+        ma_ck01: sale.muaHangGiamGia ? 'MUA_HANG_GIAM_GIA' : '',
+        ck01_nt: ck01_nt,
+        ma_ck02: sale.ckTheoChinhSach || '',
+        ck02_nt: ck02_nt,
+        ma_ck03: sale.muaHangCkVip || '',
+        ck03_nt: ck03_nt,
+        ma_ck04: sale.thanhToanVoucher ? 'VOUCHER' : '',
+        ck04_nt: ck04_nt,
+        ma_ck05: sale.thanhToanTkTienAo ? 'TK_TIEN_AO' : '',
+        ck05_nt: ck05_nt,
+        ma_ck06: sale.voucherDp1 ? 'VOUCHER_DP1' : '',
+        ck06_nt: ck06_nt,
+        ma_ck07: sale.voucherDp2 ? 'VOUCHER_DP2' : '',
+        ck07_nt: ck07_nt,
+        ma_ck08: sale.voucherDp3 ? 'VOUCHER_DP3' : '',
+        ck08_nt: ck08_nt,
+        ma_thue: sale.maThue || TAX_CODE,
+        thue_suat: 0,
+        tien_thue: 0,
+        tk_thue: sale.tkThueCo || '',
+        ma_bp: sale.department?.ma_bp || sale.branchCode || '',
+        ma_the: maThe,
+        ma_lo: maLo,
+      }],
+      cbdetail: [{
+        ma_vt: sale.itemCode || sale.product?.maVatTu || '',
+        dvt: sale.dvt || sale.product?.dvt || '',
+        so_luong: toNumber(sale.qty, 0),
+        ck_nt: totalCk,
+        gia_nt: giaBan,
+        tien_nt: tienHang,
+      }],
+    };
+  };
+
+  // Hàm xử lý double click - gọi API salesInvoice
+  const handleRowDoubleClick = async (order: Order, sale: SaleItem | null) => {
+    if (!sale) {
+      showToast('error', 'Không có dữ liệu bán hàng cho dòng này');
+      return;
+    }
+
+    if (submittingInvoice) {
+      return;
+    }
+
+    try {
+      setSubmittingInvoice(true);
+
+      // Validate và format ngày
+      const dates = validateAndFormatDate(order.docDate);
+      if (!dates) {
+        setSubmittingInvoice(false);
+        return;
+      }
+
+      // Tính toán các giá trị
+      const saleValues = calculateSaleValues(sale);
+      const discounts = calculateDiscounts(sale);
+
+      // Build invoice data
+      const invoiceData = buildInvoiceData(order, sale, saleValues, discounts, dates);
+
+      // Log để debug
+      console.log('Invoice Data:', JSON.stringify(invoiceData, null, 2));
+
+      // Gọi API
+      await submitSalesInvoice(invoiceData);
+    } catch (error: any) {
+      console.error('Error handling row double click:', error);
+      showToast('error', `Lỗi: ${error.message || 'Lỗi không xác định'}`);
+    } finally {
+      setSubmittingInvoice(false);
+    }
+  };
+
+  // Hàm log dữ liệu dòng khi double click (giữ lại để debug)
+  const logRowData = (order: Order, sale: SaleItem | null) => {
+    if (!sale) {
+      console.log('No sale data for this row');
+      return;
+    }
+
+    // Tính toán các giá trị
+    const maKho = sale.maKho || (sale.ordertype && sale.department?.ma_bp ? calculateMaKho(sale.ordertype, sale.department.ma_bp) : '') || '';
+    const maLo = sale.maLo || calculateMaLo(sale.serial, sale.catcode1, sale.catcode2) || '';
+    const tienHang = sale.tienHang || sale.linetotal || 0;
+    const tienHangForGiaBan = sale.linetotal ?? sale.tienHang;
+    const qtyForGiaBan = sale.qty;
+    let giaBan = sale.giaBan || 0;
+    if (tienHangForGiaBan != null && qtyForGiaBan != null && qtyForGiaBan > 0) {
+      giaBan = tienHangForGiaBan / qtyForGiaBan;
+    }
+    const tkDoanhThu = sale.tkDoanhThu || 
+      (sale.department?.type?.toLowerCase() === 'bán lẻ' ? sale.product?.tkDoanhThuBanLe : '') ||
+      (sale.department?.type?.toLowerCase() === 'bán buôn' ? sale.product?.tkDoanhThuBanBuon : '') || '';
+    const tkGiaVon = sale.tkGiaVon ||
+      (sale.department?.type?.toLowerCase() === 'bán lẻ' ? sale.product?.tkGiaVonBanLe : '') ||
+      (sale.department?.type?.toLowerCase() === 'bán buôn' ? sale.product?.tkGiaVonBanBuon : '') || '';
+    const maThe = sale.maThe || sale.mvc_serial || '';
+    const soSerial = sale.serial || sale.soSerial || '';
+
+    // Format ngày
+    const docDate = order.docDate ? new Date(order.docDate) : new Date();
+    const ngayCt = docDate.toISOString();
+    const ngayLct = docDate.toISOString();
+
+    // Format dữ liệu theo cấu trúc yêu cầu
+    const invoiceData = {
+      ma_dvcs: order.customer.brand || order.branchCode || '',
+      ma_kh: order.customer.code || '',
+      ong_ba: order.customer.name || '',
+      ma_ca: sale.maCa || '',
+      ngay_lct: ngayLct,
+      ngay_ct: ngayCt,
+      so_ct: order.docCode || '',
+      so_seri: sale.kyHieu || '',
+      ma_bp: sale.department?.ma_bp || sale.branchCode || '',
+      ma_nvbh: sale.saleperson_id?.toString() || sale.tenNhanVienBan || '',
+      detail: [{
+        ma_vt: sale.itemCode || sale.product?.maVatTu || '',
+        dvt: sale.dvt || sale.product?.dvt || '',
+        so_serial: soSerial,
+        ma_ctkm_th: sale.maCtkmTangHang || '',
+        ma_kho: maKho,
+        so_luong: sale.qty || 0,
+        gia_ban: giaBan,
+        tien_hang: tienHang,
+        is_reward_line: sale.isRewardLine ? 1 : 0,
+        is_bundle_reward_line: sale.isBundleRewardLine ? 1 : 0,
+        km_yn: sale.promCode ? 1 : 0,
+        dong_thuoc_goi: sale.dongThuocGoi || '',
+        trang_thai: sale.trangThai || '',
+        barcode: sale.barcode || '',
+        ma_ck01: sale.muaHangGiamGia ? 'MUA_HANG_GIAM_GIA' : '',
+        ck01_nt: sale.other_discamt || sale.chietKhauMuaHangGiamGia || 0,
+        ma_ck02: sale.ckTheoChinhSach || '',
+        ck02_nt: sale.chietKhauCkTheoChinhSach || 0,
+        ma_ck03: sale.muaHangCkVip || '',
+        ck03_nt: sale.chietKhauMuaHangCkVip || sale.grade_discamt || 0,
+        ma_ck04: sale.thanhToanVoucher ? 'VOUCHER' : '',
+        ck04_nt: sale.chietKhauThanhToanVoucher || 0,
+        ma_ck05: sale.thanhToanTkTienAo ? 'TK_TIEN_AO' : '',
+        ck05_nt: sale.chietKhauThanhToanTkTienAo || 0,
+        ma_ck06: sale.voucherDp1 ? 'VOUCHER_DP1' : '',
+        ck06_nt: sale.chietKhauVoucherDp1 || 0,
+        ma_ck07: sale.voucherDp2 ? 'VOUCHER_DP2' : '',
+        ck07_nt: sale.chietKhauVoucherDp2 || 0,
+        ma_ck08: sale.voucherDp3 ? 'VOUCHER_DP3' : '',
+        ck08_nt: sale.chietKhauVoucherDp3 || 0,
+        ma_thue: sale.maThue || TAX_CODE,
+        thue_suat: 0, // Cần lấy từ product hoặc config
+        tien_thue: 0, // Cần tính toán
+        tk_thue: sale.tkThueCo || '',
+        ma_bp: sale.department?.ma_bp || sale.branchCode || '',
+        ma_the: maThe,
+        ma_lo: maLo,
+      }],
+      cbdetail: [{
+        ma_vt: sale.itemCode || sale.product?.maVatTu || '',
+        dvt: sale.dvt || sale.product?.dvt || '',
+        so_luong: sale.qty || 0,
+        ck_nt: (sale.other_discamt || sale.chietKhauMuaHangGiamGia || 0) + 
+               (sale.chietKhauCkTheoChinhSach || 0) + 
+               (sale.chietKhauMuaHangCkVip || sale.grade_discamt || 0) + 
+               (sale.chietKhauThanhToanVoucher || 0) + 
+               (sale.chietKhauThanhToanTkTienAo || 0) + 
+               (sale.chietKhauVoucherDp1 || 0) + 
+               (sale.chietKhauVoucherDp2 || 0) + 
+               (sale.chietKhauVoucherDp3 || 0),
+        gia_nt: giaBan,
+        tien_nt: tienHang,
+      }],
+    };
+
+    console.log('Invoice Data:', JSON.stringify(invoiceData, null, 2));
+  };
+
   const flattenedRows: Array<{ order: Order; sale: SaleItem | null }> = [];
   enrichedDisplayedOrders.forEach((order) => {
     if (order.sales && order.sales.length > 0) {
@@ -1214,11 +1609,14 @@ export default function OrdersPage() {
                       return (
                         <tr
                           key={rowKey}
-                          onDoubleClick={() => setSelectedRowKey(isSelected ? null : rowKey)}
+                          onDoubleClick={() => {
+                            setSelectedRowKey(isSelected ? null : rowKey);
+                            handleRowDoubleClick(row.order, row.sale);
+                          }}
                           className={`transition-colors cursor-pointer ${isSelected
                               ? 'bg-blue-100 hover:bg-blue-200'
                               : 'hover:bg-gray-50'
-                            }`}
+                            } ${submittingInvoice ? 'opacity-50 cursor-wait' : ''}`}
                         >
                           {selectedColumns.map((column) => (
                             <td key={column} className="px-4 py-3 whitespace-nowrap">
