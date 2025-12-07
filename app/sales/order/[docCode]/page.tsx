@@ -420,7 +420,7 @@ export default function OrderDetailPage() {
         <div className="bg-red-50 border border-red-200 rounded p-4 mb-4">
           <p className="text-red-800">{error || 'Không tìm thấy đơn hàng'}</p>
         </div>
-        <Link href="/sales" className="text-blue-600 hover:underline">
+        <Link href="/orders" className="text-blue-600 hover:underline">
           ← Quay lại danh sách
         </Link>
       </div>
@@ -435,7 +435,7 @@ export default function OrderDetailPage() {
       <div className="container mx-auto px-4 py-4 max-w-7xl">
         <div className="mb-4">
           <div className="flex items-center justify-between mb-3">
-            <Link href="/sales" className="text-blue-600 hover:text-blue-800 text-sm font-medium inline-flex items-center gap-1">
+            <Link href="/orders" className="text-blue-600 hover:text-blue-800 text-sm font-medium inline-flex items-center gap-1">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>

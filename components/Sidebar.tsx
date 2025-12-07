@@ -88,7 +88,7 @@ export default function Sidebar({ isOpen, onToggle, collapsed, onToggleCollapse 
           ),
         },
         {
-          href: '/sales',
+          href: '/fast-api-invoices',
           label: 'Bảng kê hóa đơn',
           icon: (
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

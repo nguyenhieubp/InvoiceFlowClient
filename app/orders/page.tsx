@@ -911,10 +911,18 @@ export default function OrdersPage() {
       const response = await salesApi.createInvoiceViaFastApi(order.docCode);
       const result = response.data;
 
-      if (result.success) {
+      // Check success flag và status trong result (status === 0 là lỗi)
+      const hasError = Array.isArray(result.result) 
+        ? result.result.some((item: any) => item.status === 0)
+        : (result.result?.status === 0);
+
+      if (result.success && !hasError) {
         showToast('success', result.message || 'Tạo hóa đơn thành công');
       } else {
-        showToast('error', result.message || 'Tạo hóa đơn thất bại');
+        const errorMessage = Array.isArray(result.result) && result.result.length > 0
+          ? result.result[0].message || result.message || 'Tạo hóa đơn thất bại'
+          : result.message || 'Tạo hóa đơn thất bại';
+        showToast('error', errorMessage);
       }
     } catch (error: any) {
       console.error('Error handling row double click:', error);

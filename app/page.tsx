@@ -11,7 +11,7 @@ export default function Home() {
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 p-4">
         <Link
-          href="/sales"
+          href="/fast-api-invoices"
           className="group p-6 bg-white border border-gray-200 rounded-xl hover:shadow-xl transition-all duration-300 hover:border-blue-300 hover:-translate-y-1"
         >
           <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
@@ -19,9 +19,9 @@ export default function Home() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
             </svg>
           </div>
-          <h2 className="text-2xl font-semibold mb-2 text-gray-900">Đơn hàng</h2>
+          <h2 className="text-2xl font-semibold mb-2 text-gray-900">Bảng kê hóa đơn</h2>
           <p className="text-gray-600">
-            Xem và quản lý đơn hàng từ các nhãn hàng
+            Xem và quản lý hóa đơn đã tạo từ Fast API
           </p>
         </Link>
 

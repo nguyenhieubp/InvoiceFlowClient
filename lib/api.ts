@@ -32,8 +32,8 @@ export const salesApi = {
   syncFromZappy: (date: string) => {
     return api.post('/sales/sync-from-zappy', { date });
   },
-  createInvoiceViaFastApi: (docCode: string) => {
-    return api.post(`/sales/order/${docCode}/create-invoice-fast`);
+  createInvoiceViaFastApi: (docCode: string, forceRetry?: boolean) => {
+    return api.post(`/sales/order/${docCode}/create-invoice-fast`, { forceRetry: forceRetry || false });
   },
   createMultipleInvoicesViaFastApi: (docCodes: string[]) => {
     return api.post('/sales/orders/create-invoice-fast', { docCodes });
@@ -172,6 +172,36 @@ export const categoriesApi = {
 export const syncCustomersApi = {
   syncBrandT8: (brandName: string) => {
     return api.post(`/sync/brand/${brandName}/t8`);
+  },
+};
+
+// Fast API Invoices API (Bảng kê hóa đơn)
+export const fastApiInvoicesApi = {
+  getAll: (params?: {
+    page?: number;
+    limit?: number;
+    status?: number;
+    docCode?: string;
+    maKh?: string;
+    tenKh?: string;
+    maDvcs?: string;
+    startDate?: string;
+    endDate?: string;
+  }) => {
+    return api.get('/fast-api-invoices', { params });
+  },
+  getById: (id: string) => {
+    return api.get(`/fast-api-invoices/${id}`);
+  },
+  getByDocCode: (docCode: string) => {
+    return api.get(`/fast-api-invoices/doc-code/${docCode}`);
+  },
+  getStatistics: (params?: {
+    startDate?: string;
+    endDate?: string;
+    maDvcs?: string;
+  }) => {
+    return api.get('/fast-api-invoices/statistics', { params });
   },
 };
 
