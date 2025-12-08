@@ -55,26 +55,76 @@ export default function FastApiInvoicesPage() {
 
   const handleRetry = async (docCode: string) => {
     try {
-      setRetrying({ ...retrying, [docCode]: true });
+      setRetrying((prev) => ({ ...prev, [docCode]: true }));
       const response = await salesApi.createInvoiceViaFastApi(docCode, true);
       const data = response.data;
 
-      if (data.success) {
+      console.log('[Retry] Response data:', data);
+
+      // Nếu đã tồn tại (alreadyExists = true), vẫn coi như thành công
+      if (data.alreadyExists) {
+        showToast('info', data.message || `Đơn hàng ${docCode} đã được tạo hóa đơn trước đó`);
+        await loadInvoices();
+        await loadStatistics();
+        return;
+      }
+
+      // Check success flag và status trong result (status === 0 là lỗi)
+      let hasError = false;
+      if (Array.isArray(data.result) && data.result.length > 0) {
+        hasError = data.result.some((item: any) => item.status === 0);
+      } else if (data.result && typeof data.result === 'object') {
+        hasError = data.result.status === 0;
+      }
+
+      console.log('[Retry] hasError:', hasError, 'data.success:', data.success, 'data.result:', data.result);
+
+      // Nếu success = false hoặc có error trong result, coi như thất bại
+      if (data.success && !hasError) {
         showToast('success', data.message || `Đồng bộ lại ${docCode} thành công`);
         // Reload danh sách sau khi retry thành công
         await loadInvoices();
         await loadStatistics();
       } else {
-        showToast('error', data.message || `Đồng bộ lại ${docCode} thất bại`);
+        // Xử lý lỗi chi tiết hơn
+        let errorMessage = data.message || `Đồng bộ lại ${docCode} thất bại`;
+        
+        if (Array.isArray(data.result) && data.result.length > 0) {
+          const firstError = data.result[0];
+          if (firstError.message) {
+            errorMessage = firstError.message;
+          }
+        } else if (data.result?.message) {
+          errorMessage = data.result.message;
+        }
+        
+        console.log('[Retry] Error message:', errorMessage);
+        showToast('error', errorMessage);
         // Vẫn reload để cập nhật status mới
         await loadInvoices();
         await loadStatistics();
       }
     } catch (error: any) {
       console.error('Error retrying invoice:', error);
-      showToast('error', error?.response?.data?.message || `Lỗi khi đồng bộ lại ${docCode}`);
+      // Xử lý lỗi từ response hoặc error object
+      let errorMessage = `Lỗi khi đồng bộ lại ${docCode}`;
+      
+      if (error?.response?.data) {
+        const errorData = error.response.data;
+        if (errorData.message) {
+          errorMessage = errorData.message;
+        } else if (errorData.error) {
+          errorMessage = errorData.error;
+        } else if (typeof errorData === 'string') {
+          errorMessage = errorData;
+        }
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      
+      showToast('error', errorMessage);
     } finally {
-      setRetrying({ ...retrying, [docCode]: false });
+      setRetrying((prev) => ({ ...prev, [docCode]: false }));
     }
   };
 
