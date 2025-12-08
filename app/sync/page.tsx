@@ -15,25 +15,44 @@ const brands = [
 export default function SyncPage() {
   const [loading, setLoading] = useState(false);
   const [syncingBrand, setSyncingBrand] = useState<string | null>(null);
-  const [syncDate, setSyncDate] = useState<string>(() => {
-    // Format ngày hiện tại thành DDMMMYYYY (ví dụ: 04DEC2025)
-    const now = new Date();
-    const day = now.getDate().toString().padStart(2, '0');
+  
+  // Hàm convert từ Date object hoặc YYYY-MM-DD sang DDMMMYYYY
+  const convertDateToDDMMMYYYY = (date: Date | string): string => {
+    const d = typeof date === 'string' ? new Date(date) : date;
+    if (isNaN(d.getTime())) {
+      return '';
+    }
+    const day = d.getDate().toString().padStart(2, '0');
     const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
-    const month = months[now.getMonth()];
-    const year = now.getFullYear();
+    const month = months[d.getMonth()];
+    const year = d.getFullYear();
     return `${day}${month}${year}`;
+  };
+
+  const [syncDateInput, setSyncDateInput] = useState<string>(() => {
+    // Format ngày hiện tại thành YYYY-MM-DD cho date picker
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = (now.getMonth() + 1).toString().padStart(2, '0');
+    const day = now.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
   });
+
+  // Convert syncDateInput sang DDMMMYYYY khi gọi API
+  const getSyncDate = (): string => {
+    return convertDateToDDMMMYYYY(syncDateInput);
+  };
   const [result, setResult] = useState<{
     type: 'success' | 'error';
     message: string;
   } | null>(null);
 
   const handleSyncAll = async () => {
-    if (!syncDate.trim()) {
+    const syncDate = getSyncDate();
+    if (!syncDate) {
       setResult({
         type: 'error',
-        message: 'Vui lòng nhập ngày cần đồng bộ (format: DDMMMYYYY, ví dụ: 04DEC2025)',
+        message: 'Vui lòng chọn ngày cần đồng bộ',
       });
       return;
     }
@@ -42,7 +61,7 @@ export default function SyncPage() {
     setSyncingBrand(null);
     setResult(null);
     try {
-      const response = await syncApi.syncAll(syncDate.trim().toUpperCase());
+      const response = await syncApi.syncAll(syncDate);
       setResult({
         type: 'success',
         message: response.data.message || 'Đồng bộ tất cả nhãn hàng thành công',
@@ -59,10 +78,11 @@ export default function SyncPage() {
   };
 
   const handleSyncBrand = async (brandName: string) => {
-    if (!syncDate.trim()) {
+    const syncDate = getSyncDate();
+    if (!syncDate) {
       setResult({
         type: 'error',
-        message: 'Vui lòng nhập ngày cần đồng bộ (format: DDMMMYYYY, ví dụ: 04DEC2025)',
+        message: 'Vui lòng chọn ngày cần đồng bộ',
       });
       return;
     }
@@ -71,7 +91,7 @@ export default function SyncPage() {
     setLoading(false);
     setResult(null);
     try {
-      const response = await syncApi.syncBrand(brandName, syncDate.trim().toUpperCase());
+      const response = await syncApi.syncBrand(brandName, syncDate);
       setResult({
         type: 'success',
         message: response.data.message || `Đồng bộ ${brandName} thành công`,
@@ -128,15 +148,19 @@ export default function SyncPage() {
         {/* Date Input */}
         <div className="bg-white rounded-lg border border-gray-200 p-4 mb-4">
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Ngày cần đồng bộ (format: DDMMMYYYY, ví dụ: 04DEC2025)
+            Ngày cần đồng bộ
           </label>
           <input
-            type="text"
-            value={syncDate}
-            onChange={(e) => setSyncDate(e.target.value)}
-            placeholder="04DEC2025"
+            type="date"
+            value={syncDateInput}
+            onChange={(e) => setSyncDateInput(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
+          {syncDateInput && (
+            <p className="mt-2 text-xs text-gray-500">
+              Format gửi lên API: <span className="font-mono font-semibold">{getSyncDate()}</span>
+            </p>
+          )}
         </div>
 
         {/* Result Notification */}
@@ -267,7 +291,7 @@ export default function SyncPage() {
           <h3 className="text-sm font-semibold text-gray-900 mb-2">Lưu ý</h3>
           <ul className="text-xs text-gray-600 space-y-1">
             <li>• Đồng bộ dữ liệu từ Zappy API (giống như trang Đơn hàng)</li>
-            <li>• Format ngày: DDMMMYYYY (ví dụ: 04DEC2025)</li>
+            <li>• Chọn ngày từ lịch, hệ thống sẽ tự động convert sang format DDMMMYYYY</li>
             <li>• Đồng bộ thủ công có thể mất vài phút tùy vào lượng dữ liệu</li>
             <li>• Dữ liệu trùng lặp sẽ được bỏ qua tự động</li>
           </ul>
