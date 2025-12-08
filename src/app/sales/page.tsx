@@ -12,6 +12,8 @@ interface Sale {
   qty: number;
   revenue: number;
   kenh?: string;
+  promCode?: string;
+  promotionName?: string | null;
   isProcessed: boolean;
   customer: {
     name: string;
@@ -33,7 +35,21 @@ export default function SalesPage() {
     try {
       setLoading(true);
       const response = await salesApi.getAll(filter);
-      setSales(response.data.data || []);
+      const salesData = response.data.data || [];
+      
+      // Debug: Log một vài sale để kiểm tra promotionName
+      if (salesData.length > 0) {
+        const saleWithPromo = salesData.find((s: Sale) => s.promCode);
+        if (saleWithPromo) {
+          console.log('Sample sale with promotion:', {
+            promCode: saleWithPromo.promCode,
+            promotionName: saleWithPromo.promotionName,
+            fullSale: saleWithPromo,
+          });
+        }
+      }
+      
+      setSales(salesData);
     } catch (error) {
       console.error('Error loading sales:', error);
     } finally {
@@ -90,6 +106,7 @@ export default function SalesPage() {
                 <th className="px-4 py-2 border">Số lượng</th>
                 <th className="px-4 py-2 border">Doanh thu</th>
                 <th className="px-4 py-2 border">Kênh</th>
+                <th className="px-4 py-2 border">Mã khuyến mại</th>
                 <th className="px-4 py-2 border">Trạng thái</th>
                 <th className="px-4 py-2 border">Thao tác</th>
               </tr>
@@ -113,6 +130,20 @@ export default function SalesPage() {
                     {sale.revenue.toLocaleString('vi-VN')} đ
                   </td>
                   <td className="px-4 py-2 border">{sale.kenh || '-'}</td>
+                  <td className="px-4 py-2 border">
+                    {(() => {
+                      // Ưu tiên promotionName từ API
+                      if (sale.promotionName) {
+                        return sale.promotionName;
+                      }
+                      // Nếu không có promotionName, cắt phần sau dấu "-" từ promCode
+                      if (sale.promCode) {
+                        const parts = sale.promCode.split('-');
+                        return parts[0] || sale.promCode;
+                      }
+                      return '-';
+                    })()}
+                  </td>
                   <td className="px-4 py-2 border">
                     <span
                       className={`px-2 py-1 rounded text-sm ${

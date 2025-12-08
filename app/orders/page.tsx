@@ -661,7 +661,13 @@ export default function OrdersPage() {
         }
         return '';
       case 'muaHangGiamGia':
-        return sale?.promCode || '';
+        // Cắt phần sau dấu "-" từ promCode
+        const promCode = sale?.promCode || '';
+        if (promCode) {
+          const parts = promCode.split('-');
+          return parts[0] || promCode;
+        }
+        return '';
       case 'maKho':
         const maBpForMaKho = sale?.department?.ma_bp;
         const calculatedMaKho = sale?.ordertype && maBpForMaKho
@@ -867,12 +873,15 @@ export default function OrdersPage() {
         // Ngược lại bỏ trống
         return <div className="text-sm text-gray-900">-</div>;
       case 'muaHangGiamGia':
-        // Lấy code từ promotion API response
+        // Lấy code từ promotion API response, cắt phần sau dấu "-"
         const promotionCode = sale?.promCode;
         if (!promotionCode) {
           return <div className="text-sm text-gray-400 italic">-</div>;
         }
-        return <div className="text-sm text-gray-900">{promotionCode}</div>;
+        // Cắt phần sau dấu "-" từ promCode
+        const parts = promotionCode.split('-');
+        const displayCode = parts[0] || promotionCode;
+        return <div className="text-sm text-gray-900">{displayCode}</div>;
       case 'maKho':
         // Dùng ma_bp từ department (bộ phận) để tính mã kho
         const maBpForMaKho = sale?.department?.ma_bp;
