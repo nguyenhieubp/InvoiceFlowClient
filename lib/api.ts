@@ -64,11 +64,11 @@ export const invoicesApi = {
 
 // Sync API
 export const syncApi = {
-  syncAll: () => {
-    return api.post('/sync/all');
+  syncAll: (date: string) => {
+    return api.post('/sync/all', { date });
   },
-  syncBrand: (brandName: string) => {
-    return api.post(`/sync/brand/${brandName}`);
+  syncBrand: (brandName: string, date: string) => {
+    return api.post(`/sync/brand/${brandName}`, { date });
   },
 };
 

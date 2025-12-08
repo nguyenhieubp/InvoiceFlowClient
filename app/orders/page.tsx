@@ -290,6 +290,14 @@ export default function OrdersPage() {
       );
     }
 
+    // Filter by brand
+    if (filter.brand) {
+      filtered = filtered.filter((order) => {
+        const orderBrand = order.customer.brand?.toLowerCase();
+        return orderBrand === filter.brand?.toLowerCase();
+      });
+    }
+
     // Filter by date range
     if (filter.dateFrom || filter.dateTo) {
       const dateFrom = filter.dateFrom ? new Date(filter.dateFrom) : null;
@@ -378,11 +386,11 @@ export default function OrdersPage() {
 
     // Reset về trang 1 nếu search query, filter hoặc column filters thay đổi
     const hasColumnFilters = Object.values(columnFilters).some(v => v && v.trim() !== '');
-    if ((searchQuery || filter.dateFrom || filter.dateTo || hasColumnFilters) && pagination.page !== 1) {
+    if ((searchQuery || filter.brand || filter.dateFrom || filter.dateTo || hasColumnFilters) && pagination.page !== 1) {
       setPagination((prev) => ({ ...prev, page: 1 }));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery, filter.dateFrom, filter.dateTo, columnFilters, allOrders, pagination.page, pagination.limit, selectedColumns]);
+  }, [searchQuery, filter.brand, filter.dateFrom, filter.dateTo, columnFilters, allOrders, pagination.page, pagination.limit, selectedColumns]);
 
   // Enrich products chỉ cho displayedOrders (theo phân trang)
   useEffect(() => {
@@ -907,9 +915,15 @@ export default function OrdersPage() {
     try {
       setSubmittingInvoice(true);
 
-      // Gọi backend API để tạo hóa đơn
-      const response = await salesApi.createInvoiceViaFastApi(order.docCode);
+      // Gọi backend API để tạo hóa đơn với forceRetry = true để cho phép retry nếu đã tồn tại
+      const response = await salesApi.createInvoiceViaFastApi(order.docCode, true);
       const result = response.data;
+
+      // Nếu đã tồn tại (alreadyExists = true), vẫn coi như thành công
+      if (result.alreadyExists) {
+        showToast('info', result.message || 'Đơn hàng đã được tạo hóa đơn trước đó');
+        return;
+      }
 
       // Check success flag và status trong result (status === 0 là lỗi)
       const hasError = Array.isArray(result.result) 
@@ -919,14 +933,38 @@ export default function OrdersPage() {
       if (result.success && !hasError) {
         showToast('success', result.message || 'Tạo hóa đơn thành công');
       } else {
-        const errorMessage = Array.isArray(result.result) && result.result.length > 0
-          ? result.result[0].message || result.message || 'Tạo hóa đơn thất bại'
-          : result.message || 'Tạo hóa đơn thất bại';
+        // Xử lý lỗi chi tiết hơn
+        let errorMessage = result.message || 'Tạo hóa đơn thất bại';
+        
+        if (Array.isArray(result.result) && result.result.length > 0) {
+          const firstError = result.result[0];
+          if (firstError.message) {
+            errorMessage = firstError.message;
+          }
+        } else if (result.result?.message) {
+          errorMessage = result.result.message;
+        }
+        
         showToast('error', errorMessage);
       }
     } catch (error: any) {
       console.error('Error handling row double click:', error);
-      const errorMessage = error?.response?.data?.message || error?.message || 'Lỗi không xác định';
+      // Xử lý lỗi từ response hoặc error object
+      let errorMessage = 'Lỗi không xác định';
+      
+      if (error?.response?.data) {
+        const errorData = error.response.data;
+        if (errorData.message) {
+          errorMessage = errorData.message;
+        } else if (errorData.error) {
+          errorMessage = errorData.error;
+        } else if (typeof errorData === 'string') {
+          errorMessage = errorData;
+        }
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      
       showToast('error', `Lỗi: ${errorMessage}`);
     } finally {
       setSubmittingInvoice(false);

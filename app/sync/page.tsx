@@ -15,17 +15,34 @@ const brands = [
 export default function SyncPage() {
   const [loading, setLoading] = useState(false);
   const [syncingBrand, setSyncingBrand] = useState<string | null>(null);
+  const [syncDate, setSyncDate] = useState<string>(() => {
+    // Format ngày hiện tại thành DDMMMYYYY (ví dụ: 04DEC2025)
+    const now = new Date();
+    const day = now.getDate().toString().padStart(2, '0');
+    const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+    const month = months[now.getMonth()];
+    const year = now.getFullYear();
+    return `${day}${month}${year}`;
+  });
   const [result, setResult] = useState<{
     type: 'success' | 'error';
     message: string;
   } | null>(null);
 
   const handleSyncAll = async () => {
+    if (!syncDate.trim()) {
+      setResult({
+        type: 'error',
+        message: 'Vui lòng nhập ngày cần đồng bộ (format: DDMMMYYYY, ví dụ: 04DEC2025)',
+      });
+      return;
+    }
+
     setLoading(true);
     setSyncingBrand(null);
     setResult(null);
     try {
-      const response = await syncApi.syncAll();
+      const response = await syncApi.syncAll(syncDate.trim().toUpperCase());
       setResult({
         type: 'success',
         message: response.data.message || 'Đồng bộ tất cả nhãn hàng thành công',
@@ -42,11 +59,19 @@ export default function SyncPage() {
   };
 
   const handleSyncBrand = async (brandName: string) => {
+    if (!syncDate.trim()) {
+      setResult({
+        type: 'error',
+        message: 'Vui lòng nhập ngày cần đồng bộ (format: DDMMMYYYY, ví dụ: 04DEC2025)',
+      });
+      return;
+    }
+
     setSyncingBrand(brandName);
     setLoading(false);
     setResult(null);
     try {
-      const response = await syncApi.syncBrand(brandName);
+      const response = await syncApi.syncBrand(brandName, syncDate.trim().toUpperCase());
       setResult({
         type: 'success',
         message: response.data.message || `Đồng bộ ${brandName} thành công`,
@@ -96,8 +121,22 @@ export default function SyncPage() {
           </Link>
           <h1 className="text-2xl font-semibold text-gray-900">Đồng bộ dữ liệu</h1>
           <p className="text-sm text-gray-600 mt-1">
-            Đồng bộ dữ liệu từ các nhãn hàng qua n8n webhook
+            Đồng bộ dữ liệu từ Zappy API (giống như trang Đơn hàng)
           </p>
+        </div>
+
+        {/* Date Input */}
+        <div className="bg-white rounded-lg border border-gray-200 p-4 mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Ngày cần đồng bộ (format: DDMMMYYYY, ví dụ: 04DEC2025)
+          </label>
+          <input
+            type="text"
+            value={syncDate}
+            onChange={(e) => setSyncDate(e.target.value)}
+            placeholder="04DEC2025"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
         </div>
 
         {/* Result Notification */}
@@ -227,7 +266,8 @@ export default function SyncPage() {
         <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
           <h3 className="text-sm font-semibold text-gray-900 mb-2">Lưu ý</h3>
           <ul className="text-xs text-gray-600 space-y-1">
-            <li>• Hệ thống tự động đồng bộ mỗi ngày lúc 2:00 AM</li>
+            <li>• Đồng bộ dữ liệu từ Zappy API (giống như trang Đơn hàng)</li>
+            <li>• Format ngày: DDMMMYYYY (ví dụ: 04DEC2025)</li>
             <li>• Đồng bộ thủ công có thể mất vài phút tùy vào lượng dữ liệu</li>
             <li>• Dữ liệu trùng lặp sẽ được bỏ qua tự động</li>
           </ul>
