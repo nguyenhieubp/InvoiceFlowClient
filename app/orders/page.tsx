@@ -677,19 +677,20 @@ export default function OrdersPage() {
         return sale?.maKho || '';
       case 'maLo':
         // Hiển thị ma_lo dựa trên productType từ Loyalty API (bỏ logic cũ dựa trên producttype I/B/M/V/S)
-        const productTypeFromLoyalty = sale?.product?.productType;
+        // Ưu tiên lấy từ sale.productType (đã được lưu trong database), nếu không có thì lấy từ sale.product?.productType
+        const productTypeFromLoyalty = sale?.productType || sale?.product?.productType;
         const productTypeUpper = productTypeFromLoyalty ? String(productTypeFromLoyalty).toUpperCase().trim() : null;
         
         // VOUC → không hiển thị ma_lo (sẽ hiển thị ở so_serial)
-        // SKIN, TPCN → hiển thị ma_lo
-        if (productTypeUpper === 'SKIN' || productTypeUpper === 'TPCN') {
+        // SKIN, TPCN, GIFT → hiển thị ma_lo
+        if (productTypeUpper === 'SKIN' || productTypeUpper === 'TPCN' || productTypeUpper === 'GIFT') {
           const serial = sale?.serial || '';
           if (serial) {
             if (productTypeUpper === 'TPCN') {
               // Nếu productType là "TPCN", cắt lấy 8 ký tự cuối
               return serial.length >= 8 ? serial.slice(-8) : serial;
-            } else if (productTypeUpper === 'SKIN') {
-              // Nếu productType là "SKIN", cắt lấy 4 ký tự cuối
+            } else if (productTypeUpper === 'SKIN' || productTypeUpper === 'GIFT') {
+              // Nếu productType là "SKIN" hoặc "GIFT", cắt lấy 4 ký tự cuối
               return serial.length >= 4 ? serial.slice(-4) : serial;
             }
           }
@@ -903,20 +904,21 @@ export default function OrdersPage() {
         return <div className="text-sm text-gray-900">{sale?.maKho || '-'}</div>;
       case 'maLo':
         // Hiển thị ma_lo dựa trên productType từ Loyalty API (bỏ logic cũ dựa trên producttype I/B/M/V/S)
-        const productTypeFromLoyaltyRender = sale?.product?.productType;
+        // Ưu tiên lấy từ sale.productType (đã được lưu trong database), nếu không có thì lấy từ sale.product?.productType
+        const productTypeFromLoyaltyRender = sale?.productType || sale?.product?.productType;
         const productTypeUpperRender = productTypeFromLoyaltyRender ? String(productTypeFromLoyaltyRender).toUpperCase().trim() : null;
         
         // VOUC → không hiển thị ma_lo (sẽ hiển thị ở so_serial)
-        // SKIN, TPCN → hiển thị ma_lo
-        if (productTypeUpperRender === 'SKIN' || productTypeUpperRender === 'TPCN') {
+        // SKIN, TPCN, GIFT → hiển thị ma_lo
+        if (productTypeUpperRender === 'SKIN' || productTypeUpperRender === 'TPCN' || productTypeUpperRender === 'GIFT') {
           const serial = sale?.serial || '';
           let maLo = serial;
           if (serial) {
             if (productTypeUpperRender === 'TPCN') {
               // Nếu productType là "TPCN", cắt lấy 8 ký tự cuối
               maLo = serial.length >= 8 ? serial.slice(-8) : serial;
-            } else if (productTypeUpperRender === 'SKIN') {
-              // Nếu productType là "SKIN", cắt lấy 4 ký tự cuối
+            } else if (productTypeUpperRender === 'SKIN' || productTypeUpperRender === 'GIFT') {
+              // Nếu productType là "SKIN" hoặc "GIFT", cắt lấy 4 ký tự cuối
               maLo = serial.length >= 4 ? serial.slice(-4) : serial;
             }
           }
@@ -1041,9 +1043,14 @@ export default function OrdersPage() {
         }
         return <div className="text-sm text-gray-900">{voucherLabels}</div>;
       case 'soSerial':
-        // Hiển thị so_serial nếu producttype là V, S
-        const producttypeForSoSerial = sale?.producttype || sale?.product?.producttype;
-        if (producttypeForSoSerial === 'V' || producttypeForSoSerial === 'S') {
+        // Hiển thị so_serial dựa trên productType từ Loyalty API (bỏ logic cũ dựa trên producttype I/B/M/V/S)
+        // Ưu tiên lấy từ sale.productType (đã được lưu trong database), nếu không có thì lấy từ sale.product?.productType
+        const productTypeForSoSerial = sale?.productType || sale?.product?.productType;
+        const productTypeUpperForSoSerial = productTypeForSoSerial ? String(productTypeForSoSerial).toUpperCase().trim() : null;
+        
+        // VOUC → hiển thị so_serial (toàn bộ serial)
+        // SKIN, TPCN, GIFT → không hiển thị so_serial (sẽ hiển thị ở ma_lo)
+        if (productTypeUpperForSoSerial === 'VOUC') {
           return <div className="text-sm text-gray-900">{sale?.serial || '-'}</div>;
         }
         return <div className="text-sm text-gray-400 italic">-</div>;

@@ -92,6 +92,8 @@ export interface SaleItem {
   tenNhanVienBan?: string;
   dvt?: string;
   loai?: string;
+  productType?: string; // Product type from Loyalty API (VOUC, SKIN, TPCN, GIFT, etc.) - saved in database
+  producttype?: string; // Legacy product type (I, B, M, V, S) - deprecated
   qty?: number;
   giaBan?: number;
   tienHang?: number;
@@ -160,7 +162,6 @@ export interface SaleItem {
   maCtkmTangHang?: string;
   maThe?: string;
   soSerial?: string;
-  producttype?: string; // Product type: S (Serial), I (Item), V (Voucher), B (Batch), M (Material)
   revenue?: number;
   // Các trường bổ sung từ API
   cat1?: string;
