@@ -244,7 +244,6 @@ export const MAIN_COLUMNS: OrderColumn[] = [
   'kyHieu',                   // * Ký hiệu
   'description',              // Diễn giải
   'itemCode',                 // * Mã hàng
-  'itemName',                 // Tên mặt hàng
   'dvt',                      // Đvt
   'loai',                     // Loại
   'promCode',                 // Khuyến mãi

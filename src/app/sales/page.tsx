@@ -103,7 +103,6 @@ export default function SalesPage() {
                 <th className="px-4 py-2 border">Mã đơn</th>
                 <th className="px-4 py-2 border">Ngày</th>
                 <th className="px-4 py-2 border">Khách hàng</th>
-                <th className="px-4 py-2 border">Sản phẩm</th>
                 <th className="px-4 py-2 border">Số lượng</th>
                 <th className="px-4 py-2 border">Doanh thu</th>
                 <th className="px-4 py-2 border">Kênh</th>
@@ -125,7 +124,6 @@ export default function SalesPage() {
                       <div className="text-sm text-gray-500">{sale.customer.code}</div>
                     </div>
                   </td>
-                  <td className="px-4 py-2 border">{sale.itemName}</td>
                   <td className="px-4 py-2 border text-center">{sale.qty}</td>
                   <td className="px-4 py-2 border text-right">
                     {sale.revenue.toLocaleString('vi-VN')} đ
