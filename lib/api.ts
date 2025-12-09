@@ -38,6 +38,9 @@ export const salesApi = {
   createMultipleInvoicesViaFastApi: (docCodes: string[]) => {
     return api.post('/sales/orders/create-invoice-fast', { docCodes });
   },
+  createStockTransfer: (data: { data: any[] }) => {
+    return api.post('/sales/stock-transfer', data);
+  },
 };
 
 // Invoices API

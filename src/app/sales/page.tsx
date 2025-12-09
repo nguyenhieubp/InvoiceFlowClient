@@ -14,6 +14,7 @@ interface Sale {
   kenh?: string;
   promCode?: string;
   promotionName?: string | null;
+  promotionDisplayCode?: string | null;
   isProcessed: boolean;
   customer: {
     name: string;
@@ -131,18 +132,7 @@ export default function SalesPage() {
                   </td>
                   <td className="px-4 py-2 border">{sale.kenh || '-'}</td>
                   <td className="px-4 py-2 border">
-                    {(() => {
-                      // Ưu tiên promotionName từ API
-                      if (sale.promotionName) {
-                        return sale.promotionName;
-                      }
-                      // Nếu không có promotionName, cắt phần sau dấu "-" từ promCode
-                      if (sale.promCode) {
-                        const parts = sale.promCode.split('-');
-                        return parts[0] || sale.promCode;
-                      }
-                      return '-';
-                    })()}
+                    {sale.promotionDisplayCode || sale.promotionName || '-'}
                   </td>
                   <td className="px-4 py-2 border">
                     <span
