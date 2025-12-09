@@ -24,7 +24,7 @@ export default function FastApiInvoicesPage() {
   const [loading, setLoading] = useState(true);
   const [pagination, setPagination] = useState({
     page: 1,
-    limit: 50,
+    limit: 10,
     total: 0,
     totalPages: 0,
     hasNext: false,

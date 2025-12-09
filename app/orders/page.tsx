@@ -42,7 +42,7 @@ export default function OrdersPage() {
   const [columnSearchQuery, setColumnSearchQuery] = useState('');
   const [pagination, setPagination] = useState({
     page: 1,
-    limit: 25,
+    limit: 10,
     total: 0,
     totalPages: 0,
   });
@@ -1322,28 +1322,6 @@ export default function OrdersPage() {
               />
             </div>
 
-            {/* Invoice Statistics */}
-            {invoiceStatistics && (
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                <div className="bg-white p-4 rounded-lg shadow">
-                  <div className="text-sm text-gray-600">Tổng số hóa đơn</div>
-                  <div className="text-2xl font-bold text-gray-900">{invoiceStatistics.total}</div>
-                </div>
-                <div className="bg-white p-4 rounded-lg shadow">
-                  <div className="text-sm text-gray-600">Thành công</div>
-                  <div className="text-2xl font-bold text-green-600">{invoiceStatistics.success}</div>
-                </div>
-                <div className="bg-white p-4 rounded-lg shadow">
-                  <div className="text-sm text-gray-600">Thất bại</div>
-                  <div className="text-2xl font-bold text-red-600">{invoiceStatistics.failed}</div>
-                </div>
-                <div className="bg-white p-4 rounded-lg shadow">
-                  <div className="text-sm text-gray-600">Tỷ lệ thành công</div>
-                  <div className="text-2xl font-bold text-blue-600">{invoiceStatistics.successRate}%</div>
-                </div>
-              </div>
-            )}
-
             {/* Filters */}
             <div className="flex items-center gap-2 flex-wrap">
               <select
@@ -1412,15 +1390,6 @@ export default function OrdersPage() {
                         {FIELD_LABELS[column]}
                       </th>
                     ))}
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
-                      Trạng thái Invoice
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap w-96">
-                      Thông báo
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
-                      Thao tác
-                    </th>
                   </tr>
                   <tr className="bg-gray-100 border-b border-gray-200">
                     {selectedColumns.map((column) => (
@@ -1442,9 +1411,6 @@ export default function OrdersPage() {
                         />
                       </th>
                     ))}
-                    <th className="px-4 py-2"></th>
-                    <th className="px-4 py-2"></th>
-                    <th className="px-4 py-2"></th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -1475,73 +1441,6 @@ export default function OrdersPage() {
                               {renderCellValue(row.order, row.sale, column)}
                             </td>
                           ))}
-                          {/* Invoice Status Column - chỉ hiển thị ở dòng đầu tiên của mỗi order */}
-                          <td className="px-4 py-3 whitespace-nowrap">
-                            {index === 0 || flattenedRows[index - 1]?.order.docCode !== row.order.docCode ? (
-                              (() => {
-                                const invoice = invoiceStatusMap[row.order.docCode];
-                                if (!invoice) {
-                                  return (
-                                    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-600">
-                                      Chưa tạo
-                                    </span>
-                                  );
-                                }
-                                if (invoice.status === 1) {
-                                  return (
-                                    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                                      Thành công
-                                    </span>
-                                  );
-                                } else {
-                                  return (
-                                    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
-                                      Thất bại
-                                    </span>
-                                  );
-                                }
-                              })()
-                            ) : null}
-                          </td>
-                          {/* Invoice Message Column - chỉ hiển thị ở dòng đầu tiên của mỗi order */}
-                          <td className={`px-4 py-3 text-sm max-w-96 ${(() => {
-                            const invoice = invoiceStatusMap[row.order.docCode];
-                            return invoice && invoice.status === 0 ? 'text-red-600 font-medium' : 'text-gray-500';
-                          })()}`}>
-                            {index === 0 || flattenedRows[index - 1]?.order.docCode !== row.order.docCode ? (
-                              (() => {
-                                const invoice = invoiceStatusMap[row.order.docCode];
-                                if (invoice && invoice.status === 0 && invoice.message) {
-                                  return (
-                                    <div className="break-words whitespace-normal" title={invoice.message}>
-                                      {invoice.message}
-                                    </div>
-                                  );
-                                }
-                                return <span className="text-gray-400">-</span>;
-                              })()
-                            ) : null}
-                          </td>
-                          {/* Action Column - chỉ hiển thị ở dòng đầu tiên của mỗi order */}
-                          <td className="px-4 py-3 whitespace-nowrap text-sm">
-                            {index === 0 || flattenedRows[index - 1]?.order.docCode !== row.order.docCode ? (
-                              (() => {
-                                const invoice = invoiceStatusMap[row.order.docCode];
-                                if (invoice && invoice.status === 0) {
-                                  return (
-                                    <button
-                                      onClick={() => handleRetryInvoice(row.order.docCode)}
-                                      disabled={retrying[row.order.docCode]}
-                                      className="px-3 py-1.5 bg-orange-600 text-white text-xs font-medium rounded-md hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                      {retrying[row.order.docCode] ? 'Đang xử lý...' : 'Đồng bộ lại'}
-                                    </button>
-                                  );
-                                }
-                                return null;
-                              })()
-                            ) : null}
-                          </td>
                         </tr>
                       );
                     })
@@ -1564,10 +1463,10 @@ export default function OrdersPage() {
                       }}
                       className="border border-gray-300 rounded-md px-3 py-1.5 text-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
+                      <option value="10">10</option>
                       <option value="25">25</option>
                       <option value="50">50</option>
                       <option value="100">100</option>
-                      <option value="200">200</option>
                     </select>
                     <span className="text-sm text-gray-700">bản ghi/trang</span>
                   </div>
