@@ -244,81 +244,37 @@ export const MAIN_COLUMNS: OrderColumn[] = [
   'kyHieu',                   // * Ký hiệu
   'description',              // Diễn giải
   'itemCode',                 // * Mã hàng
+  'itemName',                 // Tên mặt hàng
   'dvt',                      // Đvt
+  'loai',                     // Loại
   'promCode',                 // Khuyến mãi
   'maKho',                    // * Mã kho
   'maLo',                     // * Mã lô
   'qty',                      // Số lượng
   'giaBan',                   // Giá bán
   'tienHang',                 // Tiền hàng
-  'maNt',                     // Mã nt
   'tyGia',                    // Tỷ giá
   'maThue',                   // * Mã thuế
   'tkNo',                     // * Tk nợ
   'tkDoanhThu',               // * Tk doanh thu
   'tkGiaVon',                 // * Tk giá vốn
-  'tkChiPhiKhuyenMai',        // * Tk chi phí khuyến mãi
-  'tkThueCo',                 // * Tk thuế có
   'cucThue',                  // * Cục thuế
   'maThanhToan',              // Mã thanh toán
   'vuViec',                   // Vụ việc
   'boPhan',                   // Bộ phận
-  'lsx',                      // Lsx
-  'sanPham',                  // Sản phẩm
-  'hopDong',                  // Hợp đồng
-  'phi',                      // Phí
-  'kol',                      // KOL
-  'kheUoc',                   // Khế ước
-  'maCa',                     // Mã ca
-  'isRewardLine',             // is_reward_line
-  'isBundleRewardLine',       // is_bundle_reward_line
-  'dongThuocGoi',             // Dòng thuộc gói
   'trangThai',                // Trạng thai
   'barcode',                  // Barcode
   'muaHangGiamGia',           // Mua hàng giảm giá
   'chietKhauMuaHangGiamGia',  // Chiết khấu mua hàng giảm giá
-  'ckTheoChinhSach',          // CK theo chính sách
   'chietKhauCkTheoChinhSach', // Chiết khấu ck theo chính sách
   'muaHangCkVip',             // Mua hàng CK VIP
   'chietKhauMuaHangCkVip',    // Chiết khấu mua hàng CK VIP
-  'thanhToanCoupon',          // Thanh toán coupon
-  'chietKhauThanhToanCoupon', // Chiết khấu thanh toán coupon
   'thanhToanVoucher',         // Thanh toán voucher
   'chietKhauThanhToanVoucher',// Chiết khấu thanh toán voucher
-  'duPhong1',                 // Dự phòng 1
-  'chietKhauDuPhong1',        // Chiết khấu dự phòng 1
-  'duPhong2',                 // Dự phòng 2
-  'chietKhauDuPhong2',        // Chiết khấu dự phòng 2
-  'duPhong3',                 // Dự phòng 3
-  'chietKhauDuPhong3',        // Chiết khấu dự phòng 3
-  'hang',                     // Hãng
-  'chietKhauHang',            // Chiết khấu hãng
-  'thuongBangHang',           // Thưởng bằng hàng
-  'chietKhauThuongMuaBangHang',// Chiết khấu thưởng mua bằng hàng
   'thanhToanTkTienAo',        // Thanh toán TK tiền ảo
   'chietKhauThanhToanTkTienAo',// Chiết khấu thanh toán TK tiền ảo
-  'ckThem1',                  // CK thêm 1
-  'chietKhauThem1',           // Chiết khấu thêm 1
-  'ckThem2',                  // CK thêm 2
-  'chietKhauThem2',           // Chiết khấu thêm 2
-  'ckThem3',                  // CK thêm 3
-  'chietKhauThem3',           // Chiết khấu thêm 3
+  'voucherDp1',               // Voucher DP1
   'chietKhauVoucherDp1',      // Chiết khấu Voucher DP1
-  'voucherDp2',               // Voucher DP2
-  'chietKhauVoucherDp2',      // Chiết khấu Voucher DP2
-  'voucherDp3',               // Voucher DP3
-  'chietKhauVoucherDp3',      // Chiết khấu Voucher DP3
-  'voucherDp4',               // Voucher DP4
-  'chietKhauVoucherDp4',      // Chiết khấu Voucher DP4
-  'voucherDp5',               // Voucher DP5
-  'chietKhauVoucherDp5',      // Chiết khấu Voucher DP5
-  'voucherDp6',               // Voucher DP6
-  'chietKhauVoucherDp6',      // Chiết khấu Voucher DP6
-  'voucherDp7',               // Voucher DP7
-  'chietKhauVoucherDp7',      // Chiết khấu Voucher DP7
-  'voucherDp8',               // Voucher DP8
-  'chietKhauVoucherDp8',      // Chiết khấu Voucher DP8
-  'troGia',                   // Trợ giá
   'maCtkmTangHang',           // Mã CTKM tặng hàng
   'maThe',                    // Mã thẻ
   'soSerial',                 // Số serial

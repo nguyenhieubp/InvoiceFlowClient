@@ -264,6 +264,8 @@ export default function OrdersPage() {
               itemCode: product.maVatTu || enrichedSale.itemCode,
               itemName: product.tenVatTu || enrichedSale.itemName,
               product,
+              // Giữ lại maKho từ backend
+              maKho: enrichedSale.maKho || sale.maKho,
             };
           }
         }
@@ -275,8 +277,15 @@ export default function OrdersPage() {
             enrichedSale = {
               ...enrichedSale,
               department,
+              // Giữ lại maKho từ backend
+              maKho: enrichedSale.maKho || sale.maKho,
             };
           }
+        }
+
+        // Đảm bảo maKho luôn được giữ lại
+        if (!enrichedSale.maKho && sale.maKho) {
+          enrichedSale.maKho = sale.maKho;
         }
 
         return enrichedSale;
@@ -667,8 +676,17 @@ export default function OrdersPage() {
         // Sử dụng maKho từ backend (đã được tính sẵn)
         return sale?.maKho || '';
       case 'maLo':
-        const maLo = calculateMaLo(sale?.serial, sale?.catcode1, sale?.catcode2);
-        return maLo || '';
+        // Hiển thị ma_lo nếu producttype là I, B, M
+        const producttypeForMaLo = sale?.producttype || sale?.product?.producttype;
+        if (producttypeForMaLo === 'I' || producttypeForMaLo === 'B' || producttypeForMaLo === 'M') {
+          const serial = sale?.serial || '';
+          if (producttypeForMaLo === 'I' && serial) {
+            // Nếu producttype là "I", cắt lấy 4 ký tự cuối
+            return serial.length >= 4 ? serial.slice(-4) : serial;
+          }
+          return serial;
+        }
+        return '';
       case 'qty':
         return sale?.qty?.toString() || '';
       case 'giaBan':
@@ -875,9 +893,18 @@ export default function OrdersPage() {
         // Sử dụng maKho từ backend (đã được tính sẵn)
         return <div className="text-sm text-gray-900">{sale?.maKho || '-'}</div>;
       case 'maLo':
-        // Tính mã lô dựa trên catcode1 và catcode2
-        const maLo = calculateMaLo(sale?.serial, sale?.catcode1, sale?.catcode2);
-        return <div className="text-sm text-gray-900">{maLo || '-'}</div>;
+        // Hiển thị ma_lo nếu producttype là I, B, M
+        const producttypeForMaLoRender = sale?.producttype || sale?.product?.producttype;
+        if (producttypeForMaLoRender === 'I' || producttypeForMaLoRender === 'B' || producttypeForMaLoRender === 'M') {
+          const serial = sale?.serial || '';
+          let maLo = serial;
+          if (producttypeForMaLoRender === 'I' && serial) {
+            // Nếu producttype là "I", cắt lấy 4 ký tự cuối
+            maLo = serial.length >= 4 ? serial.slice(-4) : serial;
+          }
+          return <div className="text-sm text-gray-900">{maLo || '-'}</div>;
+        }
+        return <div className="text-sm text-gray-400 italic">-</div>;
       case 'qty':
         return <div className="text-sm text-gray-900">{formatValue(sale?.qty)}</div>;
       case 'giaBan':
@@ -996,8 +1023,12 @@ export default function OrdersPage() {
         }
         return <div className="text-sm text-gray-900">{voucherLabels}</div>;
       case 'soSerial':
-        // Lấy từ serial (backend lưu vào sale.serial)
-        return <div className="text-sm text-gray-900">{sale?.serial || '-'}</div>;
+        // Hiển thị so_serial nếu producttype là V, S
+        const producttypeForSoSerial = sale?.producttype || sale?.product?.producttype;
+        if (producttypeForSoSerial === 'V' || producttypeForSoSerial === 'S') {
+          return <div className="text-sm text-gray-900">{sale?.serial || '-'}</div>;
+        }
+        return <div className="text-sm text-gray-400 italic">-</div>;
       case 'maThe':
         // Ưu tiên mvc_serial (từ Zappy API)
           return <div className="text-sm text-gray-900">{sale?.maThe ?? '-'}</div>;

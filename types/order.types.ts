@@ -26,6 +26,7 @@ export interface OrderProduct {
   maERP?: string;
   dvt?: string;
   loaiVatTu?: string;
+  producttype?: string; // Product type: S (Serial), I (Item), V (Voucher), B (Batch), M (Material)
   tkVatTu?: string;
   suaTkVatTu?: boolean;
   tkGiaVonBanBuon?: string;
@@ -158,6 +159,7 @@ export interface SaleItem {
   maCtkmTangHang?: string;
   maThe?: string;
   soSerial?: string;
+  producttype?: string; // Product type: S (Serial), I (Item), V (Voucher), B (Batch), M (Material)
   revenue?: number;
   // Các trường bổ sung từ API
   cat1?: string;
