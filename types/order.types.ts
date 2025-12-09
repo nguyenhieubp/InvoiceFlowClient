@@ -27,6 +27,7 @@ export interface OrderProduct {
   dvt?: string;
   loaiVatTu?: string;
   producttype?: string; // Product type: S (Serial), I (Item), V (Voucher), B (Batch), M (Material)
+  productType?: string; // Product type from Loyalty API: TPCN, VOUC, etc.
   tkVatTu?: string;
   suaTkVatTu?: boolean;
   tkGiaVonBanBuon?: string;
