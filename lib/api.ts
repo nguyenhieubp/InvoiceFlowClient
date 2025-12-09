@@ -179,6 +179,36 @@ export const syncCustomersApi = {
 };
 
 // Fast API Invoices API (Bảng kê hóa đơn)
+// Warehouse Releases API
+export const warehouseReleasesApi = {
+  getAll: (params?: {
+    page?: number;
+    limit?: number;
+    status?: number;
+    docCode?: string;
+    maKh?: string;
+    tenKh?: string;
+    maDvcs?: string;
+    startDate?: string;
+    endDate?: string;
+  }) => {
+    return api.get('/warehouse-releases', { params });
+  },
+  getById: (id: string) => {
+    return api.get(`/warehouse-releases/${id}`);
+  },
+  getByDocCode: (docCode: string) => {
+    return api.get(`/warehouse-releases/doc-code/${docCode}`);
+  },
+  getStatistics: (params?: {
+    startDate?: string;
+    endDate?: string;
+    maDvcs?: string;
+  }) => {
+    return api.get('/warehouse-releases/statistics', { params });
+  },
+};
+
 export const fastApiInvoicesApi = {
   getAll: (params?: {
     page?: number;

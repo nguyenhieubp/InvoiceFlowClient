@@ -3,22 +3,6 @@
  * Các hàm tiện ích cho orders
  */
 
-import { getOrderTypePrefix } from '@/lib/constants/order-type.constants';
-
-/**
- * Tính mã kho từ ordertype + ma_bp (bộ phận)
- */
-export const calculateMaKho = (
-  ordertype: string | null | undefined,
-  maBp: string | null | undefined
-): string | null => {
-  const prefix = getOrderTypePrefix(ordertype);
-  if (!prefix || !maBp) {
-    return null;
-  }
-  return prefix + maBp;
-};
-
 /**
  * Parse promCode từ format "Code-Name" để lấy code
  */

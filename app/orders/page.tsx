@@ -8,7 +8,7 @@ import { ORDER_TYPE_NORMAL, ORDER_TYPE_LAM_DV, ORDER_TYPE_BAN_ECOIN, ORDER_TYPE_
 import { calculateThanhToanVoucher } from '@/lib/utils/voucher.utils';
 import { Order, SaleItem } from '@/types/order.types';
 import { OrderColumn, FIELD_LABELS, MAIN_COLUMNS } from '@/lib/constants/order-columns.constants';
-import { calculateMaKho, calculateMaLo } from '@/lib/utils/order.utils';
+import { calculateMaLo } from '@/lib/utils/order.utils';
 import { normalizeOrderData } from '@/lib/utils/order-mapper.utils';
 import { mapLoyaltyApiProductToProductItem } from '@/lib/utils/product.utils';
 import { OrderProduct, OrderDepartment } from '@/types/order.types';
@@ -664,11 +664,8 @@ export default function OrdersPage() {
         // Sử dụng promotionDisplayCode từ backend
         return sale?.promotionDisplayCode || '';
       case 'maKho':
-        const maBpForMaKho = sale?.department?.ma_bp;
-        const calculatedMaKho = sale?.ordertype && maBpForMaKho
-          ? calculateMaKho(sale.ordertype, maBpForMaKho)
-          : null;
-        return calculatedMaKho || '';
+        // Sử dụng maKho từ backend (đã được tính sẵn)
+        return sale?.maKho || '';
       case 'maLo':
         const maLo = calculateMaLo(sale?.serial, sale?.catcode1, sale?.catcode2);
         return maLo || '';
@@ -875,12 +872,8 @@ export default function OrdersPage() {
         }
         return <div className="text-sm text-gray-900">{displayCode}</div>;
       case 'maKho':
-        // Dùng ma_bp từ department (bộ phận) để tính mã kho
-        const maBpForMaKho = sale?.department?.ma_bp;
-        const calculatedMaKho = sale?.ordertype && maBpForMaKho
-          ? calculateMaKho(sale.ordertype, maBpForMaKho)
-          : null;
-        return <div className="text-sm text-gray-900">{calculatedMaKho || '-'}</div>;
+        // Sử dụng maKho từ backend (đã được tính sẵn)
+        return <div className="text-sm text-gray-900">{sale?.maKho || '-'}</div>;
       case 'maLo':
         // Tính mã lô dựa trên catcode1 và catcode2
         const maLo = calculateMaLo(sale?.serial, sale?.catcode1, sale?.catcode2);

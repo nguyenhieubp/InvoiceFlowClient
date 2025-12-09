@@ -1,264 +1,472 @@
 'use client';
 
-import { useState } from 'react';
-import { salesApi } from '@/lib/api';
+import { useEffect, useState } from 'react';
+import { warehouseReleasesApi } from '@/lib/api';
 import { Toast } from '@/components/Toast';
 
-interface StockTransferItem {
-  doctype: string;
-  doccode: string;
-  transdate: string;
-  doc_desc: string;
-  branch_code: string;
-  brand_code: string;
-  item_code: string;
-  item_name: string;
-  stock_code: string;
-  related_stock_code: string;
-  iotype: string;
-  qty: number;
-  batchserial: string | null;
-  line_info1: string | null;
-  line_info2: string | null;
-  so_code: string | null;
+interface WarehouseRelease {
+  id: string;
+  docCode: string;
+  maDvcs: string | null;
+  maKh: string | null;
+  tenKh: string | null;
+  ngayCt: string | null;
+  status: number;
+  message: string | null;
+  guid: string | null;
+  fastApiResponse: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export default function StockTransferPage() {
-  const [jsonInput, setJsonInput] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [releases, setReleases] = useState<WarehouseRelease[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 10,
+    total: 0,
+    totalPages: 0,
+    hasNext: false,
+    hasPrev: false,
+  });
+  const [filters, setFilters] = useState({
+    status: '',
+    docCode: '',
+    maKh: '',
+    tenKh: '',
+    maDvcs: '',
+    startDate: '',
+    endDate: '',
+  });
+  const [statistics, setStatistics] = useState<{
+    total: number;
+    success: number;
+    failed: number;
+    successRate: string;
+  } | null>(null);
   const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
 
   const showToast = (type: 'success' | 'error' | 'info', message: string) => {
     setToast({ type, message });
-    setTimeout(() => setToast(null), 5000);
+    setTimeout(() => setToast(null), 3000);
   };
 
-  const handleSubmit = async () => {
+  const loadReleases = async () => {
     try {
       setLoading(true);
-      setResult(null);
+      const params: any = {
+        page: pagination.page,
+        limit: pagination.limit,
+      };
 
-      // Parse JSON input
-      let data: { data: StockTransferItem[] };
-      try {
-        const parsed = JSON.parse(jsonInput);
-        // Nếu input là array, wrap vào object
-        if (Array.isArray(parsed)) {
-          data = { data: parsed };
-        } else if (parsed.data && Array.isArray(parsed.data)) {
-          data = parsed;
-        } else {
-          throw new Error('Dữ liệu không hợp lệ. Vui lòng nhập array hoặc object có field "data"');
-        }
-      } catch (error: any) {
-        showToast('error', `Lỗi parse JSON: ${error.message}`);
-        setLoading(false);
-        return;
-      }
+      if (filters.status) params.status = parseInt(filters.status);
+      if (filters.docCode) params.docCode = filters.docCode;
+      if (filters.maKh) params.maKh = filters.maKh;
+      if (filters.tenKh) params.tenKh = filters.tenKh;
+      if (filters.maDvcs) params.maDvcs = filters.maDvcs;
+      if (filters.startDate) params.startDate = filters.startDate;
+      if (filters.endDate) params.endDate = filters.endDate;
 
-      // Validate data
-      if (!data.data || data.data.length === 0) {
-        showToast('error', 'Dữ liệu không được để trống');
-        setLoading(false);
-        return;
-      }
+      const response = await warehouseReleasesApi.getAll(params);
+      const data = response.data;
 
-      // Call API
-      const response = await salesApi.createStockTransfer(data);
-      setResult(response.data);
-      
-      if (response.data.success) {
-        showToast(
-          'success',
-          `Tạo thành công ${response.data.successCount}/${response.data.total} phiếu xuất kho`,
-        );
-      } else {
-        showToast('error', 'Có lỗi xảy ra khi tạo phiếu xuất kho');
-      }
+      const releaseList = data.items || [];
+      setReleases(releaseList);
+      setPagination({
+        ...pagination,
+        total: data.pagination?.total || 0,
+        totalPages: data.pagination?.totalPages || 0,
+        hasNext: data.pagination?.hasNext || false,
+        hasPrev: data.pagination?.hasPrev || false,
+      });
     } catch (error: any) {
-      console.error('Error creating stock transfer:', error);
-      showToast('error', error?.response?.data?.message || 'Lỗi khi tạo phiếu xuất kho');
-      setResult(null);
+      console.error('Error loading warehouse releases:', error);
+      showToast('error', error?.response?.data?.message || 'Lỗi khi tải danh sách phiếu xuất kho');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleLoadSample = () => {
-    const sample = {
-      data: [
-        {
-          doctype: 'STOCK_TRANSFER',
-          doccode: 'TR81.00367396',
-          transdate: '2025-11-01T01:40:12Z',
-          doc_desc: 'LAS1 - Nhập HL ngày 31/10/2025',
-          branch_code: 'HMC01',
-          brand_code: 'NH_KH',
-          item_code: 'FSSX015',
-          item_name: 'Disposable Rectangle Cotton Pad_BTT 5x6 lẻ',
-          stock_code: 'BAT2',
-          related_stock_code: 'LAS1',
-          iotype: 'O',
-          qty: -1000,
-          batchserial: null,
-          line_info1: null,
-          line_info2: null,
-          so_code: null,
-        },
-        {
-          doctype: 'STOCK_TRANSFER',
-          doccode: 'TR81.00367396',
-          transdate: '2025-11-01T01:40:12Z',
-          doc_desc: 'LAS1 - Nhập HL ngày 31/10/2025',
-          branch_code: 'HMC01',
-          brand_code: 'NH_KH',
-          item_code: 'FSSX016',
-          item_name: 'Disposable Rectangle Cotton Pad_BTT 6x8 lẻ',
-          stock_code: 'BAT2',
-          related_stock_code: 'LAS1',
-          iotype: 'O',
-          qty: -1000,
-          batchserial: null,
-          line_info1: null,
-          line_info2: null,
-          so_code: null,
-        },
-      ],
-    };
-    setJsonInput(JSON.stringify(sample, null, 2));
+  const loadStatistics = async () => {
+    try {
+      const params: any = {};
+      if (filters.startDate) params.startDate = filters.startDate;
+      if (filters.endDate) params.endDate = filters.endDate;
+      if (filters.maDvcs) params.maDvcs = filters.maDvcs;
+
+      const response = await warehouseReleasesApi.getStatistics(params);
+      setStatistics(response.data);
+    } catch (error: any) {
+      console.error('Error loading statistics:', error);
+    }
+  };
+
+  useEffect(() => {
+    loadReleases();
+    loadStatistics();
+  }, [pagination.page, pagination.limit]);
+
+  const handleFilterChange = (key: string, value: string) => {
+    setFilters({ ...filters, [key]: value });
+  };
+
+  const handleApplyFilters = () => {
+    setPagination({ ...pagination, page: 1 });
+    loadReleases();
+    loadStatistics();
+  };
+
+  const handleResetFilters = () => {
+    setFilters({
+      status: '',
+      docCode: '',
+      maKh: '',
+      tenKh: '',
+      maDvcs: '',
+      startDate: '',
+      endDate: '',
+    });
+    setPagination({ ...pagination, page: 1 });
+  };
+
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return '-';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleString('vi-VN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } catch {
+      return dateString;
+    }
+  };
+
+  const formatDateOnly = (dateString: string | null) => {
+    if (!dateString) return '-';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('vi-VN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      });
+    } catch {
+      return dateString;
+    }
+  };
+
+  const getStatusBadge = (status: number) => {
+    if (status === 1) {
+      return (
+        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+          Thành công
+        </span>
+      );
+    } else {
+      return (
+        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+          Thất bại
+        </span>
+      );
+    }
   };
 
   return (
-    <div className="container mx-auto p-6">
+    <div className="p-6">
+      {/* Toast - Fixed position at top */}
+      {toast && (
+        <div className="fixed top-4 right-4 z-50">
+          <Toast
+            type={toast.type}
+            message={toast.message}
+            onClose={() => setToast(null)}
+          />
+        </div>
+      )}
+
       <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">Tạo phiếu xuất/nhập kho</h1>
-        <p className="text-gray-600">
-          Nhập dữ liệu STOCK_TRANSFER dưới dạng JSON để tạo phiếu xuất/nhập kho
-        </p>
+        <h1 className="text-2xl font-bold text-gray-900">Bảng kê phiếu xuất/nhập kho</h1>
+        <p className="text-sm text-gray-600 mt-1">Danh sách chi tiết các phiếu xuất/nhập kho đã tạo từ Fast API</p>
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-lg p-6 mb-6">
-        <div className="mb-4 flex justify-between items-center">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Dữ liệu JSON
-          </label>
-          <button
-            onClick={handleLoadSample}
-            className="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
-          >
-            Load mẫu
-          </button>
+      {/* Statistics */}
+      {statistics && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <div className="bg-white p-4 rounded-lg shadow">
+            <div className="text-sm text-gray-600">Tổng số</div>
+            <div className="text-2xl font-bold text-gray-900">{statistics.total}</div>
+          </div>
+          <div className="bg-white p-4 rounded-lg shadow">
+            <div className="text-sm text-gray-600">Thành công</div>
+            <div className="text-2xl font-bold text-green-600">{statistics.success}</div>
+          </div>
+          <div className="bg-white p-4 rounded-lg shadow">
+            <div className="text-sm text-gray-600">Thất bại</div>
+            <div className="text-2xl font-bold text-red-600">{statistics.failed}</div>
+          </div>
+          <div className="bg-white p-4 rounded-lg shadow">
+            <div className="text-sm text-gray-600">Tỷ lệ thành công</div>
+            <div className="text-2xl font-bold text-blue-600">{statistics.successRate}%</div>
+          </div>
         </div>
-        <textarea
-          value={jsonInput}
-          onChange={(e) => setJsonInput(e.target.value)}
-          className="w-full h-96 p-4 border border-gray-300 rounded font-mono text-sm"
-          placeholder='{"data": [...]}'
-        />
-        <div className="mt-4 flex gap-4">
-          <button
-            onClick={handleSubmit}
-            disabled={loading || !jsonInput.trim()}
-            className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
-          >
-            {loading ? 'Đang xử lý...' : 'Tạo phiếu xuất kho'}
-          </button>
-          <button
-            onClick={() => {
-              setJsonInput('');
-              setResult(null);
-            }}
-            className="px-6 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
-          >
-            Clear
-          </button>
+      )}
+
+      {/* Filters */}
+      <div className="bg-white p-4 rounded-lg shadow mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Trạng thái</label>
+            <select
+              value={filters.status}
+              onChange={(e) => handleFilterChange('status', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Tất cả</option>
+              <option value="1">Thành công</option>
+              <option value="0">Thất bại</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Mã đơn hàng</label>
+            <input
+              type="text"
+              value={filters.docCode}
+              onChange={(e) => handleFilterChange('docCode', e.target.value)}
+              placeholder="SO31.00149453"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Mã khách hàng</label>
+            <input
+              type="text"
+              value={filters.maKh}
+              onChange={(e) => handleFilterChange('maKh', e.target.value)}
+              placeholder="KF25127785"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Tên khách hàng</label>
+            <input
+              type="text"
+              value={filters.tenKh}
+              onChange={(e) => handleFilterChange('tenKh', e.target.value)}
+              placeholder="Nguyễn Văn A"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Mã đơn vị</label>
+            <input
+              type="text"
+              value={filters.maDvcs}
+              onChange={(e) => handleFilterChange('maDvcs', e.target.value)}
+              placeholder="FBV"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Từ ngày</label>
+            <input
+              type="date"
+              value={filters.startDate}
+              onChange={(e) => handleFilterChange('startDate', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Đến ngày</label>
+            <input
+              type="date"
+              value={filters.endDate}
+              onChange={(e) => handleFilterChange('endDate', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div className="flex items-end gap-2">
+            <button
+              onClick={handleApplyFilters}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              Áp dụng
+            </button>
+            <button
+              onClick={handleResetFilters}
+              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500"
+            >
+              Reset
+            </button>
+          </div>
         </div>
       </div>
 
-      {result && (
-        <div className="bg-white border border-gray-200 rounded-lg p-6">
-          <h2 className="text-xl font-bold mb-4">Kết quả</h2>
-          <div className="mb-4">
-            <div className="grid grid-cols-3 gap-4">
-              <div className="p-4 bg-blue-50 rounded">
-                <div className="text-sm text-gray-600">Tổng số</div>
-                <div className="text-2xl font-bold text-blue-600">{result.total || 0}</div>
-              </div>
-              <div className="p-4 bg-green-50 rounded">
-                <div className="text-sm text-gray-600">Thành công</div>
-                <div className="text-2xl font-bold text-green-600">
-                  {result.successCount || 0}
-                </div>
-              </div>
-              <div className="p-4 bg-red-50 rounded">
-                <div className="text-sm text-gray-600">Thất bại</div>
-                <div className="text-2xl font-bold text-red-600">
-                  {result.failedCount || 0}
-                </div>
-              </div>
+      {/* Table */}
+      <div className="bg-white rounded-lg shadow overflow-hidden">
+        {/* Table Header with Count - Always visible */}
+        <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+          <div className="flex items-center justify-between">
+            <div className="text-sm font-medium text-gray-700">
+              {loading ? (
+                <span>Đang tải...</span>
+              ) : (
+                <>
+                  Tổng số: <span className="font-bold text-gray-900">{pagination.total}</span> phiếu
+                  {pagination.total > 0 && (
+                    <span className="ml-2 text-gray-500">
+                      (Hiển thị {Math.min((pagination.page - 1) * pagination.limit + 1, pagination.total)} - {Math.min(pagination.page * pagination.limit, pagination.total)})
+                    </span>
+                  )}
+                </>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-gray-700">Hiển thị:</label>
+              <select
+                value={pagination.limit}
+                onChange={(e) => {
+                  const newLimit = parseInt(e.target.value);
+                  setPagination({ ...pagination, limit: newLimit, page: 1 });
+                }}
+                className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              >
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+              </select>
+              <span className="text-sm text-gray-700">bản ghi/trang</span>
             </div>
           </div>
+        </div>
 
-          {result.results && result.results.length > 0 && (
-            <div className="mt-4">
-              <h3 className="text-lg font-semibold mb-2">Chi tiết</h3>
-              <div className="space-y-2">
-                {result.results.map((item: any, index: number) => (
-                  <div
-                    key={index}
-                    className={`p-4 rounded border ${
-                      item.success
-                        ? 'bg-green-50 border-green-200'
-                        : 'bg-red-50 border-red-200'
-                    }`}
-                  >
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <div className="font-semibold">{item.doccode}</div>
-                        {item.success ? (
-                          <div className="text-sm text-green-700 mt-1">
-                            Tạo thành công
+        {loading ? (
+          <div className="p-8 text-center text-gray-500">Đang tải...</div>
+        ) : releases.length === 0 ? (
+          <div className="p-8 text-center text-gray-500">Không có dữ liệu</div>
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
+                      Mã đơn hàng
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
+                      Mã KH
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-40">
+                      Tên KH
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
+                      Mã ĐVCS
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
+                      Ngày CT
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
+                      Trạng thái
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-96">
+                      Thông báo
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {releases.map((release) => (
+                    <tr key={release.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {release.docCode}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {release.maKh || '-'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {release.tenKh || '-'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {release.maDvcs || '-'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {formatDateOnly(release.ngayCt)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {getStatusBadge(release.status)}
+                      </td>
+                      <td className={`px-6 py-4 text-sm max-w-96 ${release.status === 0 ? 'text-red-600 font-medium' : 'text-gray-500'}`}>
+                        {release.status === 0 && release.message ? (
+                          <div className="break-words whitespace-normal" title={release.message}>
+                            {release.message}
                           </div>
                         ) : (
-                          <div className="text-sm text-red-700 mt-1">
-                            Lỗi: {item.error || 'Unknown error'}
-                          </div>
+                          <span className="text-gray-400">-</span>
                         )}
-                      </div>
-                      <span
-                        className={`px-2 py-1 rounded text-xs font-semibold ${
-                          item.success
-                            ? 'bg-green-200 text-green-800'
-                            : 'bg-red-200 text-red-800'
-                        }`}
-                      >
-                        {item.success ? 'Thành công' : 'Thất bại'}
-                      </span>
-                    </div>
-                    {item.result && (
-                      <div className="mt-2 text-xs text-gray-600">
-                        <pre className="bg-white p-2 rounded overflow-auto">
-                          {JSON.stringify(item.result, null, 2)}
-                        </pre>
-                      </div>
-                    )}
-                  </div>
-                ))}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination */}
+            <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+              <div className="flex-1 flex justify-between sm:hidden">
+                <button
+                  onClick={() => setPagination({ ...pagination, page: pagination.page - 1 })}
+                  disabled={!pagination.hasPrev}
+                  className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Trước
+                </button>
+                <button
+                  onClick={() => setPagination({ ...pagination, page: pagination.page + 1 })}
+                  disabled={!pagination.hasNext}
+                  className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Sau
+                </button>
+              </div>
+              <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm text-gray-700">
+                    Hiển thị <span className="font-medium">{(pagination.page - 1) * pagination.limit + 1}</span> đến{' '}
+                    <span className="font-medium">
+                      {Math.min(pagination.page * pagination.limit, pagination.total)}
+                    </span>{' '}
+                    trong tổng số <span className="font-medium">{pagination.total}</span> kết quả
+                  </p>
+                </div>
+                <div>
+                  <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                    <button
+                      onClick={() => setPagination({ ...pagination, page: pagination.page - 1 })}
+                      disabled={!pagination.hasPrev}
+                      className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Trước
+                    </button>
+                    <span className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
+                      Trang {pagination.page} / {pagination.totalPages || 1}
+                    </span>
+                    <button
+                      onClick={() => setPagination({ ...pagination, page: pagination.page + 1 })}
+                      disabled={!pagination.hasNext}
+                      className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Sau
+                    </button>
+                  </nav>
+                </div>
               </div>
             </div>
-          )}
-        </div>
-      )}
-
-      {toast && (
-        <Toast
-          type={toast.type}
-          message={toast.message}
-          onClose={() => setToast(null)}
-        />
-      )}
+          </>
+        )}
+      </div>
     </div>
   );
 }
-
