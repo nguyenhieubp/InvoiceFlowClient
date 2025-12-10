@@ -18,6 +18,9 @@ export const mapLoyaltyApiProductToProductItem = (apiProduct: any): OrderProduct
     tenVatTu: apiProduct.name || apiProduct.invoiceName || apiProduct.alternativeName || null,
     dvt: apiProduct.unit || apiProduct.dvt || null, // Ưu tiên unit trước
     loaiVatTu: apiProduct.materialType || null,
+    productType: apiProduct.productType || apiProduct.producttype || null,
+    trackSerial: apiProduct.trackSerial === true,
+    trackBatch: apiProduct.trackBatch === true,
     tkVatTu: apiProduct.materialAccount || null,
     tkGiaVonBanBuon: apiProduct.wholesaleCostAccount || null,
     tkDoanhThuBanBuon: apiProduct.wholesaleRevenueAccount || null,

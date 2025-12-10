@@ -28,6 +28,8 @@ export interface OrderProduct {
   loaiVatTu?: string;
   producttype?: string; // Product type: S (Serial), I (Item), V (Voucher), B (Batch), M (Material)
   productType?: string; // Product type from Loyalty API: TPCN, VOUC, etc.
+  trackSerial?: boolean; // Track serial from Loyalty API
+  trackBatch?: boolean; // Track batch from Loyalty API
   tkVatTu?: string;
   suaTkVatTu?: boolean;
   tkGiaVonBanBuon?: string;
