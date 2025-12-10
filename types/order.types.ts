@@ -97,6 +97,7 @@ export interface SaleItem {
   loai?: string;
   productType?: string; // Product type from Loyalty API (VOUC, SKIN, TPCN, GIFT, etc.) - saved in database
   producttype?: string; // Legacy product type (I, B, M, V, S) - deprecated
+  trackInventory?: boolean; // Track inventory from Loyalty API
   qty?: number;
   giaBan?: number;
   tienHang?: number;
