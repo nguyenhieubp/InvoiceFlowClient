@@ -287,7 +287,7 @@ export default function OrdersPage() {
         customer: {
           ...order.customer,
           // Cập nhật brand từ department.company nếu có
-          brand: brandFromDepartment || order.customer.brand || '',
+          brand: brandFromDepartment || order.customer?.brand || '',
         },
         sales: enrichedSales,
       };
@@ -347,16 +347,16 @@ export default function OrdersPage() {
       filtered = filtered.filter(
         (order) =>
           order.docCode.toLowerCase().includes(query) ||
-          order.customer.name.toLowerCase().includes(query) ||
-          order.customer.code.toLowerCase().includes(query) ||
-          (order.customer.mobile && order.customer.mobile.toLowerCase().includes(query))
+          (order.customer?.name && order.customer.name.toLowerCase().includes(query)) ||
+          (order.customer?.code && order.customer.code.toLowerCase().includes(query)) ||
+          (order.customer?.mobile && order.customer.mobile.toLowerCase().includes(query))
       );
     }
 
     // Filter by brand
     if (filter.brand) {
       filtered = filtered.filter((order) => {
-        const orderBrand = order.customer.brand?.toLowerCase();
+        const orderBrand = order.customer?.brand?.toLowerCase();
         return orderBrand === filter.brand?.toLowerCase();
       });
     }
@@ -522,17 +522,17 @@ export default function OrdersPage() {
       case 'partnerCode':
         return sale?.partnerCode || '';
       case 'customerName':
-        return order.customer.name || '';
+        return order.customer?.name || '';
       case 'customerMobile':
-        return order.customer.mobile || '';
+        return order.customer?.mobile || '';
       case 'customerSexual':
-        return order.customer.sexual || '';
+        return order.customer?.sexual || '';
       case 'customerAddress':
-        return order.customer.address || '';
+        return order.customer?.address || '';
       case 'customerProvince':
-        return order.customer.province_name || '';
+        return order.customer?.province_name || '';
       case 'customerGrade':
-        return order.customer.grade_name || '';
+        return order.customer?.grade_name || '';
       case 'kyHieu':
         return sale?.department?.branchcode || sale?.branchCode || '';
       case 'description':
@@ -700,7 +700,7 @@ export default function OrdersPage() {
           return '';
         }
         const ordertypeForThe = mapOrderTypeNameToCode(sale?.ordertype) || sale?.ordertype;
-        const branchCodeForThe = sale?.branchCode || order.customer.branch_code;
+        const branchCodeForThe = sale?.branchCode || order.customer?.branch_code;
         const lineIdForThe = sale?.line_id;
         if (ordertypeForThe === ORDER_TYPE_NORMAL && branchCodeForThe && lineIdForThe) {
           return `${branchCodeForThe}/${lineIdForThe}`;
@@ -745,19 +745,19 @@ export default function OrdersPage() {
       case 'customerName':
         return (
           <div>
-            <div className="text-sm font-medium text-gray-900">{order.customer.name}</div>
+            <div className="text-sm font-medium text-gray-900">{order.customer?.name || '-'}</div>
           </div>
         );
       case 'customerMobile':
-        return <div className="text-sm text-gray-900">{order.customer.mobile || '-'}</div>;
+        return <div className="text-sm text-gray-900">{order.customer?.mobile || '-'}</div>;
       case 'customerSexual':
-        return <div className="text-sm text-gray-900">{order.customer.sexual || '-'}</div>;
+        return <div className="text-sm text-gray-900">{order.customer?.sexual || '-'}</div>;
       case 'customerAddress':
-        return <div className="text-sm text-gray-900">{order.customer.address || '-'}</div>;
+        return <div className="text-sm text-gray-900">{order.customer?.address || '-'}</div>;
       case 'customerProvince':
-        return <div className="text-sm text-gray-900">{order.customer.province_name || '-'}</div>;
+        return <div className="text-sm text-gray-900">{order.customer?.province_name || '-'}</div>;
       case 'customerGrade':
-        return <div className="text-sm text-gray-900">{order.customer.grade_name || '-'}</div>;
+        return <div className="text-sm text-gray-900">{order.customer?.grade_name || '-'}</div>;
       case 'kyHieu':
         // Lấy branchcode từ department API (mã chi nhánh), nếu không có thì fallback về branchCode
         return <div className="text-sm text-gray-900">{sale?.department?.branchcode || sale?.branchCode || '-'}</div>;
