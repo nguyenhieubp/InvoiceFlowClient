@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { salesApi, categoriesApi, fastApiInvoicesApi } from '@/lib/api';
+import { salesApi, categoriesApi } from '@/lib/api';
 import { Toast } from '@/components/Toast';
 import { TAX_CODE, DEBIT_ACCOUNT } from '@/lib/constants/accounting.constants';
 import { ORDER_TYPE_NORMAL, ORDER_TYPE_LAM_DV, ORDER_TYPE_BAN_ECOIN, ORDER_TYPE_SAN_TMDT, mapOrderTypeNameToCode } from '@/lib/constants/order-type.constants';
@@ -13,21 +13,6 @@ import { normalizeOrderData } from '@/lib/utils/order-mapper.utils';
 import { mapLoyaltyApiProductToProductItem } from '@/lib/utils/product.utils';
 import { OrderProduct, OrderDepartment } from '@/types/order.types';
 
-
-interface FastApiInvoice {
-  id: string;
-  docCode: string;
-  maDvcs: string | null;
-  maKh: string | null;
-  tenKh: string | null;
-  ngayCt: string | null;
-  status: number;
-  message: string | null;
-  guid: string | null;
-  fastApiResponse: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
 
 export default function OrdersPage() {
   const [allOrders, setAllOrders] = useState<Order[]>([]);
@@ -41,7 +26,7 @@ export default function OrdersPage() {
   const departmentCacheRef = useRef<Map<string, OrderDepartment>>(new Map());
   // Cache full order data để tránh fetch lại
   const fullOrderCacheRef = useRef<Map<string, Order>>(new Map());
-  const [filter, setFilter] = useState<{ brand?: string; dateFrom?: string; dateTo?: string; invoiceStatus?: string }>({});
+  const [filter, setFilter] = useState<{ brand?: string; dateFrom?: string; dateTo?: string }>({});
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedColumns, setSelectedColumns] = useState<OrderColumn[]>([...MAIN_COLUMNS]);
   const [showColumnSelector, setShowColumnSelector] = useState(false);
@@ -55,13 +40,6 @@ export default function OrdersPage() {
   const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
   const [selectedRowKey, setSelectedRowKey] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
-  const [invoiceStatusMap, setInvoiceStatusMap] = useState<Record<string, FastApiInvoice>>({});
-  const [invoiceStatistics, setInvoiceStatistics] = useState<{
-    total: number;
-    success: number;
-    failed: number;
-    successRate: string;
-  } | null>(null);
   const [retrying, setRetrying] = useState<Record<string, boolean>>({});
   
   // Hàm convert từ Date object hoặc YYYY-MM-DD sang DDMMMYYYY
@@ -318,44 +296,6 @@ export default function OrdersPage() {
     return enrichedOrders;
   };
 
-  // Load invoice status từ FastApiInvoice table
-  const loadInvoiceStatuses = async () => {
-    try {
-      const params: any = {
-        page: 1,
-        limit: 100, // Lấy tất cả để map
-      };
-      if (filter.dateFrom) params.startDate = filter.dateFrom;
-      if (filter.dateTo) params.endDate = filter.dateTo;
-
-      const response = await fastApiInvoicesApi.getAll(params);
-      const invoices: FastApiInvoice[] = response.data.items || [];
-      
-      // Tạo map docCode -> invoice
-      const statusMap: Record<string, FastApiInvoice> = {};
-      invoices.forEach((invoice) => {
-        statusMap[invoice.docCode] = invoice;
-      });
-      
-      setInvoiceStatusMap(statusMap);
-    } catch (error: any) {
-      console.error('Error loading invoice statuses:', error);
-    }
-  };
-
-  // Load invoice statistics
-  const loadInvoiceStatistics = async () => {
-    try {
-      const params: any = {};
-      if (filter.dateFrom) params.startDate = filter.dateFrom;
-      if (filter.dateTo) params.endDate = filter.dateTo;
-
-      const response = await fastApiInvoicesApi.getStatistics(params);
-      setInvoiceStatistics(response.data);
-    } catch (error: any) {
-      console.error('Error loading invoice statistics:', error);
-    }
-  };
 
   const loadOrders = async () => {
     try {
@@ -382,14 +322,6 @@ export default function OrdersPage() {
         total: backendTotal,
         totalPages: response.data.totalPages || Math.ceil(backendTotal / prev.limit),
       }));
-      
-      // Load invoice statuses song song (không cần đợi)
-      Promise.all([
-        loadInvoiceStatuses(),
-        loadInvoiceStatistics(),
-      ]).catch(error => {
-        console.error('Error loading invoice data:', error);
-      });
     } catch (error: any) {
       console.error('Error loading orders:', error);
       showToast('error', 'Không thể tải danh sách đơn hàng');
@@ -426,21 +358,6 @@ export default function OrdersPage() {
       filtered = filtered.filter((order) => {
         const orderBrand = order.customer.brand?.toLowerCase();
         return orderBrand === filter.brand?.toLowerCase();
-      });
-    }
-
-    // Filter by invoice status
-    if (filter.invoiceStatus) {
-      filtered = filtered.filter((order) => {
-        const invoice = invoiceStatusMap[order.docCode];
-        if (filter.invoiceStatus === '1') {
-          return invoice && invoice.status === 1;
-        } else if (filter.invoiceStatus === '0') {
-          return invoice && invoice.status === 0;
-        } else if (filter.invoiceStatus === 'none') {
-          return !invoice;
-        }
-        return true;
       });
     }
 
@@ -1123,8 +1040,6 @@ export default function OrdersPage() {
       if (result.success && !hasError) {
         showToast('success', result.message || 'Tạo hóa đơn thành công');
         // Reload invoice statuses sau khi tạo thành công
-        await loadInvoiceStatuses();
-        await loadInvoiceStatistics();
       } else {
         // Xử lý lỗi chi tiết hơn
         let errorMessage = result.message || 'Tạo hóa đơn thất bại';
@@ -1161,9 +1076,6 @@ export default function OrdersPage() {
       showToast('error', `Lỗi: ${errorMessage}`);
     } finally {
       setSubmittingInvoice(false);
-      // Reload invoice statuses sau khi xử lý xong
-      await loadInvoiceStatuses();
-      await loadInvoiceStatistics();
     }
   };
 
@@ -1176,8 +1088,6 @@ export default function OrdersPage() {
 
       if (data.alreadyExists) {
         showToast('info', data.message || `Đơn hàng ${docCode} đã được tạo hóa đơn trước đó`);
-        await loadInvoiceStatuses();
-        await loadInvoiceStatistics();
         return;
       }
 
@@ -1190,8 +1100,6 @@ export default function OrdersPage() {
 
       if (data.success && !hasError) {
         showToast('success', data.message || `Đồng bộ lại ${docCode} thành công`);
-        await loadInvoiceStatuses();
-        await loadInvoiceStatistics();
       } else {
         let errorMessage = data.message || `Đồng bộ lại ${docCode} thất bại`;
         
@@ -1205,8 +1113,6 @@ export default function OrdersPage() {
         }
         
         showToast('error', errorMessage);
-        await loadInvoiceStatuses();
-        await loadInvoiceStatistics();
       }
     } catch (error: any) {
       console.error('Error retrying invoice:', error);
@@ -1226,8 +1132,6 @@ export default function OrdersPage() {
       }
       
       showToast('error', errorMessage);
-      await loadInvoiceStatuses();
-      await loadInvoiceStatistics();
     } finally {
       setRetrying((prev) => ({ ...prev, [docCode]: false }));
     }
@@ -1410,16 +1314,6 @@ export default function OrdersPage() {
                 <option value="labhair">LabHair</option>
                 <option value="yaman">Yaman</option>
                 <option value="menard">Menard</option>
-              </select>
-              <select
-                value={filter.invoiceStatus || ''}
-                onChange={(e) => setFilter({ ...filter, invoiceStatus: e.target.value || undefined })}
-                className="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-              >
-                <option value="">Tất cả trạng thái invoice</option>
-                <option value="1">Invoice thành công</option>
-                <option value="0">Invoice thất bại</option>
-                <option value="none">Chưa tạo invoice</option>
               </select>
               <div className="flex items-center gap-2">
                 <label className="text-sm text-gray-700 whitespace-nowrap">Từ ngày:</label>
