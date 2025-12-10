@@ -92,7 +92,7 @@ export default function CustomersPage() {
       setLoading(true);
       const response = await categoriesApi.getCustomers({
         page: 1,
-        limit: 10000, // Load tất cả để search
+        limit: 10, // Load tất cả để search
       });
       const data = response.data?.data || response.data || [];
       

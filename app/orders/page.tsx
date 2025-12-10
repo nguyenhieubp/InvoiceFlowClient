@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { salesApi, categoriesApi, fastApiInvoicesApi } from '@/lib/api';
 import { Toast } from '@/components/Toast';
 import { TAX_CODE, DEBIT_ACCOUNT } from '@/lib/constants/accounting.constants';
@@ -35,6 +35,12 @@ export default function OrdersPage() {
   const [displayedOrders, setDisplayedOrders] = useState<Order[]>([]);
   const [enrichedDisplayedOrders, setEnrichedDisplayedOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [enriching, setEnriching] = useState(false);
+  // Cache để tránh fetch lại products và departments (dùng useRef để không trigger re-render)
+  const productCacheRef = useRef<Map<string, OrderProduct>>(new Map());
+  const departmentCacheRef = useRef<Map<string, OrderDepartment>>(new Map());
+  // Cache full order data để tránh fetch lại
+  const fullOrderCacheRef = useRef<Map<string, Order>>(new Map());
   const [filter, setFilter] = useState<{ brand?: string; dateFrom?: string; dateTo?: string; invoiceStatus?: string }>({});
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedColumns, setSelectedColumns] = useState<OrderColumn[]>([...MAIN_COLUMNS]);
@@ -48,7 +54,6 @@ export default function OrdersPage() {
   });
   const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
   const [selectedRowKey, setSelectedRowKey] = useState<string | null>(null);
-  const [columnFilters, setColumnFilters] = useState<Record<OrderColumn, string>>({} as Record<OrderColumn, string>);
   const [syncing, setSyncing] = useState(false);
   const [invoiceStatusMap, setInvoiceStatusMap] = useState<Record<string, FastApiInvoice>>({});
   const [invoiceStatistics, setInvoiceStatistics] = useState<{
@@ -181,60 +186,66 @@ export default function OrdersPage() {
     }
   };
 
-  // Enrich orders với products và departments (batch fetch để tối ưu)
+  // Enrich orders với products và departments (batch fetch để tối ưu) - sử dụng cache
   const enrichOrdersWithProducts = async (orders: Order[]): Promise<Order[]> => {
-    // Collect tất cả itemCodes và branchCodes cần fetch
+    // Collect tất cả itemCodes và branchCodes cần fetch (chỉ những cái chưa có trong cache)
     const itemCodesToFetch = new Set<string>();
     const branchCodesToFetch = new Set<string>();
 
     orders.forEach(order => {
       order.sales?.forEach(sale => {
-        if (sale.itemCode) {
+        if (sale.itemCode && !productCacheRef.current.has(sale.itemCode)) {
           itemCodesToFetch.add(sale.itemCode);
         }
-        if (sale.branchCode) {
+        if (sale.branchCode && !departmentCacheRef.current.has(sale.branchCode)) {
           branchCodesToFetch.add(sale.branchCode);
         }
       });
     });
 
-    // Batch fetch products (10 items một lần)
-    const BATCH_SIZE = 10;
+    // Batch fetch products (50 items một lần để tối ưu)
+    const BATCH_SIZE = 50;
     const itemCodesArray = Array.from(itemCodesToFetch);
-    const productCache = new Map<string, OrderProduct>();
 
-    for (let i = 0; i < itemCodesArray.length; i += BATCH_SIZE) {
-      const batch = itemCodesArray.slice(i, i + BATCH_SIZE);
-      const products = await Promise.all(
-        batch.map(itemCode => fetchProduct(itemCode))
-      );
+    if (itemCodesArray.length > 0) {
+      for (let i = 0; i < itemCodesArray.length; i += BATCH_SIZE) {
+        const batch = itemCodesArray.slice(i, i + BATCH_SIZE);
+        const products = await Promise.all(
+          batch.map(itemCode => fetchProduct(itemCode))
+        );
 
-      batch.forEach((itemCode, index) => {
-        const product = products[index];
-        if (product) {
-          productCache.set(itemCode, product);
-        }
-      });
+        batch.forEach((itemCode, index) => {
+          const product = products[index];
+          if (product) {
+            productCacheRef.current.set(itemCode, product);
+          }
+        });
+      }
     }
 
-    // Batch fetch departments (5 items một lần)
-    const BATCH_SIZE_DEPT = 5;
+    // Batch fetch departments (50 items một lần để tối ưu)
+    const BATCH_SIZE_DEPT = 50;
     const branchCodesArray = Array.from(branchCodesToFetch);
-    const departmentCache = new Map<string, OrderDepartment>();
 
-    for (let i = 0; i < branchCodesArray.length; i += BATCH_SIZE_DEPT) {
-      const batch = branchCodesArray.slice(i, i + BATCH_SIZE_DEPT);
-      const departments = await Promise.all(
-        batch.map(branchCode => fetchDepartment(branchCode))
-      );
+    if (branchCodesArray.length > 0) {
+      for (let i = 0; i < branchCodesArray.length; i += BATCH_SIZE_DEPT) {
+        const batch = branchCodesArray.slice(i, i + BATCH_SIZE_DEPT);
+        const departments = await Promise.all(
+          batch.map(branchCode => fetchDepartment(branchCode))
+        );
 
-      batch.forEach((branchCode, index) => {
-        const department = departments[index];
-        if (department) {
-          departmentCache.set(branchCode, department);
-        }
-      });
+        batch.forEach((branchCode, index) => {
+          const department = departments[index];
+          if (department) {
+            departmentCacheRef.current.set(branchCode, department);
+          }
+        });
+      }
     }
+
+    // Sử dụng cache đã có
+    const finalProductCache = productCacheRef.current;
+    const finalDepartmentCache = departmentCacheRef.current;
 
     // Enrich orders với products và departments từ cache
     const enrichedOrders = orders.map(order => {
@@ -243,7 +254,7 @@ export default function OrdersPage() {
       // Tìm department đầu tiên để lấy company/brand
       let departmentForBrand: OrderDepartment | null = null;
       if (order.sales.length > 0 && order.sales[0].branchCode) {
-        departmentForBrand = departmentCache.get(order.sales[0].branchCode) || null;
+        departmentForBrand = finalDepartmentCache.get(order.sales[0].branchCode) || null;
       }
 
       // Map company từ department sang brand cho customer
@@ -256,7 +267,7 @@ export default function OrdersPage() {
 
         // Enrich product
         if (sale.itemCode) {
-          const product = productCache.get(sale.itemCode);
+          const product = finalProductCache.get(sale.itemCode);
           if (product) {
             enrichedSale = {
               ...enrichedSale,
@@ -274,7 +285,7 @@ export default function OrdersPage() {
 
         // Enrich department
         if (sale.branchCode) {
-          const department = departmentCache.get(sale.branchCode);
+          const department = finalDepartmentCache.get(sale.branchCode);
           if (department) {
             enrichedSale = {
               ...enrichedSale,
@@ -312,7 +323,7 @@ export default function OrdersPage() {
     try {
       const params: any = {
         page: 1,
-        limit: 10000, // Lấy tất cả để map
+        limit: 100, // Lấy tất cả để map
       };
       if (filter.dateFrom) params.startDate = filter.dateFrom;
       if (filter.dateTo) params.endDate = filter.dateTo;
@@ -349,25 +360,36 @@ export default function OrdersPage() {
   const loadOrders = async () => {
     try {
       setLoading(true);
-      // Lấy orders từ backend API
+      // Lấy orders từ backend API - chỉ lấy basic data (backend đã tối ưu)
       const response = await salesApi.getAllOrders({
         brand: filter.brand,
-        page: 1,
-        limit: 1000, // Lấy tất cả để search client-side
+        page: pagination.page,
+        limit: pagination.limit,
+        date: filter.dateFrom ? convertDateToDDMMMYYYY(filter.dateFrom) : undefined,
       });
       const rawData = response.data.data || [];
+      const backendTotal = response.data.total || 0;
 
       // Normalize dữ liệu - hỗ trợ cả format cũ và format mới từ ERP
       const ordersData = normalizeOrderData(rawData);
 
       setRawOrders(ordersData);
-
-      // Không enrich tất cả ngay - chỉ enrich khi hiển thị (theo phân trang)
       setAllOrders(ordersData);
       
-      // Load invoice statuses sau khi load orders
-      await loadInvoiceStatuses();
-      await loadInvoiceStatistics();
+      // Cập nhật pagination từ backend response
+      setPagination((prev) => ({
+        ...prev,
+        total: backendTotal,
+        totalPages: response.data.totalPages || Math.ceil(backendTotal / prev.limit),
+      }));
+      
+      // Load invoice statuses song song (không cần đợi)
+      Promise.all([
+        loadInvoiceStatuses(),
+        loadInvoiceStatistics(),
+      ]).catch(error => {
+        console.error('Error loading invoice data:', error);
+      });
     } catch (error: any) {
       console.error('Error loading orders:', error);
       showToast('error', 'Không thể tải danh sách đơn hàng');
@@ -379,7 +401,7 @@ export default function OrdersPage() {
   useEffect(() => {
     loadOrders();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter.brand, filter.dateFrom, filter.dateTo]);
+  }, [filter.brand, filter.dateFrom, filter.dateTo, pagination.page, pagination.limit]);
 
   // Bỏ cache - không enrich nữa
 
@@ -445,75 +467,15 @@ export default function OrdersPage() {
       });
     }
 
-    // Flatten orders thành rows (mỗi sale là một row)
-    const allRows: Array<{ order: Order; sale: SaleItem | null }> = [];
-    filtered.forEach((order) => {
-      if (order.sales && order.sales.length > 0) {
-        order.sales.forEach((sale) => {
-          allRows.push({ order, sale });
-        });
-      } else {
-        allRows.push({ order, sale: null });
-      }
-    });
-
-    // Apply column filters
-    const filteredRows = allRows.filter((row) => {
-      return selectedColumns.every((column) => {
-        const filterValue = columnFilters[column];
-        if (!filterValue || filterValue.trim() === '') {
-          return true; // Không có filter cho cột này
-        }
-
-        const cellValue = getCellRawValue(row.order, row.sale, column);
-        const searchValue = filterValue.toLowerCase().trim();
-        const cellValueLower = cellValue.toLowerCase();
-
-        // Hỗ trợ tìm kiếm số (so sánh chính xác hoặc chứa)
-        if (!isNaN(Number(searchValue)) && !isNaN(Number(cellValue))) {
-          return cellValue === searchValue || cellValueLower.includes(searchValue);
-        }
-
-        // Tìm kiếm text (chứa)
-        return cellValueLower.includes(searchValue);
-      });
-    });
-
-    // Update pagination info dựa trên số rows đã filter
-    const total = filteredRows.length;
-    const totalPages = Math.ceil(total / pagination.limit);
-    setPagination((prev) => ({
-      ...prev,
-      total,
-      totalPages,
-    }));
-
-    // Pagination trên rows đã filter
-    const startIndex = (pagination.page - 1) * pagination.limit;
-    const endIndex = startIndex + pagination.limit;
-    const paginatedRows = filteredRows.slice(startIndex, endIndex);
-
-    // Chuyển rows về orders để hiển thị
-    const orderMap = new Map<string, Order>();
-    paginatedRows.forEach((row) => {
-      if (!orderMap.has(row.order.docCode)) {
-        orderMap.set(row.order.docCode, { ...row.order, sales: [] });
-      }
-      const order = orderMap.get(row.order.docCode)!;
-      if (row.sale) {
-        order.sales = order.sales || [];
-        order.sales.push(row.sale);
-      }
-    });
-
-    setDisplayedOrders(Array.from(orderMap.values()));
+    // Backend đã paginate rồi, chỉ cần filter và set displayedOrders
+    // Không cần paginate lại vì backend đã trả về đúng orders cho trang hiện tại
+    setDisplayedOrders(filtered);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery, filter.brand, filter.dateFrom, filter.dateTo, columnFilters, allOrders, pagination.page, pagination.limit, selectedColumns]);
+  }, [searchQuery, filter.brand, filter.dateFrom, filter.dateTo, allOrders, pagination.page, pagination.limit, selectedColumns]);
 
-  // Reset về trang 1 khi search query, filter hoặc column filters thay đổi (tách riêng để tránh conflict với pagination)
+  // Reset về trang 1 khi search query hoặc filter thay đổi
   useEffect(() => {
-    const hasColumnFilters = Object.values(columnFilters).some(v => v && v.trim() !== '');
-    if (searchQuery || filter.brand || filter.dateFrom || filter.dateTo || hasColumnFilters) {
+    if (searchQuery || filter.brand || filter.dateFrom || filter.dateTo) {
       setPagination((prev) => {
         if (prev.page !== 1) {
           return { ...prev, page: 1 };
@@ -522,22 +484,56 @@ export default function OrdersPage() {
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery, filter.brand, filter.dateFrom, filter.dateTo, columnFilters]);
+  }, [searchQuery, filter.brand, filter.dateFrom, filter.dateTo]);
 
-  // Enrich products chỉ cho displayedOrders (theo phân trang)
+  // Enrich products chỉ cho displayedOrders (theo phân trang) - chỉ khi có sales
   useEffect(() => {
     if (displayedOrders.length === 0) {
       setEnrichedDisplayedOrders([]);
       return;
     }
 
+    // Kiểm tra xem có orders nào cần fetch full data không (sales array rỗng)
+    const ordersNeedingFullData = displayedOrders.filter(order => !order.sales || order.sales.length === 0);
+    
     const enrichDisplayed = async () => {
       try {
-        const enriched = await enrichOrdersWithProducts(displayedOrders);
+        setEnriching(true);
+        
+        // Fetch full data cho các orders chưa có sales (từ cache hoặc API)
+        const ordersWithFullData = await Promise.all(
+          displayedOrders.map(async (order) => {
+            // Nếu đã có trong cache, dùng cache
+            if (fullOrderCacheRef.current.has(order.docCode)) {
+              return fullOrderCacheRef.current.get(order.docCode)!;
+            }
+            
+            // Nếu không có sales, fetch full data
+            if (!order.sales || order.sales.length === 0) {
+              try {
+                const response = await salesApi.getByOrderCode(order.docCode);
+                const fullOrder = normalizeOrderData([response.data])[0];
+                // Lưu vào cache
+                fullOrderCacheRef.current.set(order.docCode, fullOrder);
+                return fullOrder;
+              } catch (error) {
+                console.error(`Error fetching full data for order ${order.docCode}:`, error);
+                return order;
+              }
+            }
+            
+            return order;
+          })
+        );
+        
+        // Enrich với products và departments
+        const enriched = await enrichOrdersWithProducts(ordersWithFullData);
         setEnrichedDisplayedOrders(enriched);
       } catch (error) {
         console.error('Error enriching orders:', error);
         setEnrichedDisplayedOrders(displayedOrders);
+      } finally {
+        setEnriching(false);
       }
     };
 
@@ -549,12 +545,6 @@ export default function OrdersPage() {
     setSelectedColumns(prev => {
       const index = prev.indexOf(field);
       if (index > -1) {
-        // Xóa filter của cột khi ẩn cột
-        setColumnFilters((prevFilters) => {
-          const newFilters = { ...prevFilters };
-          delete newFilters[field];
-          return newFilters;
-        });
         return prev.filter(col => col !== field);
       } else {
         const allFields = Object.keys(FIELD_LABELS) as OrderColumn[];
@@ -575,23 +565,6 @@ export default function OrdersPage() {
       }
     });
   };
-
-  // Xóa filter của các cột không còn được hiển thị
-  useEffect(() => {
-    setColumnFilters((prevFilters) => {
-      const newFilters = { ...prevFilters };
-      let hasChanges = false;
-
-      Object.keys(newFilters).forEach((column) => {
-        if (!selectedColumns.includes(column as OrderColumn)) {
-          delete newFilters[column as OrderColumn];
-          hasChanges = true;
-        }
-      });
-
-      return hasChanges ? newFilters : prevFilters;
-    });
-  }, [selectedColumns]);
 
   const formatValue = (value: any): React.ReactNode => {
     if (value === null || value === undefined || value === '') {
@@ -1260,6 +1233,8 @@ export default function OrdersPage() {
     }
   };
 
+  // Flatten enrichedDisplayedOrders thành rows để hiển thị
+  // Backend đã paginate rồi, không cần paginate lại
   const flattenedRows: Array<{ order: Order; sale: SaleItem | null }> = [];
   enrichedDisplayedOrders.forEach((order) => {
     if (order.sales && order.sales.length > 0) {
@@ -1267,7 +1242,11 @@ export default function OrdersPage() {
         flattenedRows.push({ order, sale });
       });
     } else {
-      flattenedRows.push({ order, sale: null });
+      // Nếu order không có sales, dùng totalItems để tạo rows
+      const rowCount = order.totalItems > 0 ? order.totalItems : 1;
+      for (let i = 0; i < rowCount; i++) {
+        flattenedRows.push({ order, sale: null });
+      }
     }
   });
 
@@ -1322,19 +1301,6 @@ export default function OrdersPage() {
                     )}
                   </button>
                 </div>
-                <button
-                  onClick={() => {
-                    setColumnFilters({} as Record<OrderColumn, string>);
-                    setPagination((prev) => ({ ...prev, page: 1 }));
-                  }}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors inline-flex items-center gap-2"
-                  title="Xóa tất cả bộ lọc cột"
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                  Xóa bộ lọc
-                </button>
                 <button
                   onClick={() => setShowColumnSelector(!showColumnSelector)}
                   className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors inline-flex items-center gap-2"
@@ -1479,6 +1445,13 @@ export default function OrdersPage() {
               <p className="text-gray-500">Đang tải dữ liệu...</p>
             </div>
           </div>
+        ) : enriching ? (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
+            <div className="flex flex-col items-center justify-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-3"></div>
+              <p className="text-gray-500">Đang tải chi tiết đơn hàng...</p>
+            </div>
+          </div>
         ) : (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
             <div className="overflow-x-auto">
@@ -1491,27 +1464,6 @@ export default function OrdersPage() {
                         className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap"
                       >
                         {FIELD_LABELS[column]}
-                      </th>
-                    ))}
-                  </tr>
-                  <tr className="bg-gray-100 border-b border-gray-200">
-                    {selectedColumns.map((column) => (
-                      <th
-                        key={`filter-${column}`}
-                        className="px-4 py-2"
-                      >
-                        <input
-                          type="text"
-                          placeholder={`Lọc ${FIELD_LABELS[column]}`}
-                          value={columnFilters[column] || ''}
-                          onChange={(e) => {
-                            setColumnFilters((prev) => ({
-                              ...prev,
-                              [column]: e.target.value,
-                            }));
-                          }}
-                          className="w-full px-2 py-1 text-xs border border-gray-300 rounded-md bg-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                        />
                       </th>
                     ))}
                   </tr>
