@@ -272,8 +272,8 @@ export const MAIN_COLUMNS: OrderColumn[] = [
   'chietKhauThanhToanVoucher',// Chiết khấu thanh toán voucher
   'thanhToanTkTienAo',        // Thanh toán TK tiền ảo
   'chietKhauThanhToanTkTienAo',// Chiết khấu thanh toán TK tiền ảo
-  'voucherDp1',               // Voucher DP1
-  'chietKhauVoucherDp1',      // Chiết khấu Voucher DP1
+  'voucherDp1',               // Voucher DP1 - Tạm thời để trống, sẽ thay logic khác sau
+  'chietKhauVoucherDp1',      // Chiết khấu Voucher DP1 - Tạm thời để trống, sẽ thay logic khác sau
   'maCtkmTangHang',           // Mã CTKM tặng hàng
   'maThe',                    // Mã thẻ
   'soSerial',                 // Số serial

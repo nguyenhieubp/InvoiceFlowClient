@@ -11,6 +11,15 @@ interface SaleItemForVoucher {
   cat1?: string;
   catcode1?: string;
   itemCode?: string;
+  customer?: {
+    brand?: string;
+  } | null;
+  product?: {
+    brand?: {
+      code?: string;
+      name?: string;
+    };
+  } | null;
 }
 
 /**
@@ -26,6 +35,7 @@ export const calculateThanhToanVoucher = (sale: SaleItemForVoucher | null | unde
   const linetotalValue = sale.linetotal ?? sale.tienHang ?? 0;
   const cat1Value = sale.cat1 || sale.catcode1 || '';
   const itemCodeValue = sale.itemCode || '';
+  const brand = sale.customer?.brand || sale.product?.brand?.code || sale.product?.brand?.name || '';
 
   // Nếu revenue = 0 và linetotal = 0 → không gắn nhãn
   if (revenueValue === 0 && linetotalValue === 0) {
@@ -40,13 +50,18 @@ export const calculateThanhToanVoucher = (sale: SaleItemForVoucher | null | unde
   // Tập hợp các nhãn sẽ hiển thị
   const labels: string[] = [];
 
-  // FBV và TT luôn hiển thị nếu có paid_by_voucher > 0
-  labels.push('FBV');
-  labels.push('TT');
+  // Kiểm tra brand: nếu là "menard" thì chỉ hiển thị VCHB/VCDV, không có FBV TT
+  const isMenard = brand.toLowerCase() === 'menard';
 
-  // VCHH: Nếu cat1 = "CHANDO" hoặc itemcode bắt đầu bằng "S" hoặc "H"
+  if (!isMenard) {
+    // FBV và TT luôn hiển thị nếu có paid_by_voucher > 0 (trừ menard)
+    labels.push('FBV');
+    labels.push('TT');
+  }
+
+  // VCHB: Nếu cat1 = "CHANDO" hoặc itemcode bắt đầu bằng "S" hoặc "H"
   if (cat1Value === 'CHANDO' || itemCodeValue.toUpperCase().startsWith('S') || itemCodeValue.toUpperCase().startsWith('H')) {
-    labels.push('VCHH');
+    labels.push('VCHB');
   }
 
   // VCDV: Nếu cat1 = "FACIALBAR" hoặc itemcode bắt đầu bằng "F" hoặc "V"
@@ -55,6 +70,6 @@ export const calculateThanhToanVoucher = (sale: SaleItemForVoucher | null | unde
   }
 
   // Trả về chuỗi các nhãn cách nhau bằng dấu cách
-  return labels.join(' ');
+  return labels.length > 0 ? labels.join(' ') : null;
 };
 

@@ -505,14 +505,22 @@ export default function OrdersPage() {
     });
 
     setDisplayedOrders(Array.from(orderMap.values()));
-
-    // Reset về trang 1 nếu search query, filter hoặc column filters thay đổi
-    const hasColumnFilters = Object.values(columnFilters).some(v => v && v.trim() !== '');
-    if ((searchQuery || filter.brand || filter.dateFrom || filter.dateTo || hasColumnFilters) && pagination.page !== 1) {
-      setPagination((prev) => ({ ...prev, page: 1 }));
-    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery, filter.brand, filter.dateFrom, filter.dateTo, columnFilters, allOrders, pagination.page, pagination.limit, selectedColumns]);
+
+  // Reset về trang 1 khi search query, filter hoặc column filters thay đổi (tách riêng để tránh conflict với pagination)
+  useEffect(() => {
+    const hasColumnFilters = Object.values(columnFilters).some(v => v && v.trim() !== '');
+    if (searchQuery || filter.brand || filter.dateFrom || filter.dateTo || hasColumnFilters) {
+      setPagination((prev) => {
+        if (prev.page !== 1) {
+          return { ...prev, page: 1 };
+        }
+        return prev;
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery, filter.brand, filter.dateFrom, filter.dateTo, columnFilters]);
 
   // Enrich products chỉ cho displayedOrders (theo phân trang)
   useEffect(() => {
@@ -760,7 +768,18 @@ export default function OrdersPage() {
         const chietKhauThanhToanVoucher = sale?.paid_by_voucher_ecode_ecoin_bp ?? sale?.chietKhauThanhToanVoucher ?? 0;
         return chietKhauThanhToanVoucher.toString();
       case 'thanhToanVoucher':
-        const voucherLabels = calculateThanhToanVoucher(sale);
+        // Truyền customer từ order vào sale để tính brand
+        const saleWithCustomer = sale ? {
+          paid_by_voucher_ecode_ecoin_bp: sale.paid_by_voucher_ecode_ecoin_bp,
+          revenue: sale.revenue,
+          linetotal: sale.linetotal,
+          tienHang: sale.tienHang,
+          cat1: sale.cat1,
+          catcode1: sale.catcode1,
+          itemCode: sale.itemCode,
+          customer: order.customer,
+        } : null;
+        const voucherLabels = calculateThanhToanVoucher(saleWithCustomer);
         return voucherLabels || '';
       case 'soSerial':
         // Hiển thị so_serial dựa trên trackSerial từ Loyalty API
@@ -770,6 +789,12 @@ export default function OrdersPage() {
         if (trackSerial && !trackBatchForSoSerial) {
           return sale?.serial || '';
         }
+        return '';
+      case 'voucherDp1':
+        // Tạm thời để trống, sẽ thay logic khác sau
+        return '';
+      case 'chietKhauVoucherDp1':
+        // Tạm thời để trống, sẽ thay logic khác sau
         return '';
       case 'maThe':
         // Ưu tiên mvc_serial (từ Zappy API), nếu không có thì dùng maThe
@@ -1044,7 +1069,18 @@ export default function OrdersPage() {
         const chietKhauThanhToanVoucher = sale?.paid_by_voucher_ecode_ecoin_bp ?? sale?.chietKhauThanhToanVoucher ?? 0;
         return <div className="text-sm text-gray-900">{formatValue(chietKhauThanhToanVoucher)}</div>;
       case 'thanhToanVoucher':
-        const voucherLabels = calculateThanhToanVoucher(sale);
+        // Truyền customer từ order vào sale để tính brand
+        const saleWithCustomerForRender = sale ? {
+          paid_by_voucher_ecode_ecoin_bp: sale.paid_by_voucher_ecode_ecoin_bp,
+          revenue: sale.revenue,
+          linetotal: sale.linetotal,
+          tienHang: sale.tienHang,
+          cat1: sale.cat1,
+          catcode1: sale.catcode1,
+          itemCode: sale.itemCode,
+          customer: order.customer,
+        } : null;
+        const voucherLabels = calculateThanhToanVoucher(saleWithCustomerForRender);
         if (!voucherLabels) {
           return <div className="text-sm text-gray-400 italic">-</div>;
         }
@@ -1057,6 +1093,12 @@ export default function OrdersPage() {
         if (trackSerialRender && !trackBatchForSoSerialRender) {
           return <div className="text-sm text-gray-900">{sale?.serial || '-'}</div>;
         }
+        return <div className="text-sm text-gray-400 italic">-</div>;
+      case 'voucherDp1':
+        // Tạm thời để trống, sẽ thay logic khác sau
+        return <div className="text-sm text-gray-400 italic">-</div>;
+      case 'chietKhauVoucherDp1':
+        // Tạm thời để trống, sẽ thay logic khác sau
         return <div className="text-sm text-gray-400 italic">-</div>;
       case 'maThe':
         // Ưu tiên mvc_serial (từ Zappy API)
