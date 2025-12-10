@@ -30,6 +30,7 @@ export interface OrderProduct {
   productType?: string; // Product type from Loyalty API: TPCN, VOUC, etc.
   trackSerial?: boolean; // Track serial from Loyalty API
   trackBatch?: boolean; // Track batch from Loyalty API
+  trackInventory?: boolean; // Track inventory from Loyalty API
   tkVatTu?: string;
   suaTkVatTu?: boolean;
   tkGiaVonBanBuon?: string;

@@ -6,6 +6,39 @@
 import { OrderProduct } from '@/types/order.types';
 
 /**
+ * Tính loại VC dựa trên productType và trackInventory
+ * @param productType - Loại sản phẩm (DIVU, GIFT, ...)
+ * @param trackInventory - Có theo dõi tồn kho hay không
+ * @returns Loại VC: "VCDV" | "VCBH" | "VCKM" | null
+ */
+export const calculateVCType = (
+  productType: string | null | undefined,
+  trackInventory: boolean | null | undefined,
+): 'VCDV' | 'VCBH' | 'VCKM' | null => {
+  // Normalize productType
+  const normalizedProductType = productType ? String(productType).trim().toUpperCase() : null;
+
+  // VCDV: productType = "DIVU"
+  if (normalizedProductType === 'DIVU') {
+    return 'VCDV';
+  }
+
+  // VCKM: productType = "GIFT"
+  if (normalizedProductType === 'GIFT') {
+    return 'VCKM';
+  }
+
+  // VCBH: productType != "DIVU" && productType != "GIFT" && trackInventory = true
+  if (normalizedProductType && normalizedProductType !== 'DIVU' && normalizedProductType !== 'GIFT') {
+    if (trackInventory === true) {
+      return 'VCBH';
+    }
+  }
+
+  return null;
+};
+
+/**
  * Map API response từ Loyalty API sang cấu trúc product
  */
 export const mapLoyaltyApiProductToProductItem = (apiProduct: any): OrderProduct | null => {
@@ -21,6 +54,7 @@ export const mapLoyaltyApiProductToProductItem = (apiProduct: any): OrderProduct
     productType: apiProduct.productType || apiProduct.producttype || null,
     trackSerial: apiProduct.trackSerial === true,
     trackBatch: apiProduct.trackBatch === true,
+    trackInventory: apiProduct.trackInventory === true,
     tkVatTu: apiProduct.materialAccount || null,
     tkGiaVonBanBuon: apiProduct.wholesaleCostAccount || null,
     tkDoanhThuBanBuon: apiProduct.wholesaleRevenueAccount || null,
