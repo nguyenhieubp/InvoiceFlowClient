@@ -263,6 +263,8 @@ export default function OrdersPage() {
               dvt: product.dvt || enrichedSale.dvt,
               itemCode: product.maVatTu || enrichedSale.itemCode,
               itemName: product.tenVatTu || enrichedSale.itemName,
+              productType: product.productType || enrichedSale.productType,
+              trackInventory: product.trackInventory ?? enrichedSale.trackInventory,
               product,
               // Giữ lại maKho từ backend
               maKho: enrichedSale.maKho || sale.maKho,
@@ -777,7 +779,10 @@ export default function OrdersPage() {
           cat1: sale.cat1,
           catcode1: sale.catcode1,
           itemCode: sale.itemCode,
+          productType: sale.productType || sale.product?.productType || sale.product?.producttype || null,
+          trackInventory: sale.trackInventory ?? sale.product?.trackInventory ?? null,
           customer: order.customer,
+          product: sale.product,
         } : null;
         const voucherLabels = calculateThanhToanVoucher(saleWithCustomer);
         return voucherLabels || '';
@@ -1078,7 +1083,10 @@ export default function OrdersPage() {
           cat1: sale.cat1,
           catcode1: sale.catcode1,
           itemCode: sale.itemCode,
+          productType: sale.productType || sale.product?.productType || sale.product?.producttype || null,
+          trackInventory: sale.trackInventory ?? sale.product?.trackInventory ?? null,
           customer: order.customer,
+          product: sale.product,
         } : null;
         const voucherLabels = calculateThanhToanVoucher(saleWithCustomerForRender);
         if (!voucherLabels) {
