@@ -46,6 +46,11 @@ export const calculateThanhToanVoucher = (sale: SaleItemForVoucher | null | unde
     return null;
   }
 
+  // Chỉ hiển thị VC labels khi có chiết khấu (paid_by_voucher > 0)
+  if (paidByVoucher <= 0) {
+    return null;
+  }
+
   // Lấy productType và trackInventory từ sale hoặc product
   const productType = sale.productType || sale.product?.productType || sale.product?.producttype || null;
   const trackInventory = sale.trackInventory ?? sale.product?.trackInventory ?? null;
@@ -53,15 +58,12 @@ export const calculateThanhToanVoucher = (sale: SaleItemForVoucher | null | unde
   // Sử dụng logic VC mới dựa trên productType và trackInventory
   const vcType = calculateVCType(productType, trackInventory);
 
-  // Nếu có VC type từ logic mới, trả về ngay (không cần kiểm tra paid_by_voucher)
+  // Nếu có VC type từ logic mới, trả về ngay
   if (vcType) {
     return vcType;
   }
 
   // Fallback: Logic cũ dựa trên cat1 và itemCode (chỉ khi có paid_by_voucher)
-  if (paidByVoucher <= 0) {
-    return null;
-  }
 
   const cat1Value = sale.cat1 || sale.catcode1 || '';
   const itemCodeValue = sale.itemCode || '';
