@@ -13,8 +13,8 @@ interface SaleItemForVoucher {
   cat1?: string;
   catcode1?: string;
   itemCode?: string;
-  productType?: string;
-  trackInventory?: boolean;
+  productType?: string | null;
+  trackInventory?: boolean | null;
   customer?: {
     brand?: string;
   } | null;
@@ -23,9 +23,9 @@ interface SaleItemForVoucher {
       code?: string;
       name?: string;
     };
-    productType?: string;
-    producttype?: string;
-    trackInventory?: boolean;
+    productType?: string | null;
+    producttype?: string | null;
+    trackInventory?: boolean | null;
   } | null;
 }
 
