@@ -47,6 +47,8 @@ interface ERPRawOrderData {
       itemcost?: number;
       itemname?: string;
       linetotal?: number;
+      mn_linetotal?: number;
+      price?: number;
       ordertype?: string;
       prom_code?: string | null;
       root_code?: string;
@@ -167,8 +169,9 @@ const mapERPSaleToSaleItem = (sale: ERPRawOrderData['data_customer']['Sales'][0]
     serial: sale.serial || undefined,
     qty: sale.qty,
     revenue: sale.revenue,
-    linetotal: sale.linetotal,
-    tienHang: sale.linetotal,
+    linetotal: sale.mn_linetotal || sale.linetotal,
+    tienHang: sale.mn_linetotal || sale.linetotal,
+    giaBan: sale.price,
     itemcost: sale.itemcost,
     totalcost: sale.totalcost,
     // Các trường từ ERP format

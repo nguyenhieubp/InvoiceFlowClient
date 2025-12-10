@@ -8,7 +8,7 @@ import { ORDER_TYPE_NORMAL, ORDER_TYPE_LAM_DV, ORDER_TYPE_BAN_ECOIN, ORDER_TYPE_
 import { calculateThanhToanVoucher } from '@/lib/utils/voucher.utils';
 import { Order, SaleItem } from '@/types/order.types';
 import { OrderColumn, FIELD_LABELS, MAIN_COLUMNS } from '@/lib/constants/order-columns.constants';
-import { calculateMaLo } from '@/lib/utils/order.utils';
+import { calculateMaLo, parsePromCode } from '@/lib/utils/order.utils';
 import { normalizeOrderData } from '@/lib/utils/order-mapper.utils';
 import { mapLoyaltyApiProductToProductItem } from '@/lib/utils/product.utils';
 import { OrderProduct, OrderDepartment } from '@/types/order.types';
@@ -255,8 +255,9 @@ export default function OrdersPage() {
               productType: product.productType || enrichedSale.productType,
               trackInventory: product.trackInventory ?? enrichedSale.trackInventory,
               product,
-              // Giữ lại maKho từ backend
+              // Giữ lại maKho và maCtkmTangHang từ backend
               maKho: enrichedSale.maKho || sale.maKho,
+              maCtkmTangHang: enrichedSale.maCtkmTangHang || sale.maCtkmTangHang,
             };
           }
         }
@@ -268,15 +269,19 @@ export default function OrdersPage() {
             enrichedSale = {
               ...enrichedSale,
               department,
-              // Giữ lại maKho từ backend
+              // Giữ lại maKho và maCtkmTangHang từ backend
               maKho: enrichedSale.maKho || sale.maKho,
+              maCtkmTangHang: enrichedSale.maCtkmTangHang || sale.maCtkmTangHang,
             };
           }
         }
 
-        // Đảm bảo maKho luôn được giữ lại
+        // Đảm bảo maKho và maCtkmTangHang luôn được giữ lại
         if (!enrichedSale.maKho && sale.maKho) {
           enrichedSale.maKho = sale.maKho;
+        }
+        if (!enrichedSale.maCtkmTangHang && sale.maCtkmTangHang) {
+          enrichedSale.maCtkmTangHang = sale.maCtkmTangHang;
         }
 
         return enrichedSale;
@@ -583,8 +588,55 @@ export default function OrdersPage() {
         }
         return '';
       case 'muaHangGiamGia':
+        // Chỉ hiển thị khi không phải hàng tặng
+        // Hàng tặng: price = 0 và mn_linetotal = 0 (hoặc giaBan = 0 và tienHang = 0 và revenue = 0)
+        // Convert string to number nếu cần
+        const tienHangForMuaHangGiamGia = parseFloat(String(sale?.linetotal ?? sale?.tienHang ?? 0)) || 0;
+        const revenueForMuaHangGiamGia = parseFloat(String(sale?.revenue ?? 0)) || 0;
+        // Ưu tiên sử dụng giaBan từ API (từ field price), nếu không có thì tính từ tienHang/qty
+        let giaBanForMuaHangGiamGia: number = parseFloat(String(sale?.giaBan ?? 0)) || 0;
+        if (giaBanForMuaHangGiamGia === 0 && tienHangForMuaHangGiamGia != null && sale?.qty != null) {
+          const qtyNum = parseFloat(String(sale.qty)) || 0;
+          if (qtyNum > 0) {
+            giaBanForMuaHangGiamGia = tienHangForMuaHangGiamGia / qtyNum;
+          }
+        }
+        // Nếu là hàng tặng (giaBan = 0 và tienHang = 0 và revenue = 0), không hiển thị ở cột này
+        if (giaBanForMuaHangGiamGia === 0 && tienHangForMuaHangGiamGia === 0 && revenueForMuaHangGiamGia === 0) {
+          return '';
+        }
         // Sử dụng promotionDisplayCode từ backend
-        return sale?.promotionDisplayCode || '';
+        return sale?.promotionDisplayCode || sale?.promCode || '';
+      case 'maCtkmTangHang':
+        // Ưu tiên sử dụng maCtkmTangHang từ backend (nếu đã được tính sẵn)
+        if (sale?.maCtkmTangHang && sale.maCtkmTangHang.trim() !== '') {
+          return sale.maCtkmTangHang;
+        }
+        // Nếu không có, tính toán lại: chỉ hiển thị khi là hàng tặng (price = 0 và mn_linetotal = 0 và revenue = 0)
+        // Convert string to number nếu cần
+        const tienHangForTangHang = parseFloat(String(sale?.linetotal ?? sale?.tienHang ?? 0)) || 0;
+        const revenueForTangHang = parseFloat(String(sale?.revenue ?? 0)) || 0;
+        // Ưu tiên sử dụng giaBan từ API (từ field price), nếu không có thì tính từ tienHang/qty
+        let giaBanForTangHang: number = parseFloat(String(sale?.giaBan ?? 0)) || 0;
+        if (giaBanForTangHang === 0 && tienHangForTangHang != null && sale?.qty != null) {
+          const qtyNum = parseFloat(String(sale.qty)) || 0;
+          if (qtyNum > 0) {
+            giaBanForTangHang = tienHangForTangHang / qtyNum;
+          }
+        }
+        // Nếu là hàng tặng (giaBan = 0 và tienHang = 0 và revenue = 0), hiển thị promCode (đã parse)
+        if (giaBanForTangHang === 0 && tienHangForTangHang === 0 && revenueForTangHang === 0) {
+          const promCodeValue = sale?.promotionDisplayCode || sale?.promCode;
+          if (promCodeValue && promCodeValue.trim() !== '') {
+            // Parse promCode từ format "Code-Name" để lấy code
+            const parsedCode = parsePromCode(promCodeValue) || promCodeValue;
+            if (parsedCode && parsedCode.trim() !== '') {
+              return parsedCode;
+            }
+          }
+          return '';
+        }
+        return '';
       case 'maKho':
         // Sử dụng maKho từ backend (đã được tính sẵn)
         return sale?.maKho || '';
@@ -833,12 +885,60 @@ export default function OrdersPage() {
         // Ngược lại bỏ trống
         return <div className="text-sm text-gray-900">-</div>;
       case 'muaHangGiamGia':
+        // Chỉ hiển thị khi không phải hàng tặng
+        // Hàng tặng: price = 0 và mn_linetotal = 0 và revenue = 0 (hoặc giaBan = 0 và tienHang = 0 và revenue = 0)
+        // Convert string to number nếu cần
+        const tienHangForMuaHangGiamGiaRender = parseFloat(String(sale?.linetotal ?? sale?.tienHang ?? 0)) || 0;
+        const revenueForMuaHangGiamGiaRender = parseFloat(String(sale?.revenue ?? 0)) || 0;
+        // Ưu tiên sử dụng giaBan từ API (từ field price), nếu không có thì tính từ tienHang/qty
+        let giaBanForMuaHangGiamGiaRender: number = parseFloat(String(sale?.giaBan ?? 0)) || 0;
+        if (giaBanForMuaHangGiamGiaRender === 0 && tienHangForMuaHangGiamGiaRender != null && sale?.qty != null) {
+          const qtyNum = parseFloat(String(sale.qty)) || 0;
+          if (qtyNum > 0) {
+            giaBanForMuaHangGiamGiaRender = tienHangForMuaHangGiamGiaRender / qtyNum;
+          }
+        }
+        // Nếu là hàng tặng (giaBan = 0 và tienHang = 0 và revenue = 0), không hiển thị ở cột này
+        if (giaBanForMuaHangGiamGiaRender === 0 && tienHangForMuaHangGiamGiaRender === 0 && revenueForMuaHangGiamGiaRender === 0) {
+          return <div className="text-sm text-gray-400 italic">-</div>;
+        }
         // Sử dụng promotionDisplayCode từ backend
-        const displayCode = sale?.promotionDisplayCode;
+        const displayCode = sale?.promotionDisplayCode || sale?.promCode;
         if (!displayCode) {
           return <div className="text-sm text-gray-400 italic">-</div>;
         }
         return <div className="text-sm text-gray-900">{displayCode}</div>;
+      case 'maCtkmTangHang':
+        // Ưu tiên sử dụng maCtkmTangHang từ backend (nếu đã được tính sẵn)
+        if (sale?.maCtkmTangHang && sale.maCtkmTangHang.trim() !== '') {
+          return <div className="text-sm text-gray-900">{sale.maCtkmTangHang}</div>;
+        }
+        // Nếu không có, tính toán lại: chỉ hiển thị khi là hàng tặng (price = 0 và mn_linetotal = 0 và revenue = 0)
+        // Convert string to number nếu cần
+        const tienHangForTangHangRender = parseFloat(String(sale?.linetotal ?? sale?.tienHang ?? 0)) || 0;
+        const revenueForTangHangRender = parseFloat(String(sale?.revenue ?? 0)) || 0;
+        // Ưu tiên sử dụng giaBan từ API (từ field price), nếu không có thì tính từ tienHang/qty
+        let giaBanForTangHangRender: number = parseFloat(String(sale?.giaBan ?? 0)) || 0;
+        if (giaBanForTangHangRender === 0 && tienHangForTangHangRender != null && sale?.qty != null) {
+          const qtyNum = parseFloat(String(sale.qty)) || 0;
+          if (qtyNum > 0) {
+            giaBanForTangHangRender = tienHangForTangHangRender / qtyNum;
+          }
+        }
+        // Nếu là hàng tặng (giaBan = 0 và tienHang = 0 và revenue = 0), hiển thị promCode (đã parse)
+        if (giaBanForTangHangRender === 0 && tienHangForTangHangRender === 0 && revenueForTangHangRender === 0) {
+          const promCodeValue = sale?.promotionDisplayCode || sale?.promCode;
+          if (!promCodeValue || promCodeValue.trim() === '') {
+            return <div className="text-sm text-gray-400 italic">-</div>;
+          }
+          // Parse promCode từ format "Code-Name" để lấy code
+          const tangHangCode = parsePromCode(promCodeValue) || promCodeValue;
+          if (tangHangCode && tangHangCode.trim() !== '') {
+            return <div className="text-sm text-gray-900">{tangHangCode}</div>;
+          }
+          return <div className="text-sm text-gray-400 italic">-</div>;
+        }
+        return <div className="text-sm text-gray-400 italic">-</div>;
       case 'maKho':
         // Sử dụng maKho từ backend (đã được tính sẵn)
         return <div className="text-sm text-gray-900">{sale?.maKho || '-'}</div>;
