@@ -8,7 +8,7 @@ import { ORDER_TYPE_NORMAL, ORDER_TYPE_LAM_DV, ORDER_TYPE_BAN_ECOIN, ORDER_TYPE_
 import { calculateThanhToanVoucher } from '@/lib/utils/voucher.utils';
 import { Order, SaleItem } from '@/types/order.types';
 import { OrderColumn, FIELD_LABELS, MAIN_COLUMNS } from '@/lib/constants/order-columns.constants';
-import { calculateMaLo, parsePromCode } from '@/lib/utils/order.utils';
+import { calculateMaLo, parsePromCode, convertPromCodeToTangSp } from '@/lib/utils/order.utils';
 import { normalizeOrderData } from '@/lib/utils/order-mapper.utils';
 import { mapLoyaltyApiProductToProductItem } from '@/lib/utils/product.utils';
 import { OrderProduct, OrderDepartment } from '@/types/order.types';
@@ -640,8 +640,30 @@ export default function OrdersPage() {
             giaBanForTangHangRender = tienHangForTangHangRender / qtyNum;
           }
         }
-        // Nếu là hàng tặng (giaBan = 0 và tienHang = 0 và revenue = 0), hiển thị promCode (đã parse)
+        // Nếu là hàng tặng (giaBan = 0 và tienHang = 0 và revenue = 0)
         if (giaBanForTangHangRender === 0 && tienHangForTangHangRender === 0 && revenueForTangHangRender === 0) {
+          // Quy tắc: Nếu ordertype_name = "06. Đầu tư" → ma_ctkm_th = "TT DAU TU"
+          const ordertypeName = sale?.ordertype || '';
+          if (ordertypeName.includes('06. Đầu tư') || ordertypeName.includes('06.Đầu tư')) {
+            return <div className="text-sm text-gray-900">TT DAU TU</div>;
+          }
+          
+          // Nếu ordertype_name = "01.Thường", "07. Bán tài khoản", "9. Sàn TMDT" → quy đổi prom_code sang TANGSP
+          if (
+            (ordertypeName.includes('01.Thường') || ordertypeName.includes('01. Thường')) ||
+            (ordertypeName.includes('07. Bán tài khoản') || ordertypeName.includes('07.Bán tài khoản')) ||
+            (ordertypeName.includes('9. Sàn TMDT') || ordertypeName.includes('9.Sàn TMDT'))
+          ) {
+            const promCodeValue = sale?.promCode || '';
+            if (promCodeValue && promCodeValue.trim() !== '') {
+              const tangSpCode = convertPromCodeToTangSp(promCodeValue);
+              if (tangSpCode) {
+                return <div className="text-sm text-gray-900">{tangSpCode}</div>;
+              }
+            }
+          }
+          
+          // Các trường hợp khác: hiển thị promCode (đã parse) nếu có
           const promCodeValue = sale?.promotionDisplayCode || sale?.promCode;
           if (!promCodeValue || promCodeValue.trim() === '') {
             return <div className="text-sm text-gray-400 italic">-</div>;
@@ -658,14 +680,27 @@ export default function OrdersPage() {
         // Sử dụng maKho từ backend (đã được tính sẵn)
         return <div className="text-sm text-gray-900">{sale?.maKho || '-'}</div>;
       case 'maLo':
-        // Hiển thị ma_lo dựa trên trackBatch từ Loyalty API
-        // trackBatch = true → hiển thị ma_lo
-        const trackBatchRender = sale?.product?.trackBatch === true;
-        if (trackBatchRender) {
-          const serial = sale?.serial || '';
-          let maLo = serial;
-          if (serial) {
-            // Vẫn cần productType để quyết định cắt bao nhiêu ký tự
+        // Hiển thị ma_lo - ưu tiên lấy từ backend nếu có, nếu không thì tính toán
+        // Nếu có ma_lo từ backend (đã được tính sẵn), dùng nó
+        if (sale?.maLo) {
+          return <div className="text-sm text-gray-900">{sale.maLo}</div>;
+        }
+        
+        // Nếu không có, tính toán từ serial
+        const serial = sale?.serial || '';
+        if (serial) {
+          // Kiểm tra nếu serial có dạng "XXX_YYYY" (có dấu gạch dưới), lấy phần sau dấu gạch dưới
+          const underscoreIndex = serial.indexOf('_');
+          if (underscoreIndex > 0 && underscoreIndex < serial.length - 1) {
+            // Lấy phần sau dấu gạch dưới
+            const maLo = serial.substring(underscoreIndex + 1);
+            return <div className="text-sm text-gray-900">{maLo}</div>;
+          }
+          
+          // Nếu không có dấu gạch dưới, kiểm tra trackBatch
+          const trackBatchRender = sale?.product?.trackBatch === true;
+          if (trackBatchRender) {
+            let maLo = serial;
             const productTypeFromLoyaltyRender = sale?.productType || sale?.product?.productType;
             const productTypeUpperRender = productTypeFromLoyaltyRender ? String(productTypeFromLoyaltyRender).toUpperCase().trim() : null;
             if (productTypeUpperRender === 'TPCN') {
@@ -674,10 +709,12 @@ export default function OrdersPage() {
             } else if (productTypeUpperRender === 'SKIN' || productTypeUpperRender === 'GIFT') {
               // Nếu productType là "SKIN" hoặc "GIFT", cắt lấy 4 ký tự cuối
               maLo = serial.length >= 4 ? serial.slice(-4) : serial;
+            } else {
+              // Các trường hợp khác → lấy 4 ký tự cuối (mặc định)
+              maLo = serial.length >= 4 ? serial.slice(-4) : serial;
             }
-            // Các trường hợp khác → giữ nguyên toàn bộ serial
+            return <div className="text-sm text-gray-900">{maLo}</div>;
           }
-          return <div className="text-sm text-gray-900">{maLo || '-'}</div>;
         }
         return <div className="text-sm text-gray-400 italic">-</div>;
       case 'qty':
@@ -845,11 +882,15 @@ export default function OrdersPage() {
         const soSourceForChietKhauVoucher = sale?.order_source || (sale as any)?.so_source || null;
         const paidByVoucherForChietKhau = sale?.paid_by_voucher_ecode_ecoin_bp ?? sale?.chietKhauThanhToanVoucher ?? 0;
         
-        // Kiểm tra điều kiện voucher dự phòng
+        // Kiểm tra điều kiện voucher dự phòng - PHẢI CÓ paid_by_voucher > 0
         const isShopeeForChietKhau = soSourceForChietKhauVoucher && String(soSourceForChietKhauVoucher).toUpperCase() === 'SHOPEE';
         const hasPkgCodeForChietKhau = pkgCodeForChietKhauVoucher && pkgCodeForChietKhauVoucher.trim() !== '';
         const hasPromCodeForChietKhau = promCodeForChietKhauVoucher && promCodeForChietKhauVoucher.trim() !== '';
-        const isVoucherDuPhongForChietKhau = chietKhauVoucherDp1ForChietKhau > 0 || isShopeeForChietKhau || (hasPromCodeForChietKhau && !hasPkgCodeForChietKhau);
+        const isVoucherDuPhongForChietKhau = paidByVoucherForChietKhau > 0 && (
+          chietKhauVoucherDp1ForChietKhau > 0 || 
+          isShopeeForChietKhau || 
+          (hasPromCodeForChietKhau && !hasPkgCodeForChietKhau)
+        );
         
         if (isVoucherDuPhongForChietKhau) {
           return <div className="text-sm text-gray-400 italic">-</div>;
@@ -865,11 +906,15 @@ export default function OrdersPage() {
         const soSourceForLabel = sale?.order_source || (sale as any)?.so_source || null;
         const paidByVoucherForLabel = sale?.paid_by_voucher_ecode_ecoin_bp ?? 0;
         
-        // Kiểm tra điều kiện voucher dự phòng
+        // Kiểm tra điều kiện voucher dự phòng - PHẢI CÓ paid_by_voucher > 0
         const isShopeeForLabel = soSourceForLabel && String(soSourceForLabel).toUpperCase() === 'SHOPEE';
         const hasPkgCodeForLabel = pkgCodeForLabel && pkgCodeForLabel.trim() !== '';
         const hasPromCodeForLabel = promCodeForLabel && promCodeForLabel.trim() !== '';
-        const isVoucherDuPhongForLabel = chietKhauVoucherDp1ForLabel > 0 || isShopeeForLabel || (hasPromCodeForLabel && !hasPkgCodeForLabel);
+        const isVoucherDuPhongForLabel = paidByVoucherForLabel > 0 && (
+          chietKhauVoucherDp1ForLabel > 0 || 
+          isShopeeForLabel || 
+          (hasPromCodeForLabel && !hasPkgCodeForLabel)
+        );
         
         if (isVoucherDuPhongForLabel) {
           return <div className="text-sm text-gray-400 italic">-</div>;
@@ -897,25 +942,43 @@ export default function OrdersPage() {
       case 'soSerial':
         // Hiển thị so_serial dựa trên trackSerial từ Loyalty API
         // trackSerial = true và trackBatch = false → hiển thị so_serial
+        // Nhưng không hiển thị nếu serial có dạng "XXX_YYYY" (đã dùng cho ma_lo)
         const trackSerialRender = sale?.product?.trackSerial === true;
         const trackBatchForSoSerialRender = sale?.product?.trackBatch === true;
+        const serialForSoSerial = sale?.serial || '';
+        
+        // Nếu serial có dạng "XXX_YYYY", không hiển thị so_serial (đã dùng cho ma_lo)
+        if (serialForSoSerial && serialForSoSerial.indexOf('_') > 0) {
+          return <div className="text-sm text-gray-400 italic">-</div>;
+        }
+        
         if (trackSerialRender && !trackBatchForSoSerialRender) {
-          return <div className="text-sm text-gray-900">{sale?.serial || '-'}</div>;
+          return <div className="text-sm text-gray-900">{serialForSoSerial || '-'}</div>;
         }
         return <div className="text-sm text-gray-400 italic">-</div>;
       case 'voucherDp1':
         // Hiển thị mã voucher dự phòng: "VC CTKM SÀN" nếu thỏa điều kiện voucher dự phòng
+        // Chỉ hiển thị khi có paid_by_voucher > 0 (v_paid)
         const chietKhauVoucherDp1ForVoucherDp1 = sale?.chietKhauVoucherDp1 ?? 0;
         const pkgCodeForVoucherDp1 = (sale as any)?.pkg_code || (sale as any)?.pkgCode || null;
         const promCodeForVoucherDp1 = sale?.promCode || null;
         const soSourceForVoucherDp1 = sale?.order_source || (sale as any)?.so_source || null;
         const paidByVoucherForVoucherDp1 = sale?.paid_by_voucher_ecode_ecoin_bp ?? 0;
         
-        // Kiểm tra điều kiện voucher dự phòng
+        // Kiểm tra điều kiện voucher dự phòng - PHẢI CÓ paid_by_voucher > 0
         const isShopeeForVoucherDp1 = soSourceForVoucherDp1 && String(soSourceForVoucherDp1).toUpperCase() === 'SHOPEE';
         const hasPkgCodeForVoucherDp1 = pkgCodeForVoucherDp1 && pkgCodeForVoucherDp1.trim() !== '';
         const hasPromCodeForVoucherDp1 = promCodeForVoucherDp1 && promCodeForVoucherDp1.trim() !== '';
-        const hasVoucherDuPhong = chietKhauVoucherDp1ForVoucherDp1 > 0 || isShopeeForVoucherDp1 || (hasPromCodeForVoucherDp1 && !hasPkgCodeForVoucherDp1);
+        
+        // Voucher dự phòng chỉ khi có paid_by_voucher > 0 VÀ thỏa một trong các điều kiện:
+        // 1. chietKhauVoucherDp1 > 0 (đã được sync), HOẶC
+        // 2. so_source = "SHOPEE", HOẶC
+        // 3. có prom_code và không có pkg_code
+        const hasVoucherDuPhong = paidByVoucherForVoucherDp1 > 0 && (
+          chietKhauVoucherDp1ForVoucherDp1 > 0 || 
+          isShopeeForVoucherDp1 || 
+          (hasPromCodeForVoucherDp1 && !hasPkgCodeForVoucherDp1)
+        );
         
         if (hasVoucherDuPhong) {
           return <div className="text-sm text-gray-900">VC CTKM SÀN</div>;
