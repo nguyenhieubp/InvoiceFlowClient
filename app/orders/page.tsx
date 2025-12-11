@@ -26,6 +26,9 @@ export default function OrdersPage() {
   const departmentCacheRef = useRef<Map<string, OrderDepartment>>(new Map());
   // Cache full order data để tránh fetch lại
   const fullOrderCacheRef = useRef<Map<string, Order>>(new Map());
+  // Track searchQuery và filter trước đó để chỉ reset page khi chúng thay đổi
+  const prevSearchQueryRef = useRef<string>('');
+  const prevFilterRef = useRef<{ brand?: string; dateFrom?: string; dateTo?: string }>({});
   const [filter, setFilter] = useState<{ brand?: string; dateFrom?: string; dateTo?: string }>({});
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedColumns, setSelectedColumns] = useState<OrderColumn[]>([...MAIN_COLUMNS]);
@@ -308,8 +311,8 @@ export default function OrdersPage() {
   const loadOrders = async () => {
     try {
       setLoading(true);
-      // Khi có search query, backend đã filter rồi, không cần load với limit lớn
-      const pageForSearch = searchQuery.trim() ? 1 : pagination.page;
+      // Khi có search query, backend đã filter rồi, vẫn cần gửi page để backend trả về đúng trang
+      // Chỉ reset về page 1 khi searchQuery thay đổi (xử lý ở useEffect khác)
       
       // Lấy orders từ backend API - chỉ lấy basic data (backend đã tối ưu)
       // Nếu có search query, gửi lên backend để search trực tiếp trên database
@@ -317,7 +320,7 @@ export default function OrdersPage() {
       // Khi không có search query, có thể dùng date (single day) để lấy từ Zappy API
       const response = await salesApi.getAllOrders({
         brand: filter.brand,
-        page: pageForSearch,
+        page: pagination.page,
         limit: pagination.limit,
         // Nếu có search query, dùng dateFrom/dateTo (date range)
         // Nếu không có search query, dùng date (single day) để lấy từ Zappy API
@@ -336,11 +339,12 @@ export default function OrdersPage() {
       setAllOrders(ordersData);
       
       // Cập nhật pagination từ backend response
-      // Backend đã filter và trả về total đúng
+      // Backend trả về total là tổng số rows (sale items) trong database
+      // Frontend sẽ paginate lại sau khi flatten, nên dùng total từ backend
       setPagination((prev) => ({
         ...prev,
         total: backendTotal,
-        totalPages: response.data.totalPages || Math.ceil(backendTotal / prev.limit),
+        totalPages: Math.ceil(backendTotal / prev.limit),
       }));
     } catch (error: any) {
       console.error('Error loading orders:', error);
@@ -350,52 +354,31 @@ export default function OrdersPage() {
     }
   };
 
+  // Reset về trang 1 khi search query hoặc filter thay đổi
+  useEffect(() => {
+    const searchQueryChanged = prevSearchQueryRef.current !== searchQuery;
+    const filterChanged = 
+      prevFilterRef.current.brand !== filter.brand ||
+      prevFilterRef.current.dateFrom !== filter.dateFrom ||
+      prevFilterRef.current.dateTo !== filter.dateTo;
+    
+    if (searchQueryChanged || filterChanged) {
+      prevSearchQueryRef.current = searchQuery;
+      prevFilterRef.current = { ...filter };
+      setPagination((prev) => ({ ...prev, page: 1 }));
+    }
+  }, [searchQuery, filter.brand, filter.dateFrom, filter.dateTo]);
+
+  // Load orders khi pagination hoặc filter thay đổi
   useEffect(() => {
     loadOrders();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter.brand, filter.dateFrom, filter.dateTo, pagination.page, pagination.limit, searchQuery]);
 
-  // Bỏ cache - không enrich nữa
-
-  // Xử lý search và pagination trên client
-  // Khi có search query, backend đã filter rồi, chỉ cần set displayedOrders = allOrders
+  // Backend đã filter và paginate rồi, frontend chỉ cần hiển thị những gì backend trả về
   useEffect(() => {
-    // Khi có search query, cần reset về trang 1 và reload data
-    if (searchQuery.trim() && pagination.page !== 1) {
-      setPagination((prev) => ({ ...prev, page: 1 }));
-      return; // useEffect sẽ chạy lại sau khi page được reset
-    }
-
-    let filtered = allOrders;
-
-    // Nếu có search query hoặc dateFrom/dateTo, backend đã filter rồi, không cần filter lại trên client
-    // Chỉ filter lại nếu không có search query và không có dateFrom/dateTo (fallback)
-    if (!searchQuery.trim() && !filter.dateFrom && !filter.dateTo) {
-      // Filter by brand (chỉ khi không có search query, vì brand đã được filter ở backend)
-      if (filter.brand) {
-        filtered = filtered.filter((order) => {
-          const orderBrand = order.customer?.brand?.toLowerCase();
-          return orderBrand === filter.brand?.toLowerCase();
-        });
-      }
-    }
-
-    setDisplayedOrders(filtered);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery, filter.brand, filter.dateFrom, filter.dateTo, allOrders, pagination.page, pagination.limit, selectedColumns]);
-
-  // Reset về trang 1 khi search query hoặc filter thay đổi
-  useEffect(() => {
-    if (searchQuery || filter.brand || filter.dateFrom || filter.dateTo) {
-      setPagination((prev) => {
-        if (prev.page !== 1) {
-          return { ...prev, page: 1 };
-        }
-        return prev;
-      });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery, filter.brand, filter.dateFrom, filter.dateTo]);
+    setDisplayedOrders(allOrders);
+  }, [allOrders]);
 
   // Enrich products chỉ cho displayedOrders (theo phân trang) - chỉ khi có sales
   useEffect(() => {
@@ -1148,8 +1131,6 @@ export default function OrdersPage() {
   };
 
   // Flatten enrichedDisplayedOrders thành rows để hiển thị
-  // Backend đã paginate và trả về đúng số orders cho trang hiện tại
-  // Nhưng khi flatten, số rows có thể nhiều hơn limit, nên cần paginate lại
   const allFlattenedRows: Array<{ order: Order; sale: SaleItem | null }> = [];
   enrichedDisplayedOrders.forEach((order) => {
     if (order.sales && order.sales.length > 0) {
@@ -1165,23 +1146,12 @@ export default function OrdersPage() {
     }
   });
 
-  // Paginate flattenedRows theo pagination hiện tại
-  // Khi có search query, đã load tất cả orders, nên cần paginate trên client
-  // Khi không có search query, backend đã paginate, chỉ cần slice theo limit
-  const startIndex = searchQuery.trim() ? (pagination.page - 1) * pagination.limit : 0;
-  const endIndex = searchQuery.trim() ? startIndex + pagination.limit : pagination.limit;
+  // Paginate lại trên frontend để đảm bảo số rows = limit
+  // Backend trả về orders, nhưng mỗi order có thể có nhiều sale items
+  // Nên cần paginate lại sau khi flatten để đảm bảo số rows hiển thị = limit
+  const startIndex = (pagination.page - 1) * pagination.limit;
+  const endIndex = startIndex + pagination.limit;
   const flattenedRows = allFlattenedRows.slice(startIndex, endIndex);
-  
-  // Cập nhật total khi có search query
-  useEffect(() => {
-    if (searchQuery.trim() && allFlattenedRows.length > 0) {
-      setPagination((prev) => ({
-        ...prev,
-        total: allFlattenedRows.length,
-        totalPages: Math.ceil(allFlattenedRows.length / prev.limit),
-      }));
-    }
-  }, [searchQuery, allFlattenedRows.length]);
 
   const filteredColumns = Object.entries(FIELD_LABELS).filter(([key]) =>
     columnSearchQuery.trim() === '' ||
