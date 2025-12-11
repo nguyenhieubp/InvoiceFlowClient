@@ -305,17 +305,17 @@ export default function OrdersPage() {
   const loadOrders = async () => {
     try {
       setLoading(true);
-      // Khi có search query, cần load với limit lớn hơn để search đúng
-      // Hoặc load tất cả orders (limit = 10000) để search toàn bộ
-      const limitForSearch = searchQuery.trim() ? 10000 : pagination.limit;
+      // Khi có search query, backend đã filter rồi, không cần load với limit lớn
       const pageForSearch = searchQuery.trim() ? 1 : pagination.page;
       
       // Lấy orders từ backend API - chỉ lấy basic data (backend đã tối ưu)
+      // Nếu có search query, gửi lên backend để search trực tiếp trên database
       const response = await salesApi.getAllOrders({
         brand: filter.brand,
         page: pageForSearch,
-        limit: limitForSearch,
+        limit: pagination.limit,
         date: filter.dateFrom ? convertDateToDDMMMYYYY(filter.dateFrom) : undefined,
+        search: searchQuery.trim() || undefined, // Gửi search query lên backend
       });
       const rawData = response.data.data || [];
       const backendTotal = response.data.total || 0;
@@ -327,11 +327,11 @@ export default function OrdersPage() {
       setAllOrders(ordersData);
       
       // Cập nhật pagination từ backend response
-      // Khi có search, total sẽ được tính lại sau khi filter
+      // Backend đã filter và trả về total đúng
       setPagination((prev) => ({
         ...prev,
-        total: searchQuery.trim() ? prev.total : backendTotal,
-        totalPages: searchQuery.trim() ? prev.totalPages : (response.data.totalPages || Math.ceil(backendTotal / prev.limit)),
+        total: backendTotal,
+        totalPages: response.data.totalPages || Math.ceil(backendTotal / prev.limit),
       }));
     } catch (error: any) {
       console.error('Error loading orders:', error);
@@ -349,6 +349,7 @@ export default function OrdersPage() {
   // Bỏ cache - không enrich nữa
 
   // Xử lý search và pagination trên client
+  // Khi có search query, backend đã filter rồi, chỉ cần set displayedOrders = allOrders
   useEffect(() => {
     // Khi có search query, cần reset về trang 1 và reload data
     if (searchQuery.trim() && pagination.page !== 1) {
@@ -358,52 +359,41 @@ export default function OrdersPage() {
 
     let filtered = allOrders;
 
-    // Filter by search query
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (order) =>
-          order.docCode.toLowerCase().includes(query) ||
-          (order.customer?.name && order.customer.name.toLowerCase().includes(query)) ||
-          (order.customer?.code && order.customer.code.toLowerCase().includes(query)) ||
-          (order.customer?.mobile && order.customer.mobile.toLowerCase().includes(query))
-      );
+    // Nếu có search query, backend đã filter rồi, không cần filter lại trên client
+    // Chỉ filter lại nếu không có search query (fallback)
+    if (!searchQuery.trim()) {
+      // Filter by brand (chỉ khi không có search query, vì brand đã được filter ở backend)
+      if (filter.brand) {
+        filtered = filtered.filter((order) => {
+          const orderBrand = order.customer?.brand?.toLowerCase();
+          return orderBrand === filter.brand?.toLowerCase();
+        });
+      }
+
+      // Filter by date range (chỉ khi không có search query, vì date đã được filter ở backend)
+      if (filter.dateFrom || filter.dateTo) {
+        const dateFrom = filter.dateFrom ? new Date(filter.dateFrom) : null;
+        const dateTo = filter.dateTo ? new Date(filter.dateTo) : null;
+
+        if (dateFrom) dateFrom.setHours(0, 0, 0, 0);
+        if (dateTo) dateTo.setHours(23, 59, 59, 999);
+
+        filtered = filtered.filter((order) => {
+          const orderDate = new Date(order.docDate);
+          orderDate.setHours(0, 0, 0, 0);
+
+          if (dateFrom && dateTo) {
+            return orderDate >= dateFrom && orderDate <= dateTo;
+          } else if (dateFrom) {
+            return orderDate >= dateFrom;
+          } else if (dateTo) {
+            return orderDate <= dateTo;
+          }
+          return true;
+        });
+      }
     }
 
-    // Filter by brand (chỉ khi không có search query, vì brand đã được filter ở backend)
-    if (filter.brand && !searchQuery.trim()) {
-      filtered = filtered.filter((order) => {
-        const orderBrand = order.customer?.brand?.toLowerCase();
-        return orderBrand === filter.brand?.toLowerCase();
-      });
-    }
-
-    // Filter by date range (chỉ khi không có search query, vì date đã được filter ở backend)
-    if ((filter.dateFrom || filter.dateTo) && !searchQuery.trim()) {
-      const dateFrom = filter.dateFrom ? new Date(filter.dateFrom) : null;
-      const dateTo = filter.dateTo ? new Date(filter.dateTo) : null;
-
-      if (dateFrom) dateFrom.setHours(0, 0, 0, 0);
-      if (dateTo) dateTo.setHours(23, 59, 59, 999);
-
-      filtered = filtered.filter((order) => {
-        const orderDate = new Date(order.docDate);
-        orderDate.setHours(0, 0, 0, 0);
-
-        if (dateFrom && dateTo) {
-          return orderDate >= dateFrom && orderDate <= dateTo;
-        } else if (dateFrom) {
-          return orderDate >= dateFrom;
-        } else if (dateTo) {
-          return orderDate <= dateTo;
-        }
-        return true;
-      });
-    }
-
-    // Khi có search query, cần load tất cả orders (không paginate) để search đúng
-    // Nhưng hiện tại backend đã paginate, nên chỉ filter trên orders hiện tại
-    // TODO: Nếu cần search toàn bộ, cần gọi API với search query hoặc load tất cả orders
     setDisplayedOrders(filtered);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery, filter.brand, filter.dateFrom, filter.dateTo, allOrders, pagination.page, pagination.limit, selectedColumns]);
