@@ -857,6 +857,20 @@ export default function OrdersPage() {
         // Lấy giá trị từ grade_discamt trong đơn hàng
         const gradeDiscamt = sale?.grade_discamt ?? sale?.chietKhauMuaHangCkVip ?? 0;
         return <div className="text-sm text-gray-900">{formatValue(gradeDiscamt)}</div>;
+      case 'thanhToanCoupon':
+        // Hiển thị mã coupon nếu có
+        const maCoupon = (sale as any)?.maCk04 || (sale?.thanhToanCoupon && sale?.thanhToanCoupon > 0 ? 'COUPON' : null);
+        if (maCoupon) {
+          return <div className="text-sm text-gray-900">{maCoupon}</div>;
+        }
+        return <div className="text-sm text-gray-400 italic">-</div>;
+      case 'chietKhauThanhToanCoupon':
+        // Chiết khấu thanh toán coupon
+        const chietKhauCoupon = sale?.chietKhauThanhToanCoupon ?? (sale as any)?.chietKhau09 ?? 0;
+        if (chietKhauCoupon > 0) {
+          return <div className="text-sm text-gray-900">{formatValue(chietKhauCoupon)}</div>;
+        }
+        return <div className="text-sm text-gray-400 italic">-</div>;
       case 'chietKhauThanhToanVoucher':
         // Chiết khấu voucher chính: chỉ hiển thị nếu không phải voucher dự phòng
         const chietKhauVoucherDp1ForChietKhau = sale?.chietKhauVoucherDp1 ?? 0;

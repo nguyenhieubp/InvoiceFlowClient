@@ -32,7 +32,7 @@ interface SaleItemForVoucher {
 /**
  * Tính và trả về các nhãn thanh toán voucher
  * @param sale - Sale item object
- * @returns Loại VC: "VCDV" | "VCBH" | "VCKM" | null
+ * @returns Loại VC: "VCDV" | "VCHB" | "VCKM" | null
  */
 export const calculateThanhToanVoucher = (sale: SaleItemForVoucher | null | undefined): string | null => {
   if (!sale) return null;

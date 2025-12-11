@@ -268,6 +268,8 @@ export const MAIN_COLUMNS: OrderColumn[] = [
   'chietKhauCkTheoChinhSach', // Chiết khấu ck theo chính sách
   'muaHangCkVip',             // Mua hàng CK VIP
   'chietKhauMuaHangCkVip',    // Chiết khấu mua hàng CK VIP
+  'thanhToanCoupon',          // Thanh toán coupon
+  'chietKhauThanhToanCoupon', // Chiết khấu thanh toán coupon
   'thanhToanVoucher',         // Thanh toán voucher
   'chietKhauThanhToanVoucher',// Chiết khấu thanh toán voucher
   'thanhToanTkTienAo',        // Thanh toán TK tiền ảo
