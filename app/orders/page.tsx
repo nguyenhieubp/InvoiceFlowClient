@@ -310,11 +310,17 @@ export default function OrdersPage() {
       
       // Lấy orders từ backend API - chỉ lấy basic data (backend đã tối ưu)
       // Nếu có search query, gửi lên backend để search trực tiếp trên database
+      // Khi có search query, gửi dateFrom/dateTo để search trong date range
+      // Khi không có search query, có thể dùng date (single day) để lấy từ Zappy API
       const response = await salesApi.getAllOrders({
         brand: filter.brand,
         page: pageForSearch,
         limit: pagination.limit,
-        date: filter.dateFrom ? convertDateToDDMMMYYYY(filter.dateFrom) : undefined,
+        // Nếu có search query, dùng dateFrom/dateTo (date range)
+        // Nếu không có search query, dùng date (single day) để lấy từ Zappy API
+        date: (!searchQuery.trim() && filter.dateFrom && !filter.dateTo) ? convertDateToDDMMMYYYY(filter.dateFrom) : undefined,
+        dateFrom: (searchQuery.trim() || filter.dateTo) ? filter.dateFrom : undefined,
+        dateTo: filter.dateTo || undefined,
         search: searchQuery.trim() || undefined, // Gửi search query lên backend
       });
       const rawData = response.data.data || [];
@@ -359,37 +365,14 @@ export default function OrdersPage() {
 
     let filtered = allOrders;
 
-    // Nếu có search query, backend đã filter rồi, không cần filter lại trên client
-    // Chỉ filter lại nếu không có search query (fallback)
-    if (!searchQuery.trim()) {
+    // Nếu có search query hoặc dateFrom/dateTo, backend đã filter rồi, không cần filter lại trên client
+    // Chỉ filter lại nếu không có search query và không có dateFrom/dateTo (fallback)
+    if (!searchQuery.trim() && !filter.dateFrom && !filter.dateTo) {
       // Filter by brand (chỉ khi không có search query, vì brand đã được filter ở backend)
       if (filter.brand) {
         filtered = filtered.filter((order) => {
           const orderBrand = order.customer?.brand?.toLowerCase();
           return orderBrand === filter.brand?.toLowerCase();
-        });
-      }
-
-      // Filter by date range (chỉ khi không có search query, vì date đã được filter ở backend)
-      if (filter.dateFrom || filter.dateTo) {
-        const dateFrom = filter.dateFrom ? new Date(filter.dateFrom) : null;
-        const dateTo = filter.dateTo ? new Date(filter.dateTo) : null;
-
-        if (dateFrom) dateFrom.setHours(0, 0, 0, 0);
-        if (dateTo) dateTo.setHours(23, 59, 59, 999);
-
-        filtered = filtered.filter((order) => {
-          const orderDate = new Date(order.docDate);
-          orderDate.setHours(0, 0, 0, 0);
-
-          if (dateFrom && dateTo) {
-            return orderDate >= dateFrom && orderDate <= dateTo;
-          } else if (dateFrom) {
-            return orderDate >= dateFrom;
-          } else if (dateTo) {
-            return orderDate <= dateTo;
-          }
-          return true;
         });
       }
     }

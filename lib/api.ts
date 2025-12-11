@@ -26,7 +26,7 @@ export const salesApi = {
   printOrders: (docCodes: string[]) => {
     return api.post('/sales/orders/print', { docCodes });
   },
-  getAllOrders: (params?: { brand?: string; processed?: boolean; page?: number; limit?: number; date?: string; search?: string }) => {
+  getAllOrders: (params?: { brand?: string; processed?: boolean; page?: number; limit?: number; date?: string; dateFrom?: string; dateTo?: string; search?: string }) => {
     return api.get('/sales', { params: { ...params } });
   },
   syncFromZappy: (date: string) => {
