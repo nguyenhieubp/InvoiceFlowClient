@@ -213,6 +213,8 @@ export interface Order {
   totalItems: number;
   isProcessed: boolean;
   sales?: SaleItem[];
+  cashioFopSyscode?: string | null;
+  cashioData?: any[] | null;
 }
 
 export type OrderRow = {

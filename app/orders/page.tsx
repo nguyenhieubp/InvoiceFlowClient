@@ -872,7 +872,18 @@ export default function OrdersPage() {
         }
         return <div className="text-sm text-gray-400 italic">-</div>;
       case 'chietKhauThanhToanVoucher':
-        // Chiết khấu voucher chính: chỉ hiển thị nếu không phải voucher dự phòng
+        // Chiết khấu voucher chính: chỉ hiển thị nếu không phải voucher dự phòng và không phải ECOIN
+        // Nếu có ECOIN thì không hiển thị voucher
+        const chietKhauTkTienAoForVoucherCheck = sale?.chietKhauThanhToanTkTienAo ?? 0;
+        const isEcoinForVoucherCheck = order?.cashioFopSyscode === 'ECOIN';
+        const cashioTotalInForVoucherCheck = order?.cashioTotalIn ?? 0;
+        
+        // Check nếu có ECOIN: chietKhauThanhToanTkTienAo > 0 HOẶC (cashioFopSyscode = 'ECOIN' và có cashioTotalIn > 0)
+        if (chietKhauTkTienAoForVoucherCheck > 0 || (isEcoinForVoucherCheck && cashioTotalInForVoucherCheck > 0)) {
+          // Có ECOIN → không hiển thị voucher
+          return <div className="text-sm text-gray-400 italic">-</div>;
+        }
+        
         const chietKhauVoucherDp1ForChietKhau = sale?.chietKhauVoucherDp1 ?? 0;
         const pkgCodeForChietKhauVoucher = (sale as any)?.pkg_code || (sale as any)?.pkgCode || null;
         const promCodeForChietKhauVoucher = sale?.promCode || null;
@@ -896,7 +907,18 @@ export default function OrdersPage() {
         const chietKhauThanhToanVoucher = paidByVoucherForChietKhau;
         return <div className="text-sm text-gray-900">{formatValue(chietKhauThanhToanVoucher)}</div>;
       case 'thanhToanVoucher':
-        // Mã voucher chính: chỉ hiển thị nếu không phải voucher dự phòng
+        // Mã voucher chính: chỉ hiển thị nếu không phải voucher dự phòng và không phải ECOIN
+        // Nếu có ECOIN thì không hiển thị voucher
+        const chietKhauTkTienAoForVoucherLabel = sale?.chietKhauThanhToanTkTienAo ?? 0;
+        const isEcoinForVoucherLabel = order?.cashioFopSyscode === 'ECOIN';
+        const cashioTotalInForVoucherLabel = order?.cashioTotalIn ?? 0;
+        
+        // Check nếu có ECOIN: chietKhauThanhToanTkTienAo > 0 HOẶC (cashioFopSyscode = 'ECOIN' và có cashioTotalIn > 0)
+        if (chietKhauTkTienAoForVoucherLabel > 0 || (isEcoinForVoucherLabel && cashioTotalInForVoucherLabel > 0)) {
+          // Có ECOIN → không hiển thị voucher
+          return <div className="text-sm text-gray-400 italic">-</div>;
+        }
+        
         const chietKhauVoucherDp1ForLabel = sale?.chietKhauVoucherDp1 ?? 0;
         const pkgCodeForLabel = (sale as any)?.pkg_code || (sale as any)?.pkgCode || null;
         const promCodeForLabel = sale?.promCode || null;
@@ -954,25 +976,29 @@ export default function OrdersPage() {
         }
         return <div className="text-sm text-gray-400 italic">-</div>;
       case 'voucherDp1':
-        // Hiển thị mã voucher dự phòng: "VC CTKM SÀN" nếu thỏa điều kiện voucher dự phòng
-        // Chỉ hiển thị khi có paid_by_voucher > 0 (v_paid)
+        // Hiển thị mã voucher dự phòng: "VC CTKM SÀN" nếu có chietKhauVoucherDp1 > 0
         const chietKhauVoucherDp1ForVoucherDp1 = sale?.chietKhauVoucherDp1 ?? 0;
+        
+        // Nếu đã có chietKhauVoucherDp1 > 0 (đã được sync) → hiển thị "VC CTKM SÀN"
+        if (chietKhauVoucherDp1ForVoucherDp1 > 0) {
+          return <div className="text-sm text-gray-900">VC CTKM SÀN</div>;
+        }
+        
+        // Fallback: nếu chưa có chietKhauVoucherDp1 nhưng thỏa điều kiện voucher dự phòng
         const pkgCodeForVoucherDp1 = (sale as any)?.pkg_code || (sale as any)?.pkgCode || null;
         const promCodeForVoucherDp1 = sale?.promCode || null;
         const soSourceForVoucherDp1 = sale?.order_source || (sale as any)?.so_source || null;
         const paidByVoucherForVoucherDp1 = sale?.paid_by_voucher_ecode_ecoin_bp ?? 0;
         
-        // Kiểm tra điều kiện voucher dự phòng - PHẢI CÓ paid_by_voucher > 0
+        // Kiểm tra điều kiện voucher dự phòng
         const isShopeeForVoucherDp1 = soSourceForVoucherDp1 && String(soSourceForVoucherDp1).toUpperCase() === 'SHOPEE';
         const hasPkgCodeForVoucherDp1 = pkgCodeForVoucherDp1 && pkgCodeForVoucherDp1.trim() !== '';
         const hasPromCodeForVoucherDp1 = promCodeForVoucherDp1 && promCodeForVoucherDp1.trim() !== '';
         
-        // Voucher dự phòng chỉ khi có paid_by_voucher > 0 VÀ thỏa một trong các điều kiện:
-        // 1. chietKhauVoucherDp1 > 0 (đã được sync), HOẶC
-        // 2. so_source = "SHOPEE", HOẶC
-        // 3. có prom_code và không có pkg_code
+        // Voucher dự phòng nếu có paid_by_voucher > 0 VÀ thỏa một trong các điều kiện:
+        // 1. so_source = "SHOPEE", HOẶC
+        // 2. có prom_code và không có pkg_code
         const hasVoucherDuPhong = paidByVoucherForVoucherDp1 > 0 && (
-          chietKhauVoucherDp1ForVoucherDp1 > 0 || 
           isShopeeForVoucherDp1 || 
           (hasPromCodeForVoucherDp1 && !hasPkgCodeForVoucherDp1)
         );
@@ -1004,6 +1030,53 @@ export default function OrdersPage() {
         if (chietKhauVoucherDp1Final > 0) {
           return <div className="text-sm text-gray-900">{formatValue(chietKhauVoucherDp1Final)}</div>;
         }
+        return <div className="text-sm text-gray-400 italic">-</div>;
+      case 'thanhToanTkTienAo':
+        // Thanh toán TK tiền ảo - chỉ hiển thị nếu item có v_paid > 0 (từ chietKhauThanhToanTkTienAo hoặc paid_by_voucher_ecode_ecoin_bp)
+        // Không hiển thị cho items có v_paid = 0
+        const chietKhauTkTienAo = sale?.chietKhauThanhToanTkTienAo ?? 0;
+        const vPaidForEcoin = sale?.paid_by_voucher_ecode_ecoin_bp ?? 0;
+        
+        // Chỉ hiển thị nếu có chietKhauThanhToanTkTienAo > 0 hoặc (v_paid > 0 và có ECOIN trong cashio)
+        if (chietKhauTkTienAo > 0) {
+          return <div className="text-sm text-gray-900">TK_TIEN_AO</div>;
+        }
+        
+        // Fallback: nếu chưa có chietKhauThanhToanTkTienAo nhưng có v_paid > 0 và có ECOIN trong cashio
+        if (vPaidForEcoin > 0 && order?.cashioData && Array.isArray(order.cashioData)) {
+          const ecoinCashio = order.cashioData.find((c: any) => c.fop_syscode === 'ECOIN');
+          if (ecoinCashio && ecoinCashio.total_in && parseFloat(String(ecoinCashio.total_in)) > 0) {
+            return <div className="text-sm text-gray-900">TK_TIEN_AO</div>;
+          }
+        }
+        
+        return <div className="text-sm text-gray-400 italic">-</div>;
+      case 'chietKhauThanhToanTkTienAo':
+        // Chiết khấu thanh toán TK tiền ảo - chỉ hiển thị nếu item có v_paid > 0
+        // Không hiển thị cho items có v_paid = 0
+        const chietKhauTkTienAoForChietKhau = sale?.chietKhauThanhToanTkTienAo ?? 0;
+        const vPaidForEcoinForChietKhau = sale?.paid_by_voucher_ecode_ecoin_bp ?? 0;
+        
+        // Ưu tiên chietKhauThanhToanTkTienAo (đã được lưu trong sync)
+        if (chietKhauTkTienAoForChietKhau > 0) {
+          return <div className="text-sm text-gray-900">{formatValue(chietKhauTkTienAoForChietKhau)}</div>;
+        }
+        
+        // Fallback: nếu chưa có chietKhauThanhToanTkTienAo nhưng có v_paid > 0 và có ECOIN trong cashio
+        if (vPaidForEcoinForChietKhau > 0 && order?.cashioData && Array.isArray(order.cashioData)) {
+          const ecoinCashioForChietKhau = order.cashioData.find((c: any) => c.fop_syscode === 'ECOIN');
+          if (ecoinCashioForChietKhau && ecoinCashioForChietKhau.total_in) {
+            const ecoinValue = parseFloat(String(ecoinCashioForChietKhau.total_in)) || 0;
+            if (ecoinValue > 0) {
+              return <div className="text-sm text-gray-900">{formatValue(ecoinValue)}</div>;
+            }
+          }
+          // Nếu không tìm thấy trong cashioData, thử dùng v_paid trực tiếp
+          if (vPaidForEcoinForChietKhau > 0) {
+            return <div className="text-sm text-gray-900">{formatValue(vPaidForEcoinForChietKhau)}</div>;
+          }
+        }
+        
         return <div className="text-sm text-gray-400 italic">-</div>;
       case 'maThe':
         // Ưu tiên mvc_serial (từ Zappy API)

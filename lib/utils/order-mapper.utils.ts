@@ -220,7 +220,13 @@ export const normalizeOrderData = (data: any): Order[] => {
       } 
       // Format cũ - đã là Order object
       else if (item?.docCode) {
-        normalized.push(item as Order);
+        // Preserve cashio fields từ backend
+        const order: Order = {
+          ...(item as Order),
+          cashioFopSyscode: item.cashioFopSyscode || null,
+          cashioData: item.cashioData || null,
+        };
+        normalized.push(order);
       }
     });
     return normalized;
@@ -234,7 +240,13 @@ export const normalizeOrderData = (data: any): Order[] => {
 
   // Format cũ - giả sử đã là Order object, wrap trong array
   if (data?.docCode) {
-    return [data as Order];
+    // Preserve cashio fields từ backend
+    const order: Order = {
+      ...(data as Order),
+      cashioFopSyscode: data.cashioFopSyscode || null,
+      cashioData: data.cashioData || null,
+    };
+    return [order];
   }
 
   return [];
