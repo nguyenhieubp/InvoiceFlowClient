@@ -672,6 +672,10 @@ export default function OrdersPage() {
         // Nếu không có, tính toán từ serial
         const serial = sale?.serial || '';
         if (serial) {
+          // Lấy brand để phân biệt logic cho F3
+          const brand = order.customer?.brand || order.brand || '';
+          const brandLower = (brand || '').toLowerCase().trim();
+          
           // Kiểm tra nếu serial có dạng "XXX_YYYY" (có dấu gạch dưới), lấy phần sau dấu gạch dưới
           const underscoreIndex = serial.indexOf('_');
           if (underscoreIndex > 0 && underscoreIndex < serial.length - 1) {
@@ -683,6 +687,12 @@ export default function OrdersPage() {
           // Nếu không có dấu gạch dưới, kiểm tra trackBatch
           const trackBatchRender = sale?.product?.trackBatch === true;
           if (trackBatchRender) {
+            // Với F3, lấy toàn bộ serial (không cắt, không xử lý)
+            if (brandLower === 'f3') {
+              return <div className="text-sm text-gray-900">{serial}</div>;
+            }
+            
+            // Các brand khác: tính toán theo productType
             let maLo = serial;
             const productTypeFromLoyaltyRender = sale?.productType || sale?.product?.productType;
             const productTypeUpperRender = productTypeFromLoyaltyRender ? String(productTypeFromLoyaltyRender).toUpperCase().trim() : null;
