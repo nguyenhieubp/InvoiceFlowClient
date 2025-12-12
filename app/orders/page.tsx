@@ -769,7 +769,11 @@ export default function OrdersPage() {
       case 'tkThueCo':
         return <div className="text-sm text-gray-900">{sale?.tkThueCo || '-'}</div>;
       case 'cucThue':
-        return <div className="text-sm text-gray-900">{sale?.cucThue || '-'}</div>;
+        // Với F3, mặc định cục thuế là "FBV" nếu chưa có
+        const brandForCucThue = order.customer?.brand || order.brand || '';
+        const brandLowerForCucThue = (brandForCucThue || '').toLowerCase().trim();
+        const cucThueValue = sale?.cucThue || (brandLowerForCucThue === 'f3' ? 'FBV' : null);
+        return <div className="text-sm text-gray-900">{cucThueValue || '-'}</div>;
       case 'tkVatTu':
         return <div className="text-sm text-gray-900">-</div>;
       case 'suaTkVatTu':
