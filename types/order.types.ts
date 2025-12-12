@@ -216,6 +216,7 @@ export interface Order {
   cashioFopSyscode?: string | null;
   cashioData?: any[] | null;
   cashioTotalIn?: number | null;
+  brand?: string; // Brand name (f3, menard, labhair, yaman, etc.)
 }
 
 export type OrderRow = {

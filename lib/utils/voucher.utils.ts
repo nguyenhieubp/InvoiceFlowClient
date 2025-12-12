@@ -58,30 +58,46 @@ export const calculateThanhToanVoucher = (sale: SaleItemForVoucher | null | unde
   // Sử dụng logic VC mới dựa trên productType và trackInventory
   const vcType = calculateVCType(productType, trackInventory);
 
-  // Nếu có VC type từ logic mới, trả về ngay
+  // Lấy brand để phân biệt logic
+  const brand = sale.customer?.brand || '';
+  const brandLower = (brand || '').toLowerCase().trim();
+  
+  let vcLabel: string | null = null;
+  
+  // Nếu có VC type từ logic mới, dùng nó
   if (vcType) {
-    return vcType;
+    vcLabel = vcType;
+  } else {
+    // Fallback: Logic cũ dựa trên cat1 và itemCode (chỉ khi có paid_by_voucher)
+    const cat1Value = sale.cat1 || sale.catcode1 || '';
+    const itemCodeValue = sale.itemCode || '';
+
+    // Tập hợp các nhãn sẽ hiển thị
+    const labels: string[] = [];
+
+    // VCHB: Nếu cat1 = "CHANDO" hoặc itemcode bắt đầu bằng "S" hoặc "H"
+    if (cat1Value === 'CHANDO' || itemCodeValue.toUpperCase().startsWith('S') || itemCodeValue.toUpperCase().startsWith('H')) {
+      labels.push('VCHB');
+    }
+
+    // VCDV: Nếu cat1 = "FACIALBAR" hoặc itemcode bắt đầu bằng "F" hoặc "V"
+    if (cat1Value === 'FACIALBAR' || itemCodeValue.toUpperCase().startsWith('F') || itemCodeValue.toUpperCase().startsWith('V')) {
+      labels.push('VCDV');
+    }
+
+    vcLabel = labels.length > 0 ? labels.join(' ') : null;
   }
-
-  // Fallback: Logic cũ dựa trên cat1 và itemCode (chỉ khi có paid_by_voucher)
-
-  const cat1Value = sale.cat1 || sale.catcode1 || '';
-  const itemCodeValue = sale.itemCode || '';
-
-  // Tập hợp các nhãn sẽ hiển thị
-  const labels: string[] = [];
-
-  // VCHB: Nếu cat1 = "CHANDO" hoặc itemcode bắt đầu bằng "S" hoặc "H"
-  if (cat1Value === 'CHANDO' || itemCodeValue.toUpperCase().startsWith('S') || itemCodeValue.toUpperCase().startsWith('H')) {
-    labels.push('VCHB');
+  
+  // Nếu không có label, trả về null
+  if (!vcLabel) {
+    return null;
   }
-
-  // VCDV: Nếu cat1 = "FACIALBAR" hoặc itemcode bắt đầu bằng "F" hoặc "V"
-  if (cat1Value === 'FACIALBAR' || itemCodeValue.toUpperCase().startsWith('F') || itemCodeValue.toUpperCase().startsWith('V')) {
-    labels.push('VCDV');
+  
+  // Với F3, thêm prefix "FBV TT" trước VC label
+  if (brandLower === 'f3') {
+    return `FBV TT ${vcLabel}`;
   }
-
-  // Nếu không có nhãn nào thỏa điều kiện, mặc định trả về null
-  return labels.length > 0 ? labels.join(' ') : null;
+  
+  return vcLabel;
 };
 

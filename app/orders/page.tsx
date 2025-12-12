@@ -811,40 +811,56 @@ export default function OrdersPage() {
         // Nếu có chiết khấu VIP (grade_discamt > 0) nhưng chưa có mã, tính VIP type
         const gradeDiscamtForMuaHangCkVipRender = sale?.grade_discamt ?? sale?.chietKhauMuaHangCkVip ?? 0;
         if (gradeDiscamtForMuaHangCkVipRender > 0) {
-          // Tính VIP type dựa trên quy tắc
+          // Lấy brand từ order để phân biệt logic VIP
+          const brand = order.customer?.brand || order.brand || '';
+          const brandLower = (brand || '').toLowerCase().trim();
+          
           const productType = sale?.productType || sale?.product?.productType || sale?.product?.producttype || null;
-          const materialCode = sale?.product?.maVatTu || sale?.product?.materialCode || sale?.itemCode || null;
-          const code = sale?.itemCode || null;
-          const trackInventory = sale?.trackInventory ?? sale?.product?.trackInventory ?? null;
-          const trackSerial = (sale?.product as any)?.trackSerial ?? null;
           
           let muaHangCkVipValue = '';
-          // Nếu productType == "DIVU"
-          if (productType === 'DIVU') {
-            muaHangCkVipValue = 'VIP DV MAT';
-          } else if (productType === 'VOUC') {
-            // Nếu productType == "VOUC" → "VIP VC MP"
-            muaHangCkVipValue = 'VIP VC MP';
+          
+          // Logic VIP khác nhau cho từng brand
+          if (brandLower === 'f3') {
+            // Logic cũ cho f3: DIVU → "FBV CKVIP DV", còn lại → "FBV CKVIP SP"
+            if (productType === 'DIVU') {
+              muaHangCkVipValue = 'FBV CKVIP DV';
+            } else {
+              muaHangCkVipValue = 'FBV CKVIP SP';
+            }
           } else {
-            // Nếu materialCode bắt đầu bằng "E." hoặc "VC" có trong code/materialCode/itemCode hoặc (trackInventory == False và trackSerial == True)
-            const materialCodeStr = materialCode || '';
-            const codeStr = code || '';
-            const itemCodeStr = sale?.itemCode || '';
-            // Kiểm tra "VC" trong materialCode, code, hoặc itemCode (không phân biệt hoa thường)
-            const hasVC = 
-              materialCodeStr.toUpperCase().includes('VC') ||
-              codeStr.toUpperCase().includes('VC') ||
-              itemCodeStr.toUpperCase().includes('VC');
+            // Logic mới cho các brand khác (menard, labhair, yaman)
+            const materialCode = sale?.product?.maVatTu || sale?.product?.materialCode || sale?.itemCode || null;
+            const code = sale?.itemCode || null;
+            const trackInventory = sale?.trackInventory ?? sale?.product?.trackInventory ?? null;
+            const trackSerial = (sale?.product as any)?.trackSerial ?? null;
             
-            if (
-              materialCodeStr.startsWith('E.') ||
-              hasVC ||
-              (trackInventory === false && trackSerial === true)
-            ) {
+            // Nếu productType == "DIVU"
+            if (productType === 'DIVU') {
+              muaHangCkVipValue = 'VIP DV MAT';
+            } else if (productType === 'VOUC') {
+              // Nếu productType == "VOUC" → "VIP VC MP"
               muaHangCkVipValue = 'VIP VC MP';
             } else {
-              // Ngược lại
-              muaHangCkVipValue = 'VIP MP';
+              // Nếu materialCode bắt đầu bằng "E." hoặc "VC" có trong code/materialCode/itemCode hoặc (trackInventory == False và trackSerial == True)
+              const materialCodeStr = materialCode || '';
+              const codeStr = code || '';
+              const itemCodeStr = sale?.itemCode || '';
+              // Kiểm tra "VC" trong materialCode, code, hoặc itemCode (không phân biệt hoa thường)
+              const hasVC = 
+                materialCodeStr.toUpperCase().includes('VC') ||
+                codeStr.toUpperCase().includes('VC') ||
+                itemCodeStr.toUpperCase().includes('VC');
+              
+              if (
+                materialCodeStr.startsWith('E.') ||
+                hasVC ||
+                (trackInventory === false && trackSerial === true)
+              ) {
+                muaHangCkVipValue = 'VIP VC MP';
+              } else {
+                // Ngược lại
+                muaHangCkVipValue = 'VIP MP';
+              }
             }
           }
           
