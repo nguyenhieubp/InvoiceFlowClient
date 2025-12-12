@@ -215,6 +215,7 @@ export interface Order {
   sales?: SaleItem[];
   cashioFopSyscode?: string | null;
   cashioData?: any[] | null;
+  cashioTotalIn?: number | null;
 }
 
 export type OrderRow = {

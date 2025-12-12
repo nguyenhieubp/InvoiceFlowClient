@@ -225,6 +225,7 @@ export const normalizeOrderData = (data: any): Order[] => {
           ...(item as Order),
           cashioFopSyscode: item.cashioFopSyscode || null,
           cashioData: item.cashioData || null,
+          cashioTotalIn: item.cashioTotalIn || null,
         };
         normalized.push(order);
       }
@@ -245,6 +246,7 @@ export const normalizeOrderData = (data: any): Order[] => {
       ...(data as Order),
       cashioFopSyscode: data.cashioFopSyscode || null,
       cashioData: data.cashioData || null,
+      cashioTotalIn: data.cashioTotalIn || null,
     };
     return [order];
   }
