@@ -1175,16 +1175,52 @@ export default function OrdersPage() {
         const chietKhauTkTienAo = sale?.chietKhauThanhToanTkTienAo ?? 0;
         const vPaidForEcoin = sale?.paid_by_voucher_ecode_ecoin_bp ?? 0;
         
+        // Generate label: YYMM{brand_code}.TKDV (ví dụ: 2511MN.TKDV)
+        // Lấy tháng từ docDate của order, không phải tháng hiện tại
+        const generateTkTienAoLabel = () => {
+          // Lấy ngày từ docDate của order
+          let docDate: Date;
+          if (order?.docDate) {
+            const docDateValue = order.docDate as any;
+            if (docDateValue instanceof Date) {
+              docDate = docDateValue;
+            } else {
+              docDate = new Date(docDateValue);
+              if (isNaN(docDate.getTime())) {
+                // Nếu không parse được, dùng ngày hiện tại
+                docDate = new Date();
+              }
+            }
+          } else {
+            // Fallback: dùng ngày hiện tại
+            docDate = new Date();
+          }
+          
+          const year = docDate.getFullYear();
+          const month = docDate.getMonth() + 1;
+          const yy = String(year).slice(-2);
+          const mm = String(month).padStart(2, '0');
+          
+          // Lấy brand code từ order hoặc sale
+          const maDvcs = (order as any)?.ma_dvcs || order?.customer?.brand || order?.brand || (sale as any)?.department?.ma_dvcs || '';
+          let brandCode = 'MN'; // Default
+          if (maDvcs && String(maDvcs).length >= 2) {
+            brandCode = String(maDvcs).slice(-2).toUpperCase();
+          }
+          
+          return `${yy}${mm}${brandCode}.TKDV`;
+        };
+        
         // Chỉ hiển thị nếu có chietKhauThanhToanTkTienAo > 0 hoặc (v_paid > 0 và có ECOIN trong cashio)
         if (chietKhauTkTienAo > 0) {
-          return <div className="text-sm text-gray-900">TK_TIEN_AO</div>;
+          return <div className="text-sm text-gray-900">{generateTkTienAoLabel()}</div>;
         }
         
         // Fallback: nếu chưa có chietKhauThanhToanTkTienAo nhưng có v_paid > 0 và có ECOIN trong cashio
         if (vPaidForEcoin > 0 && order?.cashioData && Array.isArray(order.cashioData)) {
           const ecoinCashio = order.cashioData.find((c: any) => c.fop_syscode === 'ECOIN');
           if (ecoinCashio && ecoinCashio.total_in && parseFloat(String(ecoinCashio.total_in)) > 0) {
-            return <div className="text-sm text-gray-900">TK_TIEN_AO</div>;
+            return <div className="text-sm text-gray-900">{generateTkTienAoLabel()}</div>;
           }
         }
         
