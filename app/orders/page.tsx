@@ -914,28 +914,74 @@ export default function OrdersPage() {
           return <div className="text-sm text-gray-400 italic">-</div>;
         }
         
-        const chietKhauVoucherDp1ForChietKhau = sale?.chietKhauVoucherDp1 ?? 0;
+        // Convert sang number để so sánh đúng
+        const chietKhauVoucherDp1ForChietKhau = Number(sale?.chietKhauVoucherDp1 ?? 0) || 0;
         const pkgCodeForChietKhauVoucher = (sale as any)?.pkg_code || (sale as any)?.pkgCode || null;
         const promCodeForChietKhauVoucher = sale?.promCode || null;
         const soSourceForChietKhauVoucher = sale?.order_source || (sale as any)?.so_source || null;
-        const paidByVoucherForChietKhau = sale?.paid_by_voucher_ecode_ecoin_bp ?? sale?.chietKhauThanhToanVoucher ?? 0;
+        const paidByVoucherForChietKhau = Number(sale?.paid_by_voucher_ecode_ecoin_bp ?? sale?.chietKhauThanhToanVoucher ?? 0) || 0;
         
-        // Kiểm tra điều kiện voucher dự phòng - PHẢI CÓ paid_by_voucher > 0
-        const isShopeeForChietKhau = soSourceForChietKhauVoucher && String(soSourceForChietKhauVoucher).toUpperCase() === 'SHOPEE';
+        // Kiểm tra điều kiện voucher dự phòng - Logic giống hệt backend
+        // Xác định isVoucherDuPhong dựa trên so_source và prom_code/pkg_code (KHÔNG check chietKhauVoucherDp1)
+        const brandForChietKhau = order?.customer?.brand || order?.brand || '';
+        const brandLowerForChietKhau = (brandForChietKhau || '').toLowerCase().trim();
+        const isShopeeForChietKhau = Boolean(soSourceForChietKhauVoucher && String(soSourceForChietKhauVoucher).toUpperCase() === 'SHOPEE');
         const hasPkgCodeForChietKhau = pkgCodeForChietKhauVoucher && pkgCodeForChietKhauVoucher.trim() !== '';
         const hasPromCodeForChietKhau = promCodeForChietKhauVoucher && promCodeForChietKhauVoucher.trim() !== '';
-        const isVoucherDuPhongForChietKhau = paidByVoucherForChietKhau > 0 && (
-          chietKhauVoucherDp1ForChietKhau > 0 || 
-          isShopeeForChietKhau || 
-          (hasPromCodeForChietKhau && !hasPkgCodeForChietKhau)
-        );
         
-        if (isVoucherDuPhongForChietKhau) {
+        // Xác định voucher dự phòng theo logic mới (giống backend)
+        let isVoucherDuPhongForChietKhau: boolean = false;
+        if (brandLowerForChietKhau === 'f3') {
+          // Với F3: Chỉ khi so_source = "SHOPEE" mới là voucher dự phòng
+          isVoucherDuPhongForChietKhau = isShopeeForChietKhau;
+        } else {
+          // Với các brand khác: SHOPEE hoặc (có prom_code và không có pkg_code)
+          isVoucherDuPhongForChietKhau = isShopeeForChietKhau || Boolean(hasPromCodeForChietKhau && !hasPkgCodeForChietKhau);
+        }
+        
+        // DEBUG LOG
+        console.log('[chietKhauThanhToanVoucher]', {
+          itemCode: sale?.itemCode,
+          brand: brandForChietKhau,
+          brandLower: brandLowerForChietKhau,
+          soSource: soSourceForChietKhauVoucher,
+          isShopee: isShopeeForChietKhau,
+          promCode: promCodeForChietKhauVoucher,
+          pkgCode: pkgCodeForChietKhauVoucher,
+          hasPromCode: hasPromCodeForChietKhau,
+          hasPkgCode: hasPkgCodeForChietKhau,
+          chietKhauVoucherDp1: chietKhauVoucherDp1ForChietKhau,
+          paidByVoucher: paidByVoucherForChietKhau,
+          isVoucherDuPhong: isVoucherDuPhongForChietKhau,
+        });
+        
+        // Nếu có chietKhauVoucherDp1 > 0 nhưng theo logic mới không phải voucher dự phòng
+        // → Chuyển sang voucher chính (dữ liệu cũ đã sync với logic cũ)
+        // Frontend: Nếu không phải voucher dự phòng, hiển thị là voucher chính
+        if (chietKhauVoucherDp1ForChietKhau > 0 && !isVoucherDuPhongForChietKhau) {
+          // Chuyển sang voucher chính - không ẩn, sẽ hiển thị giá trị
+          isVoucherDuPhongForChietKhau = false;
+        }
+        
+        // Chỉ ẩn nếu thực sự là voucher dự phòng VÀ có paid_by_voucher > 0
+        if (isVoucherDuPhongForChietKhau && paidByVoucherForChietKhau > 0) {
           return <div className="text-sm text-gray-400 italic">-</div>;
         }
         
-        const chietKhauThanhToanVoucher = paidByVoucherForChietKhau;
-        return <div className="text-sm text-gray-900">{formatValue(chietKhauThanhToanVoucher)}</div>;
+        // Hiển thị giá trị voucher chính
+        // Nếu có chietKhauVoucherDp1 > 0 nhưng không phải voucher dự phòng (dữ liệu cũ)
+        // → Hiển thị giá trị đó như voucher chính (giống backend logic)
+        const chietKhauThanhToanVoucher = chietKhauVoucherDp1ForChietKhau > 0 && !isVoucherDuPhongForChietKhau
+          ? chietKhauVoucherDp1ForChietKhau
+          : paidByVoucherForChietKhau;
+        
+        console.log('[chietKhauThanhToanVoucher] Final value:', chietKhauThanhToanVoucher);
+        
+        if (chietKhauThanhToanVoucher > 0) {
+          return <div className="text-sm text-gray-900">{formatValue(chietKhauThanhToanVoucher)}</div>;
+        }
+        
+        return <div className="text-sm text-gray-400 italic">-</div>;
       case 'thanhToanVoucher':
         // Mã voucher chính: chỉ hiển thị nếu không phải voucher dự phòng và không phải ECOIN
         // Nếu có ECOIN thì không hiển thị voucher
@@ -949,29 +995,68 @@ export default function OrdersPage() {
           return <div className="text-sm text-gray-400 italic">-</div>;
         }
         
-        const chietKhauVoucherDp1ForLabel = sale?.chietKhauVoucherDp1 ?? 0;
+        // Convert sang number để so sánh đúng
+        const chietKhauVoucherDp1ForLabel = Number(sale?.chietKhauVoucherDp1 ?? 0) || 0;
         const pkgCodeForLabel = (sale as any)?.pkg_code || (sale as any)?.pkgCode || null;
         const promCodeForLabel = sale?.promCode || null;
         const soSourceForLabel = sale?.order_source || (sale as any)?.so_source || null;
-        const paidByVoucherForLabel = sale?.paid_by_voucher_ecode_ecoin_bp ?? 0;
+        const paidByVoucherForLabel = Number(sale?.paid_by_voucher_ecode_ecoin_bp ?? 0) || 0;
         
-        // Kiểm tra điều kiện voucher dự phòng - PHẢI CÓ paid_by_voucher > 0
-        const isShopeeForLabel = soSourceForLabel && String(soSourceForLabel).toUpperCase() === 'SHOPEE';
+        // Kiểm tra điều kiện voucher dự phòng - Logic giống hệt backend
+        // Xác định isVoucherDuPhong dựa trên so_source và prom_code/pkg_code (KHÔNG check chietKhauVoucherDp1)
+        const brandForLabel = order?.customer?.brand || order?.brand || '';
+        const brandLowerForLabel = (brandForLabel || '').toLowerCase().trim();
+        const isShopeeForLabel = Boolean(soSourceForLabel && String(soSourceForLabel).toUpperCase() === 'SHOPEE');
         const hasPkgCodeForLabel = pkgCodeForLabel && pkgCodeForLabel.trim() !== '';
         const hasPromCodeForLabel = promCodeForLabel && promCodeForLabel.trim() !== '';
-        const isVoucherDuPhongForLabel = paidByVoucherForLabel > 0 && (
-          chietKhauVoucherDp1ForLabel > 0 || 
-          isShopeeForLabel || 
-          (hasPromCodeForLabel && !hasPkgCodeForLabel)
-        );
+        
+        // Xác định voucher dự phòng theo logic mới (giống backend)
+        let isVoucherDuPhongForLabel: boolean = false;
+        if (brandLowerForLabel === 'f3') {
+          // Với F3: Chỉ khi so_source = "SHOPEE" mới là voucher dự phòng
+          isVoucherDuPhongForLabel = isShopeeForLabel;
+        } else {
+          // Với các brand khác: SHOPEE hoặc (có prom_code và không có pkg_code)
+          isVoucherDuPhongForLabel = isShopeeForLabel || Boolean(hasPromCodeForLabel && !hasPkgCodeForLabel);
+        }
+        
+        // DEBUG LOG
+        console.log('[thanhToanVoucher]', {
+          itemCode: sale?.itemCode,
+          brand: brandForLabel,
+          brandLower: brandLowerForLabel,
+          soSource: soSourceForLabel,
+          isShopee: isShopeeForLabel,
+          promCode: promCodeForLabel,
+          pkgCode: pkgCodeForLabel,
+          hasPromCode: hasPromCodeForLabel,
+          hasPkgCode: hasPkgCodeForLabel,
+          chietKhauVoucherDp1: chietKhauVoucherDp1ForLabel,
+          paidByVoucher: paidByVoucherForLabel,
+          isVoucherDuPhong: isVoucherDuPhongForLabel,
+        });
+        
+        // Nếu có chietKhauVoucherDp1 > 0 nhưng theo logic mới không phải voucher dự phòng
+        // → Chuyển sang voucher chính (dữ liệu cũ đã sync với logic cũ)
+        // Frontend: Nếu không phải voucher dự phòng, hiển thị label voucher chính
+        if (chietKhauVoucherDp1ForLabel > 0 && !isVoucherDuPhongForLabel) {
+          // Chuyển sang voucher chính - không ẩn, sẽ hiển thị label
+          isVoucherDuPhongForLabel = false;
+        }
         
         if (isVoucherDuPhongForLabel) {
           return <div className="text-sm text-gray-400 italic">-</div>;
         }
         
         // Truyền customer từ order vào sale để tính brand
+        // Nếu có chietKhauVoucherDp1 > 0 nhưng không phải voucher dự phòng (dữ liệu cũ)
+        // → Truyền giá trị đó vào paid_by_voucher_ecode_ecoin_bp để tính label
+        const paidByVoucherForLabelCalc = chietKhauVoucherDp1ForLabel > 0 && !isVoucherDuPhongForLabel
+          ? chietKhauVoucherDp1ForLabel
+          : paidByVoucherForLabel;
+        
         const saleWithCustomerForRender = sale ? {
-          paid_by_voucher_ecode_ecoin_bp: sale.paid_by_voucher_ecode_ecoin_bp,
+          paid_by_voucher_ecode_ecoin_bp: paidByVoucherForLabelCalc,
           revenue: sale.revenue,
           linetotal: sale.linetotal,
           tienHang: sale.tienHang,
@@ -1006,39 +1091,47 @@ export default function OrdersPage() {
         }
         return <div className="text-sm text-gray-400 italic">-</div>;
       case 'voucherDp1':
-        // Hiển thị mã voucher dự phòng: "VC CTKM SÀN" nếu có chietKhauVoucherDp1 > 0
-        const chietKhauVoucherDp1ForVoucherDp1 = sale?.chietKhauVoucherDp1 ?? 0;
-        
-        // Nếu đã có chietKhauVoucherDp1 > 0 (đã được sync) → hiển thị "VC CTKM SÀN"
-        if (chietKhauVoucherDp1ForVoucherDp1 > 0) {
-          return <div className="text-sm text-gray-900">VC CTKM SÀN</div>;
-        }
-        
-        // Fallback: nếu chưa có chietKhauVoucherDp1 nhưng thỏa điều kiện voucher dự phòng
+        // Hiển thị mã voucher dự phòng: "VC CTKM SÀN" nếu thực sự là voucher dự phòng
+        // Logic giống hệt backend: xác định dựa trên so_source và prom_code/pkg_code
+        const brandForVoucherDp1 = order?.customer?.brand || order?.brand || '';
+        const brandLowerForVoucherDp1 = (brandForVoucherDp1 || '').toLowerCase().trim();
         const pkgCodeForVoucherDp1 = (sale as any)?.pkg_code || (sale as any)?.pkgCode || null;
         const promCodeForVoucherDp1 = sale?.promCode || null;
         const soSourceForVoucherDp1 = sale?.order_source || (sale as any)?.so_source || null;
         const paidByVoucherForVoucherDp1 = sale?.paid_by_voucher_ecode_ecoin_bp ?? 0;
+        const chietKhauVoucherDp1ForVoucherDp1 = sale?.chietKhauVoucherDp1 ?? 0;
         
         // Kiểm tra điều kiện voucher dự phòng
         const isShopeeForVoucherDp1 = soSourceForVoucherDp1 && String(soSourceForVoucherDp1).toUpperCase() === 'SHOPEE';
         const hasPkgCodeForVoucherDp1 = pkgCodeForVoucherDp1 && pkgCodeForVoucherDp1.trim() !== '';
         const hasPromCodeForVoucherDp1 = promCodeForVoucherDp1 && promCodeForVoucherDp1.trim() !== '';
         
-        // Voucher dự phòng nếu có paid_by_voucher > 0 VÀ thỏa một trong các điều kiện:
-        // 1. so_source = "SHOPEE", HOẶC
-        // 2. có prom_code và không có pkg_code
-        const hasVoucherDuPhong = paidByVoucherForVoucherDp1 > 0 && (
-          isShopeeForVoucherDp1 || 
-          (hasPromCodeForVoucherDp1 && !hasPkgCodeForVoucherDp1)
-        );
+        // Xác định voucher dự phòng theo logic mới (giống backend)
+        let isVoucherDuPhongForVoucherDp1 = false;
+        if (brandLowerForVoucherDp1 === 'f3') {
+          // Với F3: Chỉ khi so_source = "SHOPEE" mới là voucher dự phòng
+          isVoucherDuPhongForVoucherDp1 = isShopeeForVoucherDp1;
+        } else {
+          // Với các brand khác: SHOPEE hoặc (có prom_code và không có pkg_code)
+          isVoucherDuPhongForVoucherDp1 = isShopeeForVoucherDp1 || (hasPromCodeForVoucherDp1 && !hasPkgCodeForVoucherDp1);
+        }
         
-        if (hasVoucherDuPhong) {
+        // Nếu có chietKhauVoucherDp1 > 0 nhưng theo logic mới không phải voucher dự phòng
+        // → Không hiển thị (đã chuyển sang voucher chính)
+        if (chietKhauVoucherDp1ForVoucherDp1 > 0 && !isVoucherDuPhongForVoucherDp1) {
+          return <div className="text-sm text-gray-400 italic">-</div>;
+        }
+        
+        // Chỉ hiển thị nếu thực sự là voucher dự phòng VÀ có giá trị
+        if (isVoucherDuPhongForVoucherDp1 && (chietKhauVoucherDp1ForVoucherDp1 > 0 || paidByVoucherForVoucherDp1 > 0)) {
           return <div className="text-sm text-gray-900">VC CTKM SÀN</div>;
         }
         return <div className="text-sm text-gray-400 italic">-</div>;
       case 'chietKhauVoucherDp1':
         // Hiển thị chiết khấu voucher dự phòng
+        // Logic giống hệt backend: xác định dựa trên so_source và prom_code/pkg_code
+        const brandForChietKhauDp1 = order?.customer?.brand || order?.brand || '';
+        const brandLowerForChietKhauDp1 = (brandForChietKhauDp1 || '').toLowerCase().trim();
         const chietKhauVoucherDp1Value = sale?.chietKhauVoucherDp1 ?? 0;
         const pkgCodeForChietKhauDp1 = (sale as any)?.pkg_code || (sale as any)?.pkgCode || null;
         const promCodeForChietKhauDp1 = sale?.promCode || null;
@@ -1049,15 +1142,30 @@ export default function OrdersPage() {
         const isShopeeForChietKhauDp1 = soSourceForChietKhauDp1 && String(soSourceForChietKhauDp1).toUpperCase() === 'SHOPEE';
         const hasPkgCodeForChietKhauDp1 = pkgCodeForChietKhauDp1 && pkgCodeForChietKhauDp1.trim() !== '';
         const hasPromCodeForChietKhauDp1 = promCodeForChietKhauDp1 && promCodeForChietKhauDp1.trim() !== '';
-        const isVoucherDuPhongForChietKhauDp1 = isShopeeForChietKhauDp1 || (hasPromCodeForChietKhauDp1 && !hasPkgCodeForChietKhauDp1);
         
-        // Nếu có chietKhauVoucherDp1, dùng nó; nếu không, kiểm tra fallback
+        // Xác định voucher dự phòng theo logic mới (giống backend)
+        let isVoucherDuPhongForChietKhauDp1 = false;
+        if (brandLowerForChietKhauDp1 === 'f3') {
+          // Với F3: Chỉ khi so_source = "SHOPEE" mới là voucher dự phòng
+          isVoucherDuPhongForChietKhauDp1 = isShopeeForChietKhauDp1;
+        } else {
+          // Với các brand khác: SHOPEE hoặc (có prom_code và không có pkg_code)
+          isVoucherDuPhongForChietKhauDp1 = isShopeeForChietKhauDp1 || (hasPromCodeForChietKhauDp1 && !hasPkgCodeForChietKhauDp1);
+        }
+        
+        // Nếu có chietKhauVoucherDp1 > 0 nhưng theo logic mới không phải voucher dự phòng
+        // → Không hiển thị (đã chuyển sang voucher chính)
+        if (chietKhauVoucherDp1Value > 0 && !isVoucherDuPhongForChietKhauDp1) {
+          return <div className="text-sm text-gray-400 italic">-</div>;
+        }
+        
+        // Chỉ hiển thị nếu thực sự là voucher dự phòng VÀ có giá trị
         let chietKhauVoucherDp1Final = chietKhauVoucherDp1Value;
         if (chietKhauVoucherDp1Final === 0 && isVoucherDuPhongForChietKhauDp1 && paidByVoucherForChietKhauDp1 > 0) {
           chietKhauVoucherDp1Final = paidByVoucherForChietKhauDp1;
         }
         
-        if (chietKhauVoucherDp1Final > 0) {
+        if (isVoucherDuPhongForChietKhauDp1 && chietKhauVoucherDp1Final > 0) {
           return <div className="text-sm text-gray-900">{formatValue(chietKhauVoucherDp1Final)}</div>;
         }
         return <div className="text-sm text-gray-400 italic">-</div>;
