@@ -107,8 +107,9 @@ export default function OrdersPage() {
       return node.map(extractTextFromReactNode).join(' ');
     }
     if (React.isValidElement(node)) {
-      if (node.props?.children) {
-        return extractTextFromReactNode(node.props.children);
+      const props = node.props as { children?: any };
+      if (props?.children) {
+        return extractTextFromReactNode(props.children);
       }
       return '';
     }

@@ -26,6 +26,8 @@ interface SaleItemForVoucher {
     productType?: string | null;
     producttype?: string | null;
     trackInventory?: boolean | null;
+    cat1?: string;
+    catcode1?: string;
   } | null;
 }
 
