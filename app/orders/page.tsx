@@ -1313,17 +1313,18 @@ export default function OrdersPage() {
         
         return <div className="text-sm text-gray-400 italic">-</div>;
       case 'chietKhauThanhToanTkTienAo':
-        // Chiết khấu thanh toán TK tiền ảo - chỉ hiển thị nếu item có v_paid > 0
-        // Không hiển thị cho items có v_paid = 0
+        // Chiết khấu thanh toán TK tiền ảo - chỉ hiển thị nếu có ECOIN
+        // Không hiển thị nếu chỉ có voucher (paid_by_voucher_ecode_ecoin_bp > 0 nhưng không có ECOIN)
         const chietKhauTkTienAoForChietKhau = sale?.chietKhauThanhToanTkTienAo ?? 0;
         const vPaidForEcoinForChietKhau = sale?.paid_by_voucher_ecode_ecoin_bp ?? 0;
         
-        // Ưu tiên chietKhauThanhToanTkTienAo (đã được lưu trong sync)
+        // Ưu tiên chietKhauThanhToanTkTienAo (đã được lưu trong sync) - chỉ hiển thị nếu > 0
         if (chietKhauTkTienAoForChietKhau > 0) {
           return <div className="text-sm text-gray-900">{formatValue(chietKhauTkTienAoForChietKhau)}</div>;
         }
         
-        // Fallback: nếu chưa có chietKhauThanhToanTkTienAo nhưng có v_paid > 0 và có ECOIN trong cashio
+        // Fallback: nếu chưa có chietKhauThanhToanTkTienAo nhưng có v_paid > 0 VÀ có ECOIN trong cashio
+        // Chỉ hiển thị khi THỰC SỰ có ECOIN, không phải chỉ vì có v_paid > 0
         if (vPaidForEcoinForChietKhau > 0 && order?.cashioData && Array.isArray(order.cashioData)) {
           const ecoinCashioForChietKhau = order.cashioData.find((c: any) => c.fop_syscode === 'ECOIN');
           if (ecoinCashioForChietKhau && ecoinCashioForChietKhau.total_in) {
@@ -1332,12 +1333,9 @@ export default function OrdersPage() {
               return <div className="text-sm text-gray-900">{formatValue(ecoinValue)}</div>;
             }
           }
-          // Nếu không tìm thấy trong cashioData, thử dùng v_paid trực tiếp
-          if (vPaidForEcoinForChietKhau > 0) {
-            return <div className="text-sm text-gray-900">{formatValue(vPaidForEcoinForChietKhau)}</div>;
-          }
         }
         
+        // Không hiển thị nếu không có ECOIN (chỉ có voucher thông thường)
         return <div className="text-sm text-gray-400 italic">-</div>;
       case 'maThe':
         // Ưu tiên mvc_serial (từ Zappy API)
