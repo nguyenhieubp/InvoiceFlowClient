@@ -137,7 +137,9 @@ export default function OrdersPage() {
       case 'itemName':
         return sale?.itemName || sale?.product?.tenVatTu || '';
       case 'qty':
-        return sale?.qty ?? null;
+        // Làm tròn số lượng về số nguyên
+        const qtyValue = sale?.qty ?? null;
+        return qtyValue !== null ? Math.round(Number(qtyValue)) : null;
       case 'giaBan':
         const tienHangForGiaBan = sale?.linetotal ?? sale?.tienHang;
         const qtyForGiaBan = sale?.qty;
@@ -162,7 +164,52 @@ export default function OrdersPage() {
       case 'maKho':
         return sale?.maKho || '';
       case 'maLo':
-        return sale?.maLo || '';
+        // Hiển thị ma_lo - ưu tiên lấy từ backend nếu có, nếu không thì tính toán từ serial
+        if (sale?.maLo) {
+          return sale.maLo;
+        }
+        
+        // Nếu không có, tính toán từ serial
+        const serial = sale?.serial || sale?.soSerial;
+        if (serial) {
+          // Lấy brand để phân biệt logic cho F3
+          const brand = order.customer?.brand || order.brand || '';
+          const brandLower = (brand || '').toLowerCase().trim();
+          
+          // Kiểm tra nếu serial có dạng "XXX_YYYY" (có dấu gạch dưới), lấy phần sau dấu gạch dưới
+          const underscoreIndex = serial.indexOf('_');
+          if (underscoreIndex > 0 && underscoreIndex < serial.length - 1) {
+            // Lấy phần sau dấu gạch dưới
+            const maLo = serial.substring(underscoreIndex + 1);
+            return maLo;
+          }
+          
+          // Nếu không có dấu gạch dưới, kiểm tra trackBatch
+          const trackBatch = sale?.product?.trackBatch === true;
+          if (trackBatch) {
+            // Với F3, lấy toàn bộ serial (không cắt, không xử lý)
+            if (brandLower === 'f3') {
+              return serial;
+            }
+            
+            // Các brand khác: tính toán theo productType
+            let maLo = serial;
+            const productTypeFromLoyalty = sale?.productType || sale?.product?.productType;
+            const productTypeUpper = productTypeFromLoyalty ? String(productTypeFromLoyalty).toUpperCase().trim() : null;
+            if (productTypeUpper === 'TPCN') {
+              // Nếu productType là "TPCN", cắt lấy 8 ký tự cuối
+              maLo = serial.length >= 8 ? serial.slice(-8) : serial;
+            } else if (productTypeUpper === 'SKIN' || productTypeUpper === 'GIFT') {
+              // Nếu productType là "SKIN" hoặc "GIFT", cắt lấy 4 ký tự cuối
+              maLo = serial.length >= 4 ? serial.slice(-4) : serial;
+            } else {
+              // Các trường hợp khác → lấy 4 ký tự cuối (mặc định)
+              maLo = serial.length >= 4 ? serial.slice(-4) : serial;
+            }
+            return maLo;
+          }
+        }
+        return '';
       case 'soSerial':
         return sale?.serial || '';
       default:
@@ -297,7 +344,8 @@ export default function OrdersPage() {
             
             // Giữ nguyên giá trị number cho các cột số
             if (numericColumns.includes(column) || column.includes('chietKhau') || column.includes('ThanhToan') || column.includes('thanhToan')) {
-              cellValue = value; // Giữ nguyên số, Excel sẽ tự format
+              // Làm tròn tất cả các số về số nguyên (bỏ phần thập phân)
+              cellValue = Math.round(value);
             } else {
               cellValue = value; // Các số khác cũng giữ nguyên
             }
@@ -312,6 +360,54 @@ export default function OrdersPage() {
 
       // Tạo worksheet từ dữ liệu
       const ws = XLSX.utils.json_to_sheet(excelData);
+
+      // Danh sách các cột số cần set format
+      const numericColumns = [
+        'qty', 'giaBan', 'tienHang', 'revenue', 'tyGia',
+        'chietKhauMuaHangGiamGia', 'chietKhauCkTheoChinhSach', 'chietKhauMuaHangCkVip',
+        'chietKhauThanhToanCoupon', 'chietKhauThanhToanVoucher', 'chietKhauThanhToanTkTienAo',
+        'chietKhauDuPhong1', 'chietKhauDuPhong2', 'chietKhauDuPhong3',
+        'chietKhauHang', 'chietKhauThuongMuaBangHang',
+        'chietKhauThem1', 'chietKhauThem2', 'chietKhauThem3',
+        'chietKhauVoucherDp1', 'chietKhauVoucherDp2', 'chietKhauVoucherDp3',
+        'chietKhauVoucherDp4', 'chietKhauVoucherDp5', 'chietKhauVoucherDp6',
+        'chietKhauVoucherDp7', 'chietKhauVoucherDp8',
+        'muaHangGiamGia', 'muaHangCkVip',
+        'thanhToanCoupon', 'thanhToanVoucher', 'thanhToanTkTienAo',
+        'duPhong1', 'duPhong2', 'duPhong3',
+        'voucherDp1', 'voucherDp2', 'voucherDp3', 'voucherDp4', 'voucherDp5',
+        'voucherDp6', 'voucherDp7', 'voucherDp8',
+        'troGia', 'ckTheoChinhSach', 'ckThem1', 'ckThem2', 'ckThem3',
+        'thuongBangHang'
+      ];
+
+      // Set cell type và format cho các cột số - TẤT CẢ đều là số nguyên (không có số thập phân, không có dấu phân cách hàng nghìn)
+      const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
+      for (let col = range.s.c; col <= range.e.c; col++) {
+        const colLetter = XLSX.utils.encode_col(col);
+        const headerCell = ws[colLetter + '1'];
+        if (headerCell && headerCell.v) {
+          const columnLabel = headerCell.v;
+          // Tìm column tương ứng với label
+          const column = selectedColumns.find(col => FIELD_LABELS[col] === columnLabel);
+          
+          if (column && (numericColumns.includes(column) || column.includes('chietKhau') || column.includes('ThanhToan') || column.includes('thanhToan'))) {
+            // Set format cho tất cả cells trong cột này (trừ header)
+            for (let row = range.s.r + 1; row <= range.e.r; row++) {
+              const cellAddress = colLetter + (row + 1);
+              const cell = ws[cellAddress];
+              if (cell && typeof cell.v === 'number') {
+                // Set cell type là number
+                cell.t = 'n'; // number type
+                // Format: số nguyên không có dấu phân cách hàng nghìn
+                cell.z = '0'; // Format '0' = số nguyên, không có số thập phân, không có dấu phân cách
+                // Làm tròn về số nguyên (bỏ phần thập phân)
+                cell.v = Math.round(Number(cell.v));
+              }
+            }
+          }
+        }
+      }
 
       // Đặt độ rộng cột tự động
       const colWidths = selectedColumns.map((column) => {
