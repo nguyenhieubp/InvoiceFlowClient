@@ -111,7 +111,7 @@ export default function OrdersPage() {
       const data = response.data;
 
       if (data.success) {
-        showToast('success', `${data.message}. Đã đồng bộ ${data.ordersCount} đơn hàng, ${data.salesCount} dòng bán hàng mới, ${data.customersCount} khách hàng mới.`);
+        showToast('success', `${data.message} Đã đồng bộ ${data.ordersCount} đơn hàng, ${data.salesCount} dòng bán hàng mới, ${data.customersCount} khách hàng mới.`);
         // Reload orders sau khi đồng bộ thành công
         await loadOrders();
       } else {
