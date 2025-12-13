@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { salesApi, categoriesApi } from '@/lib/api';
 import { Toast } from '@/components/Toast';
 import { TAX_CODE, DEBIT_ACCOUNT } from '@/lib/constants/accounting.constants';
@@ -12,6 +12,7 @@ import { calculateMaLo, parsePromCode, convertPromCodeToTangSp } from '@/lib/uti
 import { normalizeOrderData } from '@/lib/utils/order-mapper.utils';
 import { mapLoyaltyApiProductToProductItem } from '@/lib/utils/product.utils';
 import { OrderProduct, OrderDepartment } from '@/types/order.types';
+import * as XLSX from 'xlsx';
 
 
 export default function OrdersPage() {
@@ -95,6 +96,179 @@ export default function OrdersPage() {
     };
 
     return brandMap[companyUpper] || company.toLowerCase();
+  };
+
+  // Hàm helper để extract text từ React element (đệ quy)
+  const extractTextFromReactNode = (node: any): string => {
+    if (node === null || node === undefined) return '';
+    if (typeof node === 'string' || typeof node === 'number') return String(node);
+    if (typeof node === 'boolean') return node ? 'Có' : 'Không';
+    if (Array.isArray(node)) {
+      return node.map(extractTextFromReactNode).join(' ');
+    }
+    if (React.isValidElement(node)) {
+      if (node.props?.children) {
+        return extractTextFromReactNode(node.props.children);
+      }
+      return '';
+    }
+    return String(node);
+  };
+
+  // Hàm lấy giá trị raw từ order/sale (không render React element)
+  const getRawCellValue = (order: Order, sale: SaleItem | null, field: OrderColumn): any => {
+    if (!sale && field !== 'docCode' && field !== 'docDate' && field !== 'customerName' && field !== 'partnerCode') {
+      return null;
+    }
+
+    switch (field) {
+      case 'docCode':
+        return order.docCode || '';
+      case 'docDate':
+        return order.docDate ? new Date(order.docDate).toLocaleDateString('vi-VN') : '';
+      case 'customerName':
+        return order.customer?.name || '';
+      case 'partnerCode':
+        return sale?.partnerCode || order.customer?.code || '';
+      case 'itemCode':
+        return sale?.itemCode || '';
+      case 'itemName':
+        return sale?.itemName || sale?.product?.tenVatTu || '';
+      case 'qty':
+        return sale?.qty ?? null;
+      case 'giaBan':
+        const tienHangForGiaBan = sale?.linetotal ?? sale?.tienHang;
+        const qtyForGiaBan = sale?.qty;
+        if (tienHangForGiaBan != null && qtyForGiaBan != null && qtyForGiaBan > 0) {
+          return tienHangForGiaBan / qtyForGiaBan;
+        }
+        return sale?.giaBan ?? 0;
+      case 'tienHang':
+        return sale?.linetotal ?? sale?.tienHang ?? null;
+      case 'revenue':
+        return sale?.revenue ?? null;
+      case 'maNt':
+        return sale?.maNt || 'VND';
+      case 'tyGia':
+        return sale?.tyGia ?? 1;
+      case 'maThue':
+        return sale?.maThue || TAX_CODE;
+      case 'tkNo':
+        return sale?.tkNo || DEBIT_ACCOUNT;
+      case 'dvt':
+        return sale?.dvt || sale?.product?.dvt || '';
+      case 'maKho':
+        return sale?.maKho || '';
+      case 'maLo':
+        return sale?.maLo || '';
+      case 'soSerial':
+        return sale?.serial || '';
+      default:
+        // Với các field phức tạp, dùng renderCellValue và extract text
+        const renderedValue = renderCellValue(order, sale, field);
+        return extractTextFromReactNode(renderedValue);
+    }
+  };
+
+  // Hàm xuất Excel
+  const handleExportExcel = () => {
+    try {
+      // Tính toán lại flattened rows từ enrichedDisplayedOrders
+      const rowsToExport: Array<{ order: Order; sale: SaleItem | null }> = [];
+      enrichedDisplayedOrders.forEach((order) => {
+        if (order.sales && order.sales.length > 0) {
+          order.sales.forEach((sale) => {
+            rowsToExport.push({ order, sale });
+          });
+        } else {
+          // Nếu order không có sales, dùng totalItems để tạo rows
+          const rowCount = order.totalItems > 0 ? order.totalItems : 1;
+          for (let i = 0; i < rowCount; i++) {
+            rowsToExport.push({ order, sale: null });
+          }
+        }
+      });
+
+      if (rowsToExport.length === 0) {
+        showToast('info', 'Không có dữ liệu để xuất Excel');
+        return;
+      }
+
+      // Lấy brand từ orders (ưu tiên brand đầu tiên tìm thấy)
+      let brandName = '';
+      for (const row of rowsToExport) {
+        const brand = row.order?.customer?.brand || row.order?.brand || '';
+        if (brand) {
+          brandName = brand;
+          break;
+        }
+      }
+
+      // Tạo workbook mới
+      const wb = XLSX.utils.book_new();
+
+      // Chuẩn bị dữ liệu cho Excel - lấy tất cả rows (không chỉ trang hiện tại)
+      const excelData = rowsToExport.map((row) => {
+        const rowData: any = {};
+        selectedColumns.forEach((column) => {
+          const label = FIELD_LABELS[column];
+          const value = getRawCellValue(row.order, row.sale, column);
+          
+          // Format giá trị
+          let cellValue: any = '';
+          if (value === null || value === undefined) {
+            cellValue = '';
+          } else if (typeof value === 'number') {
+            // Format số tiền với 2 chữ số thập phân
+            if (column === 'giaBan' || column === 'tienHang' || column === 'revenue' || 
+                column.includes('chietKhau') || column.includes('ThanhToan')) {
+              cellValue = value.toLocaleString('vi-VN', { 
+                minimumFractionDigits: 2, 
+                maximumFractionDigits: 2 
+              });
+            } else {
+              cellValue = value;
+            }
+          } else {
+            cellValue = String(value);
+          }
+          
+          rowData[label] = cellValue;
+        });
+        return rowData;
+      });
+
+      // Tạo worksheet từ dữ liệu
+      const ws = XLSX.utils.json_to_sheet(excelData);
+
+      // Đặt độ rộng cột tự động
+      const colWidths = selectedColumns.map((column) => {
+        const label = FIELD_LABELS[column];
+        const maxLength = Math.max(
+          label.length,
+          ...excelData.map((row) => String(row[label] || '').length)
+        );
+        return { wch: Math.min(maxLength + 2, 50) }; // Giới hạn tối đa 50 ký tự
+      });
+      ws['!cols'] = colWidths;
+
+      // Thêm worksheet vào workbook
+      XLSX.utils.book_append_sheet(wb, ws, 'Đơn hàng');
+
+      // Tạo tên file với ngày hiện tại và brand
+      const now = new Date();
+      const dateStr = now.toISOString().split('T')[0].replace(/-/g, '');
+      const brandSuffix = brandName ? `_${brandName.toUpperCase()}` : '';
+      const fileName = `DonHang_${dateStr}${brandSuffix}.xlsx`;
+
+      // Xuất file
+      XLSX.writeFile(wb, fileName);
+      
+      showToast('success', `Đã xuất Excel thành công: ${fileName} (${excelData.length} dòng)`);
+    } catch (error: any) {
+      console.error('Error exporting Excel:', error);
+      showToast('error', `Lỗi khi xuất Excel: ${error?.message || 'Unknown error'}`);
+    }
   };
 
   // Hàm đồng bộ từ Zappy
@@ -1558,6 +1732,17 @@ export default function OrdersPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
                   </svg>
                   Chọn cột hiển thị
+                </button>
+                <button
+                  onClick={handleExportExcel}
+                  disabled={allFlattenedRows.length === 0}
+                  className="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-green-600 rounded-lg hover:bg-green-700 transition-colors inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Xuất Excel"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Xuất Excel
                 </button>
               </div>
             </div>
