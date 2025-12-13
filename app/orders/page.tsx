@@ -596,10 +596,32 @@ export default function OrdersPage() {
             giaBanForMuaHangGiamGiaRender = tienHangForMuaHangGiamGiaRender / qtyNum;
           }
         }
+        
+        // Lấy brand để phân biệt logic F3
+        const brandForMuaHangGiamGia = order?.customer?.brand || order?.brand || sale?.customer?.brand || '';
+        let brandLowerForMuaHangGiamGia = (brandForMuaHangGiamGia || '').toLowerCase().trim();
+        // Normalize: "facialbar" → "f3"
+        if (brandLowerForMuaHangGiamGia === 'facialbar') {
+          brandLowerForMuaHangGiamGia = 'f3';
+        }
+        
+        const hasPromCodeForMuaHangGiamGia = sale?.promCode && String(sale.promCode).trim() !== '';
+        const isTangHangForMuaHangGiamGia = giaBanForMuaHangGiamGiaRender === 0 && tienHangForMuaHangGiamGiaRender === 0 && revenueForMuaHangGiamGiaRender === 0;
+        
+        // Với F3: Nếu có promCode và giaBan = 0 && tienHang = 0 → là "mua hàng giảm giá" (giảm 100%), không phải "tặng hàng"
+        // → Hiển thị ở cột này
+        if (brandLowerForMuaHangGiamGia === 'f3' && hasPromCodeForMuaHangGiamGia && isTangHangForMuaHangGiamGia) {
+          const displayCode = sale?.promotionDisplayCode || sale?.promCode;
+          if (displayCode) {
+            return <div className="text-sm text-gray-900">{displayCode}</div>;
+          }
+        }
+        
         // Nếu là hàng tặng (giaBan = 0 và tienHang = 0 và revenue = 0), không hiển thị ở cột này
-        if (giaBanForMuaHangGiamGiaRender === 0 && tienHangForMuaHangGiamGiaRender === 0 && revenueForMuaHangGiamGiaRender === 0) {
+        if (isTangHangForMuaHangGiamGia) {
           return <div className="text-sm text-gray-400 italic">-</div>;
         }
+        
         // Sử dụng promotionDisplayCode từ backend
         const displayCode = sale?.promotionDisplayCode || sale?.promCode;
         if (!displayCode) {
@@ -623,8 +645,25 @@ export default function OrdersPage() {
             giaBanForTangHangRender = tienHangForTangHangRender / qtyNum;
           }
         }
+        // Lấy brand để phân biệt logic F3
+        const brandForTangHang = order?.customer?.brand || order?.brand || sale?.customer?.brand || '';
+        let brandLowerForTangHang = (brandForTangHang || '').toLowerCase().trim();
+        // Normalize: "facialbar" → "f3"
+        if (brandLowerForTangHang === 'facialbar') {
+          brandLowerForTangHang = 'f3';
+        }
+        
+        const hasPromCodeForTangHang = sale?.promCode && String(sale.promCode).trim() !== '';
+        const isTangHangForTangHangRender = giaBanForTangHangRender === 0 && tienHangForTangHangRender === 0 && revenueForTangHangRender === 0;
+        
+        // Với F3: Nếu có promCode và giaBan = 0 && tienHang = 0 → là "mua hàng giảm giá" (giảm 100%), không phải "tặng hàng"
+        // → Không hiển thị ở cột này
+        if (brandLowerForTangHang === 'f3' && hasPromCodeForTangHang && isTangHangForTangHangRender) {
+          return <div className="text-sm text-gray-400 italic">-</div>;
+        }
+        
         // Nếu là hàng tặng (giaBan = 0 và tienHang = 0 và revenue = 0)
-        if (giaBanForTangHangRender === 0 && tienHangForTangHangRender === 0 && revenueForTangHangRender === 0) {
+        if (isTangHangForTangHangRender) {
           // Quy tắc: Nếu ordertype_name = "06. Đầu tư" → ma_ctkm_th = "TT DAU TU"
           const ordertypeName = sale?.ordertype || '';
           if (ordertypeName.includes('06. Đầu tư') || ordertypeName.includes('06.Đầu tư')) {
