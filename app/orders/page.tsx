@@ -270,20 +270,36 @@ export default function OrdersPage() {
           const label = FIELD_LABELS[column];
           const value = getRawCellValue(row.order, row.sale, column);
           
-          // Format giá trị
+          // Format giá trị - Giữ số dạng số để Excel có thể tính toán
           let cellValue: any = '';
           if (value === null || value === undefined) {
             cellValue = '';
           } else if (typeof value === 'number') {
-            // Format số tiền với 2 chữ số thập phân
-            if (column === 'giaBan' || column === 'tienHang' || column === 'revenue' || 
-                column.includes('chietKhau') || column.includes('ThanhToan')) {
-              cellValue = value.toLocaleString('vi-VN', { 
-                minimumFractionDigits: 2, 
-                maximumFractionDigits: 2 
-              });
+            // Danh sách các cột số: giữ nguyên giá trị number (không format thành string)
+            const numericColumns = [
+              'qty', 'giaBan', 'tienHang', 'revenue', 'tyGia',
+              'chietKhauMuaHangGiamGia', 'chietKhauCkTheoChinhSach', 'chietKhauMuaHangCkVip',
+              'chietKhauThanhToanCoupon', 'chietKhauThanhToanVoucher', 'chietKhauThanhToanTkTienAo',
+              'chietKhauDuPhong1', 'chietKhauDuPhong2', 'chietKhauDuPhong3',
+              'chietKhauHang', 'chietKhauThuongMuaBangHang',
+              'chietKhauThem1', 'chietKhauThem2', 'chietKhauThem3',
+              'chietKhauVoucherDp1', 'chietKhauVoucherDp2', 'chietKhauVoucherDp3',
+              'chietKhauVoucherDp4', 'chietKhauVoucherDp5', 'chietKhauVoucherDp6',
+              'chietKhauVoucherDp7', 'chietKhauVoucherDp8',
+              'muaHangGiamGia', 'muaHangCkVip',
+              'thanhToanCoupon', 'thanhToanVoucher', 'thanhToanTkTienAo',
+              'duPhong1', 'duPhong2', 'duPhong3',
+              'voucherDp1', 'voucherDp2', 'voucherDp3', 'voucherDp4', 'voucherDp5',
+              'voucherDp6', 'voucherDp7', 'voucherDp8',
+              'troGia', 'ckTheoChinhSach', 'ckThem1', 'ckThem2', 'ckThem3',
+              'thuongBangHang'
+            ];
+            
+            // Giữ nguyên giá trị number cho các cột số
+            if (numericColumns.includes(column) || column.includes('chietKhau') || column.includes('ThanhToan') || column.includes('thanhToan')) {
+              cellValue = value; // Giữ nguyên số, Excel sẽ tự format
             } else {
-              cellValue = value;
+              cellValue = value; // Các số khác cũng giữ nguyên
             }
           } else {
             cellValue = String(value);
@@ -741,8 +757,8 @@ export default function OrdersPage() {
         minimumFractionDigits: 2, 
         maximumFractionDigits: 2 
       });
-    }
-    return String(value);
+        }
+        return String(value);
   };
 
   const renderCellValue = (order: Order, sale: SaleItem | null, field: OrderColumn): React.ReactNode => {
@@ -988,15 +1004,15 @@ export default function OrdersPage() {
           }
           
           // Nếu không có dấu gạch dưới, kiểm tra trackBatch
-          const trackBatchRender = sale?.product?.trackBatch === true;
-          if (trackBatchRender) {
+        const trackBatchRender = sale?.product?.trackBatch === true;
+        if (trackBatchRender) {
             // Với F3, lấy toàn bộ serial (không cắt, không xử lý)
             if (brandLower === 'f3') {
               return <div className="text-sm text-gray-900">{serial}</div>;
             }
             
             // Các brand khác: tính toán theo productType
-            let maLo = serial;
+          let maLo = serial;
             const productTypeFromLoyaltyRender = sale?.productType || sale?.product?.productType;
             const productTypeUpperRender = productTypeFromLoyaltyRender ? String(productTypeFromLoyaltyRender).toUpperCase().trim() : null;
             if (productTypeUpperRender === 'TPCN') {
@@ -1281,7 +1297,7 @@ export default function OrdersPage() {
         console.log('[chietKhauThanhToanVoucher] Final value:', chietKhauThanhToanVoucher);
         
         if (chietKhauThanhToanVoucher > 0) {
-          return <div className="text-sm text-gray-900">{formatValue(chietKhauThanhToanVoucher)}</div>;
+        return <div className="text-sm text-gray-900">{formatValue(chietKhauThanhToanVoucher)}</div>;
         }
         
         return <div className="text-sm text-gray-400 italic">-</div>;
