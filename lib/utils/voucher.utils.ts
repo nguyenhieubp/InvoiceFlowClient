@@ -69,20 +69,24 @@ export const calculateThanhToanVoucher = (sale: SaleItemForVoucher | null | unde
     vcLabel = vcType;
   } else {
     // Fallback: Logic cũ dựa trên cat1 và itemCode (chỉ khi có paid_by_voucher)
-    const cat1Value = sale.cat1 || sale.catcode1 || '';
+    if (paidByVoucher <= 0) {
+      return null;
+    }
+
+    const cat1Value = sale.cat1 || sale.catcode1 || sale.product?.cat1 || sale.product?.catcode1 || '';
     const itemCodeValue = sale.itemCode || '';
 
     // Tập hợp các nhãn sẽ hiển thị
     const labels: string[] = [];
 
-    // VCHB: Nếu cat1 = "CHANDO" hoặc itemcode bắt đầu bằng "S" hoặc "H"
+    // VCDV: Nếu cat1 = "CHANDO" hoặc itemcode bắt đầu bằng "S" hoặc "H"
     if (cat1Value === 'CHANDO' || itemCodeValue.toUpperCase().startsWith('S') || itemCodeValue.toUpperCase().startsWith('H')) {
-      labels.push('VCHB');
+      labels.push('VCDV');
     }
 
-    // VCDV: Nếu cat1 = "FACIALBAR" hoặc itemcode bắt đầu bằng "F" hoặc "V"
+    // VCHB: Nếu cat1 = "FACIALBAR" hoặc itemcode bắt đầu bằng "F" hoặc "V"
     if (cat1Value === 'FACIALBAR' || itemCodeValue.toUpperCase().startsWith('F') || itemCodeValue.toUpperCase().startsWith('V')) {
-      labels.push('VCDV');
+      labels.push('VCHB');
     }
 
     vcLabel = labels.length > 0 ? labels.join(' ') : null;

@@ -472,11 +472,43 @@ export default function OrdersPage() {
         </span>
       );
     }
-    if (typeof value === 'number') {
-      if (value % 1 !== 0) {
-        return value.toLocaleString('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    // Convert string numbers to number first
+    // Xử lý cả string numbers (như "118000.00", "118000", "118.000,00", "118,000.00")
+    if (typeof value === 'string' && value.trim() !== '') {
+      // Thử parse trực tiếp trước (cho số thuần như "118000.00" hoặc "118000")
+      let numValue = parseFloat(value);
+      
+      // Nếu parse trực tiếp không được (có dấu phân cách hàng nghìn), thử clean trước
+      if (isNaN(numValue) || String(numValue).replace('.', '') !== value.replace(/[^\d]/g, '')) {
+        // Format VN: "118.000,00" → loại bỏ dấu chấm, thay dấu phẩy bằng dấu chấm
+        // Format US: "118,000.00" → loại bỏ dấu phẩy, giữ dấu chấm
+        let cleanedValue = value;
+        // Nếu có dấu phẩy ở cuối (sau 2-3 chữ số) → format VN
+        if (/,(\d{1,3})$/.test(value)) {
+          cleanedValue = value.replace(/\./g, '').replace(',', '.');
+        } else {
+          // Format US hoặc số thuần, chỉ loại bỏ dấu phẩy (phân cách hàng nghìn)
+          cleanedValue = value.replace(/,/g, '');
+        }
+        numValue = parseFloat(cleanedValue);
       }
-      return value.toLocaleString('vi-VN');
+      
+      if (!isNaN(numValue)) {
+        // Format tất cả số tiền đều có 2 chữ số thập phân và nhất quán
+        // Sử dụng locale 'vi-VN' với dấu chấm (.) phân cách hàng nghìn, dấu phẩy (,) phân cách thập phân
+        return numValue.toLocaleString('vi-VN', { 
+          minimumFractionDigits: 2, 
+          maximumFractionDigits: 2 
+        });
+      }
+    }
+    if (typeof value === 'number') {
+      // Format tất cả số tiền đều có 2 chữ số thập phân và nhất quán
+      // Sử dụng locale 'vi-VN' với dấu chấm (.) phân cách hàng nghìn, dấu phẩy (,) phân cách thập phân
+      return value.toLocaleString('vi-VN', { 
+        minimumFractionDigits: 2, 
+        maximumFractionDigits: 2 
+      });
     }
     return String(value);
   };
@@ -598,7 +630,7 @@ export default function OrdersPage() {
         }
         
         // Lấy brand để phân biệt logic F3
-        const brandForMuaHangGiamGia = order?.customer?.brand || order?.brand || sale?.customer?.brand || '';
+        const brandForMuaHangGiamGia = order?.customer?.brand || order?.brand || '';
         let brandLowerForMuaHangGiamGia = (brandForMuaHangGiamGia || '').toLowerCase().trim();
         // Normalize: "facialbar" → "f3"
         if (brandLowerForMuaHangGiamGia === 'facialbar') {
@@ -646,7 +678,7 @@ export default function OrdersPage() {
           }
         }
         // Lấy brand để phân biệt logic F3
-        const brandForTangHang = order?.customer?.brand || order?.brand || sale?.customer?.brand || '';
+        const brandForTangHang = order?.customer?.brand || order?.brand || '';
         let brandLowerForTangHang = (brandForTangHang || '').toLowerCase().trim();
         // Normalize: "facialbar" → "f3"
         if (brandLowerForTangHang === 'facialbar') {
