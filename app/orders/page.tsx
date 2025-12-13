@@ -1175,6 +1175,23 @@ export default function OrdersPage() {
         const chietKhauTkTienAo = sale?.chietKhauThanhToanTkTienAo ?? 0;
         const vPaidForEcoin = sale?.paid_by_voucher_ecode_ecoin_bp ?? 0;
         
+        // Map brand name sang brand code
+        const mapBrandToCode = (brand: string | null | undefined): string => {
+          if (!brand) return 'MN'; // Default
+          
+          const brandLower = String(brand).toLowerCase().trim();
+          const brandMap: Record<string, string> = {
+            'menard': 'MN',
+            'f3': 'FBV',
+            'facialbar': 'FBV',
+            'chando': 'CDV',
+            'labhair': 'LHV',
+            'yaman': 'BTH',
+          };
+          
+          return brandMap[brandLower] || 'MN'; // Default to MN
+        };
+
         // Generate label: YYMM{brand_code}.TKDV (ví dụ: 2511MN.TKDV)
         // Lấy tháng từ docDate của order, không phải tháng hiện tại
         const generateTkTienAoLabel = () => {
@@ -1201,12 +1218,11 @@ export default function OrdersPage() {
           const yy = String(year).slice(-2);
           const mm = String(month).padStart(2, '0');
           
-          // Lấy brand code từ order hoặc sale
-          const maDvcs = (order as any)?.ma_dvcs || order?.customer?.brand || order?.brand || (sale as any)?.department?.ma_dvcs || '';
-          let brandCode = 'MN'; // Default
-          if (maDvcs && String(maDvcs).length >= 2) {
-            brandCode = String(maDvcs).slice(-2).toUpperCase();
-          }
+          // Ưu tiên lấy brand code từ customer.brand
+          const brand = order?.customer?.brand || (sale as any)?.customer?.brand || '';
+          
+          // Map brand name sang brand code (menard → MN, f3 → FBV, etc.)
+          const brandCode = mapBrandToCode(brand);
           
           return `${yy}${mm}${brandCode}.TKDV`;
         };
