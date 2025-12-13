@@ -45,6 +45,7 @@ export default function OrdersPage() {
   const [selectedRowKey, setSelectedRowKey] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [retrying, setRetrying] = useState<Record<string, boolean>>({});
+  const [isExporting, setIsExporting] = useState(false);
   
   // Hàm convert từ Date object hoặc YYYY-MM-DD sang DDMMMYYYY
   const convertDateToDDMMMYYYY = (date: Date | string): string => {
@@ -171,12 +172,64 @@ export default function OrdersPage() {
     }
   };
 
-  // Hàm xuất Excel
-  const handleExportExcel = () => {
+  // Hàm xuất Excel - xuất tất cả dữ liệu (không chỉ phần hiển thị)
+  const handleExportExcel = async () => {
     try {
-      // Tính toán lại flattened rows từ enrichedDisplayedOrders
+      setIsExporting(true);
+      
+      // Fetch tất cả orders (không paginate, không filter)
+      showToast('info', 'Đang tải dữ liệu để xuất Excel...');
+      const response = await salesApi.getAllOrders({
+        brand: filter.brand, // Vẫn giữ brand filter nếu có
+        page: 1,
+        limit: 10000, // Lấy tối đa 10000 orders
+        dateFrom: filter.dateFrom,
+        dateTo: filter.dateTo,
+        search: searchQuery.trim() || undefined,
+      });
+      
+      const rawData = response.data.data || [];
+      const ordersData = normalizeOrderData(rawData);
+      
+      if (ordersData.length === 0) {
+        showToast('info', 'Không có dữ liệu để xuất Excel');
+        setIsExporting(false);
+        return;
+      }
+      
+      // Enrich tất cả orders (fetch full data nếu cần)
+      showToast('info', `Đang xử lý ${ordersData.length} đơn hàng...`);
+      const ordersWithFullData = await Promise.all(
+        ordersData.map(async (order) => {
+          // Nếu đã có trong cache, dùng cache
+          if (fullOrderCacheRef.current.has(order.docCode)) {
+            return fullOrderCacheRef.current.get(order.docCode)!;
+          }
+          
+          // Nếu không có sales, fetch full data
+          if (!order.sales || order.sales.length === 0) {
+            try {
+              const fullResponse = await salesApi.getByOrderCode(order.docCode);
+              const fullOrder = normalizeOrderData([fullResponse.data])[0];
+              // Lưu vào cache
+              fullOrderCacheRef.current.set(order.docCode, fullOrder);
+              return fullOrder;
+            } catch (error) {
+              console.error(`Error fetching full data for order ${order.docCode}:`, error);
+              return order;
+            }
+          }
+          
+          return order;
+        })
+      );
+      
+      // Enrich với products và departments
+      const enrichedOrders = await enrichOrdersWithProducts(ordersWithFullData);
+      
+      // Tính toán flattened rows từ tất cả enriched orders
       const rowsToExport: Array<{ order: Order; sale: SaleItem | null }> = [];
-      enrichedDisplayedOrders.forEach((order) => {
+      enrichedOrders.forEach((order) => {
         if (order.sales && order.sales.length > 0) {
           order.sales.forEach((sale) => {
             rowsToExport.push({ order, sale });
@@ -192,6 +245,7 @@ export default function OrdersPage() {
 
       if (rowsToExport.length === 0) {
         showToast('info', 'Không có dữ liệu để xuất Excel');
+        setIsExporting(false);
         return;
       }
 
@@ -206,9 +260,10 @@ export default function OrdersPage() {
       }
 
       // Tạo workbook mới
+      showToast('info', `Đang tạo file Excel với ${rowsToExport.length} dòng...`);
       const wb = XLSX.utils.book_new();
 
-      // Chuẩn bị dữ liệu cho Excel - lấy tất cả rows (không chỉ trang hiện tại)
+      // Chuẩn bị dữ liệu cho Excel
       const excelData = rowsToExport.map((row) => {
         const rowData: any = {};
         selectedColumns.forEach((column) => {
@@ -269,6 +324,8 @@ export default function OrdersPage() {
     } catch (error: any) {
       console.error('Error exporting Excel:', error);
       showToast('error', `Lỗi khi xuất Excel: ${error?.message || 'Unknown error'}`);
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -1736,14 +1793,26 @@ export default function OrdersPage() {
                 </button>
                 <button
                   onClick={handleExportExcel}
-                  disabled={allFlattenedRows.length === 0}
+                  disabled={isExporting || allFlattenedRows.length === 0}
                   className="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-green-600 rounded-lg hover:bg-green-700 transition-colors inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   title="Xuất Excel"
                 >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  Xuất Excel
+                  {isExporting ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Đang xuất...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      Xuất Excel
+                    </>
+                  )}
                 </button>
               </div>
             </div>
