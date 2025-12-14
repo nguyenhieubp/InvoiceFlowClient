@@ -1926,27 +1926,21 @@ export default function OrdersPage() {
   };
 
   // Flatten enrichedDisplayedOrders thành rows để hiển thị
-  const allFlattenedRows: Array<{ order: Order; sale: SaleItem | null }> = [];
+  // Backend đã paginate theo rows rồi, frontend không cần paginate lại
+  const flattenedRows: Array<{ order: Order; sale: SaleItem | null }> = [];
   enrichedDisplayedOrders.forEach((order) => {
     if (order.sales && order.sales.length > 0) {
       order.sales.forEach((sale) => {
-        allFlattenedRows.push({ order, sale });
+        flattenedRows.push({ order, sale });
       });
     } else {
       // Nếu order không có sales, dùng totalItems để tạo rows
       const rowCount = order.totalItems > 0 ? order.totalItems : 1;
       for (let i = 0; i < rowCount; i++) {
-        allFlattenedRows.push({ order, sale: null });
+        flattenedRows.push({ order, sale: null });
       }
     }
   });
-
-  // Paginate lại trên frontend để đảm bảo số rows = limit
-  // Backend trả về orders, nhưng mỗi order có thể có nhiều sale items
-  // Nên cần paginate lại sau khi flatten để đảm bảo số rows hiển thị = limit
-  const startIndex = (pagination.page - 1) * pagination.limit;
-  const endIndex = startIndex + pagination.limit;
-  const flattenedRows = allFlattenedRows.slice(startIndex, endIndex);
 
   const filteredColumns = Object.entries(FIELD_LABELS).filter(([key]) =>
     columnSearchQuery.trim() === '' ||
@@ -2010,7 +2004,7 @@ export default function OrdersPage() {
                 </button>
                 <button
                   onClick={handleExportExcel}
-                  disabled={isExporting || allFlattenedRows.length === 0}
+                  disabled={isExporting || enrichedDisplayedOrders.length === 0}
                   className="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-green-600 rounded-lg hover:bg-green-700 transition-colors inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   title="Xuất Excel"
                 >
