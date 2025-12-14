@@ -212,6 +212,61 @@ export default function OrdersPage() {
         return '';
       case 'soSerial':
         return sale?.serial || '';
+      case 'promCode':
+        // Chỉ hiển thị "Khuyến mãi" cho hàng tặng (giaBan = 0 và tienHang = 0 và revenue = 0)
+        // Convert string to number nếu cần
+        const tienHangForPromCodeRaw = parseFloat(String(sale?.linetotal ?? sale?.tienHang ?? 0)) || 0;
+        const revenueForPromCodeRaw = parseFloat(String(sale?.revenue ?? 0)) || 0;
+        // Ưu tiên sử dụng giaBan từ API (từ field price), nếu không có thì tính từ tienHang/qty
+        let giaBanForPromCodeRaw: number = parseFloat(String(sale?.giaBan ?? 0)) || 0;
+        if (giaBanForPromCodeRaw === 0 && tienHangForPromCodeRaw != null && sale?.qty != null) {
+          const qtyNum = parseFloat(String(sale.qty)) || 0;
+          if (qtyNum > 0) {
+            giaBanForPromCodeRaw = tienHangForPromCodeRaw / qtyNum;
+          }
+        }
+        
+        // Lấy brand để phân biệt logic F3
+        const brandForPromCodeRaw = order?.customer?.brand || order?.brand || '';
+        let brandLowerForPromCodeRaw = (brandForPromCodeRaw || '').toLowerCase().trim();
+        // Normalize: "facialbar" → "f3"
+        if (brandLowerForPromCodeRaw === 'facialbar') {
+          brandLowerForPromCodeRaw = 'f3';
+        }
+        
+        const hasPromCodeForPromCodeRaw = sale?.promCode && String(sale.promCode).trim() !== '';
+        const isTangHangForPromCodeRaw = giaBanForPromCodeRaw === 0 && tienHangForPromCodeRaw === 0 && revenueForPromCodeRaw === 0;
+        // Kiểm tra có mã số thẻ (maThe) không - nếu có thì km_yn = 0 (không hiển thị "1")
+        const hasMaTheForPromCodeRaw = sale?.maThe && String(sale.maThe).trim() !== '';
+        // Kiểm tra nếu ma_ctkm_th = "TT DAU TU" thì cũng không hiển thị "1"
+        // Nếu chưa có từ backend, tính toán lại từ ordertype
+        let maCtkmTangHangForPromCodeRaw = sale?.maCtkmTangHang || '';
+        if (!maCtkmTangHangForPromCodeRaw && isTangHangForPromCodeRaw) {
+          const ordertypeNameForPromCodeRaw = sale?.ordertype || '';
+          if (ordertypeNameForPromCodeRaw.includes('06. Đầu tư') || ordertypeNameForPromCodeRaw.includes('06.Đầu tư')) {
+            maCtkmTangHangForPromCodeRaw = 'TT DAU TU';
+          }
+        }
+        const isTTDauTuForPromCodeRaw = maCtkmTangHangForPromCodeRaw.trim() === 'TT DAU TU';
+        
+        // Với F3: Nếu có promCode và giaBan = 0 && tienHang = 0 → là "mua hàng giảm giá" (giảm 100%), không phải "tặng hàng"
+        // → Không hiển thị ở cột này
+        if (brandLowerForPromCodeRaw === 'f3' && hasPromCodeForPromCodeRaw && isTangHangForPromCodeRaw) {
+          return '';
+        }
+        
+        // Nếu có mã số thẻ (maThe) hoặc ma_ctkm_th = "TT DAU TU" thì không hiển thị "1"
+        if (hasMaTheForPromCodeRaw || isTTDauTuForPromCodeRaw) {
+          return '';
+        }
+        
+        // Chỉ hiển thị khi là hàng tặng → hiển thị "1" (giống km_yn = 1 trong backend)
+        if (isTangHangForPromCodeRaw) {
+          return '1';
+        }
+        
+        // Các trường hợp khác (không phải hàng tặng) → bỏ trống
+        return '';
       default:
         // Với các field phức tạp, dùng renderCellValue và extract text
         const renderedValue = renderCellValue(order, sale, field);
@@ -936,28 +991,60 @@ export default function OrdersPage() {
           (sale?.catcode1 ? `${sale.catcode1}${sale.catcode2 ? ` / ${sale.catcode2}` : ''}${sale.catcode3 ? ` / ${sale.catcode3}` : ''}` : null);
         return <div className="text-sm text-gray-900">{loaiValue || '-'}</div>;
       case 'promCode':
-        // Tính giá bán
-        const tienHangForPromCode = sale?.linetotal ?? sale?.tienHang;
-        const qtyForPromCode = sale?.qty;
-        let giaBanForPromCode: number = 0;
-        if (tienHangForPromCode != null && qtyForPromCode != null && qtyForPromCode > 0) {
-          giaBanForPromCode = tienHangForPromCode / qtyForPromCode;
-        } else {
-          giaBanForPromCode = sale?.giaBan ?? 0;
+        // Chỉ hiển thị "Khuyến mãi" cho hàng tặng (giaBan = 0 và tienHang = 0 và revenue = 0)
+        // Convert string to number nếu cần
+        const tienHangForPromCode = parseFloat(String(sale?.linetotal ?? sale?.tienHang ?? 0)) || 0;
+        const revenueForPromCode = parseFloat(String(sale?.revenue ?? 0)) || 0;
+        // Ưu tiên sử dụng giaBan từ API (từ field price), nếu không có thì tính từ tienHang/qty
+        let giaBanForPromCode: number = parseFloat(String(sale?.giaBan ?? 0)) || 0;
+        if (giaBanForPromCode === 0 && tienHangForPromCode != null && sale?.qty != null) {
+          const qtyNum = parseFloat(String(sale.qty)) || 0;
+          if (qtyNum > 0) {
+            giaBanForPromCode = tienHangForPromCode / qtyNum;
+          }
         }
-
-        // Nếu giá bán = 0 và ordertype là NORMAL, BAN_ECOIN, hoặc SAN_TMDT thì hiển thị "1"
-        // Ngược lại bỏ trống
-        const ordertypeForPromCode = mapOrderTypeNameToCode(sale?.ordertype) || sale?.ordertype;
-        if (giaBanForPromCode === 0 && ordertypeForPromCode &&
-          (ordertypeForPromCode === ORDER_TYPE_NORMAL ||
-            ordertypeForPromCode === ORDER_TYPE_BAN_ECOIN ||
-            ordertypeForPromCode === ORDER_TYPE_SAN_TMDT)) {
+        
+        // Lấy brand để phân biệt logic F3
+        const brandForPromCode = order?.customer?.brand || order?.brand || '';
+        let brandLowerForPromCode = (brandForPromCode || '').toLowerCase().trim();
+        // Normalize: "facialbar" → "f3"
+        if (brandLowerForPromCode === 'facialbar') {
+          brandLowerForPromCode = 'f3';
+        }
+        
+        const hasPromCodeForPromCode = sale?.promCode && String(sale.promCode).trim() !== '';
+        const isTangHangForPromCode = giaBanForPromCode === 0 && tienHangForPromCode === 0 && revenueForPromCode === 0;
+        // Kiểm tra có mã số thẻ (maThe) không - nếu có thì km_yn = 0 (không hiển thị "1")
+        const hasMaTheForPromCode = sale?.maThe && String(sale.maThe).trim() !== '';
+        // Kiểm tra nếu ma_ctkm_th = "TT DAU TU" thì cũng không hiển thị "1"
+        // Nếu chưa có từ backend, tính toán lại từ ordertype
+        let maCtkmTangHangForPromCode = sale?.maCtkmTangHang || '';
+        if (!maCtkmTangHangForPromCode && isTangHangForPromCode) {
+          const ordertypeNameForPromCode = sale?.ordertype || '';
+          if (ordertypeNameForPromCode.includes('06. Đầu tư') || ordertypeNameForPromCode.includes('06.Đầu tư')) {
+            maCtkmTangHangForPromCode = 'TT DAU TU';
+          }
+        }
+        const isTTDauTuForPromCode = maCtkmTangHangForPromCode.trim() === 'TT DAU TU';
+        
+        // Với F3: Nếu có promCode và giaBan = 0 && tienHang = 0 → là "mua hàng giảm giá" (giảm 100%), không phải "tặng hàng"
+        // → Không hiển thị ở cột này
+        if (brandLowerForPromCode === 'f3' && hasPromCodeForPromCode && isTangHangForPromCode) {
+          return <div className="text-sm text-gray-400 italic">-</div>;
+        }
+        
+        // Nếu có mã số thẻ (maThe) hoặc ma_ctkm_th = "TT DAU TU" thì không hiển thị "1"
+        if (hasMaTheForPromCode || isTTDauTuForPromCode) {
+          return <div className="text-sm text-gray-400 italic">-</div>;
+        }
+        
+        // Chỉ hiển thị khi là hàng tặng → hiển thị "1" (giống km_yn = 1 trong backend)
+        if (isTangHangForPromCode) {
           return <div className="text-sm text-gray-900">1</div>;
         }
-
-        // Ngược lại bỏ trống
-        return <div className="text-sm text-gray-900">-</div>;
+        
+        // Các trường hợp khác (không phải hàng tặng) → bỏ trống
+        return <div className="text-sm text-gray-400 italic">-</div>;
       case 'muaHangGiamGia':
         // Chỉ hiển thị khi không phải hàng tặng
         // Hàng tặng: price = 0 và mn_linetotal = 0 và revenue = 0 (hoặc giaBan = 0 và tienHang = 0 và revenue = 0)
