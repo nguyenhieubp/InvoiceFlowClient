@@ -141,14 +141,25 @@ export default function OrdersPage() {
         const qtyValue = sale?.qty ?? null;
         return qtyValue !== null ? Math.round(Number(qtyValue)) : null;
       case 'giaBan':
+        // Trả về số nguyên (làm tròn) cho Excel export
         const tienHangForGiaBan = sale?.linetotal ?? sale?.tienHang;
         const qtyForGiaBan = sale?.qty;
+        let giaBanValue: number = 0;
         if (tienHangForGiaBan != null && qtyForGiaBan != null && qtyForGiaBan > 0) {
-          return tienHangForGiaBan / qtyForGiaBan;
+          giaBanValue = tienHangForGiaBan / qtyForGiaBan;
+        } else {
+          giaBanValue = sale?.giaBan ?? 0;
         }
-        return sale?.giaBan ?? 0;
+        // Làm tròn về số nguyên
+        return Math.round(Number(giaBanValue));
       case 'tienHang':
-        return sale?.linetotal ?? sale?.tienHang ?? null;
+        // Trả về số nguyên (làm tròn) cho Excel export
+        const tienHangRaw = sale?.linetotal ?? sale?.tienHang ?? null;
+        if (tienHangRaw !== null && tienHangRaw !== undefined) {
+          const numValue = typeof tienHangRaw === 'string' ? parseFloat(tienHangRaw) : Number(tienHangRaw);
+          return Math.round(numValue);
+        }
+        return null;
       case 'revenue':
         return sale?.revenue ?? null;
       case 'maNt':
@@ -409,7 +420,9 @@ export default function OrdersPage() {
             // Giữ nguyên giá trị number cho các cột số
             if (numericColumns.includes(column) || column.includes('chietKhau') || column.includes('ThanhToan') || column.includes('thanhToan')) {
               // Làm tròn tất cả các số về số nguyên (bỏ phần thập phân)
-              cellValue = Math.round(value);
+              // Đảm bảo convert sang number trước khi làm tròn
+              const numValue = typeof value === 'string' ? parseFloat(value) : Number(value);
+              cellValue = Math.round(numValue);
             } else {
               cellValue = value; // Các số khác cũng giữ nguyên
             }
@@ -460,13 +473,26 @@ export default function OrdersPage() {
             for (let row = range.s.r + 1; row <= range.e.r; row++) {
               const cellAddress = colLetter + (row + 1);
               const cell = ws[cellAddress];
-              if (cell && typeof cell.v === 'number') {
+              if (cell) {
+                // Convert giá trị sang number nếu là string
+                let numValue: number;
+                if (typeof cell.v === 'string') {
+                  numValue = parseFloat(cell.v);
+                } else if (typeof cell.v === 'number') {
+                  numValue = cell.v;
+                } else {
+                  continue; // Skip nếu không phải number hoặc string có thể parse
+                }
+                
+                // Làm tròn về số nguyên (bỏ phần thập phân)
+                const intValue = Math.round(numValue);
+                
                 // Set cell type là number
                 cell.t = 'n'; // number type
                 // Format: số nguyên không có dấu phân cách hàng nghìn
                 cell.z = '0'; // Format '0' = số nguyên, không có số thập phân, không có dấu phân cách
-                // Làm tròn về số nguyên (bỏ phần thập phân)
-                cell.v = Math.round(Number(cell.v));
+                // Set giá trị đã làm tròn
+                cell.v = intValue;
               }
             }
           }
@@ -1231,7 +1257,9 @@ export default function OrdersPage() {
         }
         return <div className="text-sm text-gray-400 italic">-</div>;
       case 'qty':
-        return <div className="text-sm text-gray-900">{formatValue(sale?.qty)}</div>;
+        // Hiển thị số lượng dưới dạng số thuần túy (không format)
+        const qtyNum = sale?.qty ?? null;
+        return qtyNum !== null && qtyNum !== undefined ? <div className="text-sm text-gray-900">{Math.round(Number(qtyNum))}</div> : <div className="text-sm text-gray-400 italic">-</div>;
       case 'giaBan':
         // Giá bán = tiền hàng (linetotal hoặc tienHang) / số lượng (qty)
         const tienHangForGiaBan = sale?.linetotal ?? sale?.tienHang;
@@ -1245,11 +1273,28 @@ export default function OrdersPage() {
           giaBan = sale?.giaBan ?? 0;
         }
 
-        return <div className="text-sm text-gray-900">{formatValue(giaBan)}</div>;
+        // Hiển thị giá bán dưới dạng số thuần túy (không format, không có phần thập phân)
+        if (giaBan !== null && giaBan !== undefined) {
+          const numValue = Number(giaBan);
+          // Làm tròn về số nguyên và format để loại bỏ .00
+          const intValue = Math.round(numValue);
+          // Convert sang string và loại bỏ phần thập phân nếu có
+          const displayValue = intValue.toString().replace(/\.0+$/, '');
+          return <div className="text-sm text-gray-900">{displayValue}</div>;
+        }
+        return <div className="text-sm text-gray-400 italic">-</div>;
       case 'tienHang':
         // Ưu tiên linetotal (thành tiền của dòng), nếu không có thì dùng tienHang
         const tienHangValue = sale?.linetotal ?? sale?.tienHang;
-        return <div className="text-sm text-gray-900">{formatValue(tienHangValue)}</div>;
+        // Hiển thị tiền hàng dưới dạng số thuần túy (không format, không có phần thập phân)
+        if (tienHangValue !== null && tienHangValue !== undefined) {
+          // Convert sang number và làm tròn về số nguyên
+          const numValue = typeof tienHangValue === 'string' ? parseFloat(tienHangValue) : Number(tienHangValue);
+          const intValue = Math.round(numValue);
+          // Hiển thị số nguyên (React sẽ tự động loại bỏ .00 khi render số nguyên)
+          return <div className="text-sm text-gray-900">{intValue}</div>;
+        }
+        return <div className="text-sm text-gray-400 italic">-</div>;
       case 'revenue':
         return <div className="text-sm text-gray-900">{formatValue(sale?.revenue)}</div>;
       case 'maNt':
@@ -1334,9 +1379,14 @@ export default function OrdersPage() {
         // Lấy ma_bp từ department API (mã bộ phận), nếu không có thì fallback về branchCode
         return <div className="text-sm text-gray-900">{sale?.department?.ma_bp || sale?.branchCode || '-'}</div>;
       case 'chietKhauMuaHangGiamGia':
-     
+        // Hiển thị chiết khấu giảm giá dưới dạng số thuần túy (không format, không có phần thập phân)
         const other_discamt = sale?.other_discamt ?? 0;
-        return <div className="text-sm text-gray-900">{formatValue(other_discamt)}</div>;
+        const numOtherDiscamt = Number(other_discamt);
+        // Làm tròn về số nguyên và format để loại bỏ .00
+        const intOtherDiscamt = Math.round(numOtherDiscamt);
+        // Convert sang string và loại bỏ phần thập phân nếu có
+        const displayOtherDiscamt = intOtherDiscamt.toString().replace(/\.0+$/, '');
+        return <div className="text-sm text-gray-900">{displayOtherDiscamt}</div>;
       case 'muaHangCkVip':
         // Nếu đã có muaHangCkVip từ backend, hiển thị ngay
         if (sale?.muaHangCkVip) {
@@ -1685,8 +1735,14 @@ export default function OrdersPage() {
           chietKhauVoucherDp1Final = paidByVoucherForChietKhauDp1;
         }
         
+        // Hiển thị chiết khấu Voucher DP1 dưới dạng số thuần túy (không format, không có phần thập phân)
         if (isVoucherDuPhongForChietKhauDp1 && chietKhauVoucherDp1Final > 0) {
-          return <div className="text-sm text-gray-900">{formatValue(chietKhauVoucherDp1Final)}</div>;
+          const numValue = Number(chietKhauVoucherDp1Final);
+          // Làm tròn về số nguyên và format để loại bỏ .00
+          const intValue = Math.round(numValue);
+          // Convert sang string và loại bỏ phần thập phân nếu có
+          const displayValue = intValue.toString().replace(/\.0+$/, '');
+          return <div className="text-sm text-gray-900">{displayValue}</div>;
         }
         return <div className="text-sm text-gray-400 italic">-</div>;
       case 'thanhToanTkTienAo':
@@ -1950,7 +2006,7 @@ export default function OrdersPage() {
           break; // Đã đủ rows, dừng lại
         }
         flattenedRows.push({ order, sale: null });
-      }
+    }
     }
   }
 
