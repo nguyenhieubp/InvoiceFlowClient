@@ -199,6 +199,7 @@ const mapERPSaleToSaleItem = (sale: ERPRawOrderData['data_customer']['Sales'][0]
     revenue_retail: sale.revenue_retail,
     paid_by_voucher_ecode_ecoin_bp: sale.paid_by_voucher_ecode_ecoin_bp,
     docsourcetype: sale.docsourcetype,
+    statusAsys: sale.statusAsys !== undefined ? sale.statusAsys : undefined, // Map statusAsys từ backend
   };
 };
 
@@ -221,11 +222,17 @@ export const normalizeOrderData = (data: any): Order[] => {
       // Format cũ - đã là Order object
       else if (item?.docCode) {
         // Preserve cashio fields từ backend
+        // Preserve statusAsys trong sales array
         const order: Order = {
           ...(item as Order),
           cashioFopSyscode: item.cashioFopSyscode || null,
           cashioData: item.cashioData || null,
           cashioTotalIn: item.cashioTotalIn || null,
+          // Preserve statusAsys trong sales array nếu có
+          sales: item.sales?.map((sale: any) => ({
+            ...sale,
+            statusAsys: sale.statusAsys !== undefined ? sale.statusAsys : undefined,
+          })),
         };
         normalized.push(order);
       }
@@ -242,11 +249,17 @@ export const normalizeOrderData = (data: any): Order[] => {
   // Format cũ - giả sử đã là Order object, wrap trong array
   if (data?.docCode) {
     // Preserve cashio fields từ backend
+    // Preserve statusAsys trong sales array
     const order: Order = {
       ...(data as Order),
       cashioFopSyscode: data.cashioFopSyscode || null,
       cashioData: data.cashioData || null,
       cashioTotalIn: data.cashioTotalIn || null,
+      // Preserve statusAsys trong sales array nếu có
+      sales: data.sales?.map((sale: any) => ({
+        ...sale,
+        statusAsys: sale.statusAsys !== undefined ? sale.statusAsys : undefined,
+      })),
     };
     return [order];
   }

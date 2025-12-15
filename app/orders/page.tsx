@@ -182,7 +182,7 @@ export default function OrdersPage() {
         }
         
         // Nếu không có, tính toán từ serial
-        const serial = sale?.serial || sale?.soSerial;
+        const serial = sale?.serial || '';
         if (serial) {
           // Lấy brand để phân biệt logic cho F3
           const brand = order.customer?.brand || order.brand || '';
@@ -223,7 +223,22 @@ export default function OrdersPage() {
         }
         return '';
       case 'soSerial':
-        return sale?.serial || '';
+        // Hiển thị so_serial dựa trên trackSerial từ Loyalty API
+        // trackSerial = true và trackBatch = false → hiển thị so_serial
+        // Nhưng không hiển thị nếu serial có dạng "XXX_YYYY" (đã dùng cho ma_lo)
+        const trackSerialForRaw = sale?.product?.trackSerial === true;
+        const trackBatchForSoSerialRaw = sale?.product?.trackBatch === true;
+        const serialForSoSerialRaw = sale?.serial || '';
+        
+        // Nếu serial có dạng "XXX_YYYY", không hiển thị so_serial (đã dùng cho ma_lo)
+        if (serialForSoSerialRaw && serialForSoSerialRaw.indexOf('_') > 0) {
+          return '';
+        }
+        
+        if (trackSerialForRaw && !trackBatchForSoSerialRaw) {
+          return serialForSoSerialRaw || '';
+        }
+        return '';
       case 'promCode':
         // Chỉ hiển thị "Khuyến mãi" cho hàng tặng (giaBan = 0 và tienHang = 0 và revenue = 0)
         // Convert string to number nếu cần
@@ -2347,6 +2362,10 @@ export default function OrdersPage() {
                     flattenedRows.map((row, index) => {
                       const rowKey = `${row.order.docCode}-${row.sale?.id || index}`;
                       const isSelected = selectedRowKey === rowKey;
+                      // Kiểm tra statusAsys: nếu false thì bôi đỏ dòng
+                      // Chú ý: statusAsys có thể là undefined, null, true, hoặc false
+                      // Chỉ bôi đỏ khi statusAsys === false (không phải undefined hoặc null)
+                      const isStatusAsysFalse = row.sale?.statusAsys === false;
                       return (
                         <tr
                           key={rowKey}
@@ -2354,7 +2373,10 @@ export default function OrdersPage() {
                             setSelectedRowKey(isSelected ? null : rowKey);
                             handleRowDoubleClick(row.order, row.sale);
                           }}
-                          className={`transition-colors cursor-pointer ${isSelected
+                          className={`transition-colors cursor-pointer ${
+                            isStatusAsysFalse
+                              ? 'bg-red-100 hover:bg-red-200' // Bôi đỏ nếu statusAsys = false
+                              : isSelected
                               ? 'bg-blue-100 hover:bg-blue-200'
                               : 'hover:bg-gray-50'
                             } ${submittingInvoice ? 'opacity-50 cursor-wait' : ''}`}

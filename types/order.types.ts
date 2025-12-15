@@ -200,6 +200,7 @@ export interface SaleItem {
   product?: OrderProduct | null;
   promotion?: OrderPromotion | null;
   department?: OrderDepartment | null;
+  statusAsys?: boolean; // Trạng thái đồng bộ: true = đồng bộ thành công, false = sản phẩm không tồn tại trong Loyalty API (404)
 }
 
 export interface Order {
