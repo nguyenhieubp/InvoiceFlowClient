@@ -33,11 +33,10 @@ export default function GiaiTrinhFaceIdPage() {
     date: string;
     faceStatus: FaceStatusFilter;
   }>(() => {
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
     return {
       orderCode: '',
       partnerCode: '',
-      date: today,
+      date: '',
       faceStatus: 'all',
     };
   });
@@ -237,8 +236,7 @@ export default function GiaiTrinhFaceIdPage() {
              <div className="flex gap-2">
                <button
                  onClick={() => {
-                   const today = new Date().toISOString().split('T')[0];
-                   setFilters({ orderCode: '', partnerCode: '', date: today, faceStatus: 'all' });
+                   setFilters({ orderCode: '', partnerCode: '', date: '', faceStatus: 'all' });
                    setPagination((prev) => ({ ...prev, page: 1 }));
                  }}
                  className="flex-1 inline-flex items-center justify-center rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
