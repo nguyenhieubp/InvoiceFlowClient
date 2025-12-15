@@ -137,11 +137,11 @@ export default function OrdersPage() {
       case 'itemName':
         return sale?.itemName || sale?.product?.tenVatTu || '';
       case 'qty':
-        // Làm tròn số lượng về số nguyên
+        // Giữ nguyên giá trị số lượng (có thể có phần thập phân), không làm tròn
         const qtyValue = sale?.qty ?? null;
-        return qtyValue !== null ? Math.round(Number(qtyValue)) : null;
+        return qtyValue !== null ? Number(qtyValue) : null;
       case 'giaBan':
-        // Trả về số nguyên (làm tròn) cho Excel export
+        // Trả về giá trị: giữ phần thập phân nếu có, không làm tròn về số nguyên
         const tienHangForGiaBan = sale?.linetotal ?? sale?.tienHang;
         const qtyForGiaBan = sale?.qty;
         let giaBanValue: number = 0;
@@ -150,14 +150,15 @@ export default function OrdersPage() {
         } else {
           giaBanValue = sale?.giaBan ?? 0;
         }
-        // Làm tròn về số nguyên
-        return Math.round(Number(giaBanValue));
+        // Giữ nguyên giá trị (không làm tròn)
+        return Number(giaBanValue);
       case 'tienHang':
-        // Trả về số nguyên (làm tròn) cho Excel export
+        // Trả về giá trị: giữ phần thập phân nếu có, không làm tròn về số nguyên
         const tienHangRaw = sale?.linetotal ?? sale?.tienHang ?? null;
         if (tienHangRaw !== null && tienHangRaw !== undefined) {
           const numValue = typeof tienHangRaw === 'string' ? parseFloat(tienHangRaw) : Number(tienHangRaw);
-          return Math.round(numValue);
+          // Giữ nguyên giá trị (không làm tròn)
+          return numValue;
         }
         return null;
       case 'revenue':
@@ -419,14 +420,14 @@ export default function OrdersPage() {
             
             // Giữ nguyên giá trị number cho các cột số
             if (numericColumns.includes(column) || column.includes('chietKhau') || column.includes('ThanhToan') || column.includes('thanhToan')) {
-              // Làm tròn tất cả các số về số nguyên (bỏ phần thập phân)
-              // Đảm bảo convert sang number trước khi làm tròn
+              // Giữ nguyên giá trị (không làm tròn), chỉ convert sang number
               const numValue = typeof value === 'string' ? parseFloat(value) : Number(value);
               // Kiểm tra nếu giá trị hợp lệ (không phải NaN hoặc Infinity)
               if (isNaN(numValue) || !isFinite(numValue)) {
                 cellValue = ''; // Để trống nếu không hợp lệ
               } else {
-                cellValue = Math.round(numValue);
+                // Giữ nguyên giá trị (có thể có phần thập phân)
+                cellValue = numValue;
               }
             } else {
               cellValue = value; // Các số khác cũng giữ nguyên
@@ -516,11 +517,9 @@ export default function OrdersPage() {
                   continue;
                 }
                 
-                // Làm tròn về số nguyên (bỏ phần thập phân)
-                const intValue = Math.round(numValue);
-                
-                // Kiểm tra lại sau khi làm tròn
-                if (isNaN(intValue) || !isFinite(intValue)) {
+                // Giữ nguyên giá trị (không làm tròn), nhưng format dựa trên có phần thập phân hay không
+                // Kiểm tra lại sau khi parse
+                if (isNaN(numValue) || !isFinite(numValue)) {
                   cell.v = '';
                   cell.t = 's'; // string type
                   cell.z = undefined;
@@ -529,10 +528,18 @@ export default function OrdersPage() {
                 
                 // Set cell type là number
                 cell.t = 'n'; // number type
-                // Format: số nguyên không có dấu phân cách hàng nghìn
-                cell.z = '0'; // Format '0' = số nguyên, không có số thập phân, không có dấu phân cách
-                // Set giá trị đã làm tròn
-                cell.v = intValue;
+                
+                // Kiểm tra nếu có phần thập phân
+                if (numValue % 1 !== 0) {
+                  // Có phần thập phân → format với 2 chữ số sau dấu phẩy
+                  cell.z = '0.00'; // Format '0.00' = có 2 chữ số sau dấu phẩy
+                } else {
+                  // Số nguyên → format số nguyên không có dấu phân cách hàng nghìn
+                  cell.z = '0'; // Format '0' = số nguyên, không có số thập phân, không có dấu phân cách
+                }
+                
+                // Set giá trị (giữ nguyên, không làm tròn)
+                cell.v = numValue;
               }
             }
           }
@@ -1297,9 +1304,20 @@ export default function OrdersPage() {
         }
         return <div className="text-sm text-gray-400 italic">-</div>;
       case 'qty':
-        // Hiển thị số lượng dưới dạng số thuần túy (không format)
+        // Hiển thị số lượng: nếu có phần thập phân thì hiển thị 2 chữ số, nếu là số nguyên thì hiển thị số nguyên
         const qtyNum = sale?.qty ?? null;
-        return qtyNum !== null && qtyNum !== undefined ? <div className="text-sm text-gray-900">{Math.round(Number(qtyNum))}</div> : <div className="text-sm text-gray-400 italic">-</div>;
+        if (qtyNum !== null && qtyNum !== undefined) {
+          const numValue = Number(qtyNum);
+          // Kiểm tra nếu có phần thập phân
+          if (numValue % 1 !== 0) {
+            // Có phần thập phân → format với 2 chữ số sau dấu phẩy
+            return <div className="text-sm text-gray-900">{numValue.toFixed(2)}</div>;
+          } else {
+            // Số nguyên → hiển thị số nguyên
+            return <div className="text-sm text-gray-900">{numValue}</div>;
+          }
+        }
+        return <div className="text-sm text-gray-400 italic">-</div>;
       case 'giaBan':
         // Giá bán = tiền hàng (linetotal hoặc tienHang) / số lượng (qty)
         const tienHangForGiaBan = sale?.linetotal ?? sale?.tienHang;
@@ -1313,26 +1331,34 @@ export default function OrdersPage() {
           giaBan = sale?.giaBan ?? 0;
         }
 
-        // Hiển thị giá bán dưới dạng số thuần túy (không format, không có phần thập phân)
+        // Hiển thị giá bán: nếu có phần thập phân thì hiển thị 2 chữ số, nếu là số nguyên thì hiển thị số nguyên
         if (giaBan !== null && giaBan !== undefined) {
           const numValue = Number(giaBan);
-          // Làm tròn về số nguyên và format để loại bỏ .00
-          const intValue = Math.round(numValue);
-          // Convert sang string và loại bỏ phần thập phân nếu có
-          const displayValue = intValue.toString().replace(/\.0+$/, '');
-          return <div className="text-sm text-gray-900">{displayValue}</div>;
+          // Kiểm tra nếu có phần thập phân
+          if (numValue % 1 !== 0) {
+            // Có phần thập phân → format với 2 chữ số sau dấu phẩy
+            return <div className="text-sm text-gray-900">{numValue.toFixed(2)}</div>;
+          } else {
+            // Số nguyên → hiển thị số nguyên
+            return <div className="text-sm text-gray-900">{numValue}</div>;
+          }
         }
         return <div className="text-sm text-gray-400 italic">-</div>;
       case 'tienHang':
         // Ưu tiên linetotal (thành tiền của dòng), nếu không có thì dùng tienHang
         const tienHangValue = sale?.linetotal ?? sale?.tienHang;
-        // Hiển thị tiền hàng dưới dạng số thuần túy (không format, không có phần thập phân)
+        // Hiển thị tiền hàng: nếu có phần thập phân thì hiển thị 2 chữ số, nếu là số nguyên thì hiển thị số nguyên
         if (tienHangValue !== null && tienHangValue !== undefined) {
-          // Convert sang number và làm tròn về số nguyên
+          // Convert sang number
           const numValue = typeof tienHangValue === 'string' ? parseFloat(tienHangValue) : Number(tienHangValue);
-          const intValue = Math.round(numValue);
-          // Hiển thị số nguyên (React sẽ tự động loại bỏ .00 khi render số nguyên)
-          return <div className="text-sm text-gray-900">{intValue}</div>;
+          // Kiểm tra nếu có phần thập phân
+          if (numValue % 1 !== 0) {
+            // Có phần thập phân → format với 2 chữ số sau dấu phẩy
+            return <div className="text-sm text-gray-900">{numValue.toFixed(2)}</div>;
+          } else {
+            // Số nguyên → hiển thị số nguyên
+            return <div className="text-sm text-gray-900">{numValue}</div>;
+          }
         }
         return <div className="text-sm text-gray-400 italic">-</div>;
       case 'revenue':
@@ -1340,7 +1366,20 @@ export default function OrdersPage() {
       case 'maNt':
         return <div className="text-sm text-gray-900">{sale?.maNt || '-'}</div>;
       case 'tyGia':
-        return <div className="text-sm text-gray-900">{formatValue(sale?.tyGia)}</div>;
+        // Hiển thị tỷ giá: nếu có phần thập phân thì hiển thị 2 chữ số, nếu là số nguyên thì hiển thị số nguyên
+        const tyGiaValue = sale?.tyGia ?? 1;
+        if (tyGiaValue !== null && tyGiaValue !== undefined) {
+          const numValue = Number(tyGiaValue);
+          // Kiểm tra nếu có phần thập phân
+          if (numValue % 1 !== 0) {
+            // Có phần thập phân → format với 2 chữ số sau dấu phẩy
+            return <div className="text-sm text-gray-900">{numValue.toFixed(2)}</div>;
+          } else {
+            // Số nguyên → hiển thị số nguyên
+            return <div className="text-sm text-gray-900">{numValue}</div>;
+          }
+        }
+        return <div className="text-sm text-gray-900">1</div>;
       case 'maThue':
         return <div className="text-sm text-gray-900">{sale?.maThue || TAX_CODE}</div>;
       case 'tkNo':
@@ -1419,14 +1458,17 @@ export default function OrdersPage() {
         // Lấy ma_bp từ department API (mã bộ phận), nếu không có thì fallback về branchCode
         return <div className="text-sm text-gray-900">{sale?.department?.ma_bp || sale?.branchCode || '-'}</div>;
       case 'chietKhauMuaHangGiamGia':
-        // Hiển thị chiết khấu giảm giá dưới dạng số thuần túy (không format, không có phần thập phân)
+        // Hiển thị chiết khấu giảm giá: nếu có phần thập phân thì hiển thị 2 chữ số, nếu là số nguyên thì hiển thị số nguyên
         const other_discamt = sale?.other_discamt ?? 0;
         const numOtherDiscamt = Number(other_discamt);
-        // Làm tròn về số nguyên và format để loại bỏ .00
-        const intOtherDiscamt = Math.round(numOtherDiscamt);
-        // Convert sang string và loại bỏ phần thập phân nếu có
-        const displayOtherDiscamt = intOtherDiscamt.toString().replace(/\.0+$/, '');
-        return <div className="text-sm text-gray-900">{displayOtherDiscamt}</div>;
+        // Kiểm tra nếu có phần thập phân
+        if (numOtherDiscamt % 1 !== 0) {
+          // Có phần thập phân → format với 2 chữ số sau dấu phẩy
+          return <div className="text-sm text-gray-900">{numOtherDiscamt.toFixed(2)}</div>;
+        } else {
+          // Số nguyên → hiển thị số nguyên
+          return <div className="text-sm text-gray-900">{numOtherDiscamt}</div>;
+        }
       case 'muaHangCkVip':
         // Nếu đã có muaHangCkVip từ backend, hiển thị ngay
         if (sale?.muaHangCkVip) {
@@ -1775,14 +1817,17 @@ export default function OrdersPage() {
           chietKhauVoucherDp1Final = paidByVoucherForChietKhauDp1;
         }
         
-        // Hiển thị chiết khấu Voucher DP1 dưới dạng số thuần túy (không format, không có phần thập phân)
+        // Hiển thị chiết khấu Voucher DP1: nếu có phần thập phân thì hiển thị 2 chữ số, nếu là số nguyên thì hiển thị số nguyên
         if (isVoucherDuPhongForChietKhauDp1 && chietKhauVoucherDp1Final > 0) {
           const numValue = Number(chietKhauVoucherDp1Final);
-          // Làm tròn về số nguyên và format để loại bỏ .00
-          const intValue = Math.round(numValue);
-          // Convert sang string và loại bỏ phần thập phân nếu có
-          const displayValue = intValue.toString().replace(/\.0+$/, '');
-          return <div className="text-sm text-gray-900">{displayValue}</div>;
+          // Kiểm tra nếu có phần thập phân
+          if (numValue % 1 !== 0) {
+            // Có phần thập phân → format với 2 chữ số sau dấu phẩy
+            return <div className="text-sm text-gray-900">{numValue.toFixed(2)}</div>;
+          } else {
+            // Số nguyên → hiển thị số nguyên
+            return <div className="text-sm text-gray-900">{numValue}</div>;
+          }
         }
         return <div className="text-sm text-gray-400 italic">-</div>;
       case 'thanhToanTkTienAo':
