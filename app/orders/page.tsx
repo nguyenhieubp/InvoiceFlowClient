@@ -1926,21 +1926,33 @@ export default function OrdersPage() {
   };
 
   // Flatten enrichedDisplayedOrders thành rows để hiển thị
-  // Backend đã paginate theo rows rồi, frontend không cần paginate lại
+  // Backend đã paginate theo rows rồi, nhưng cần giới hạn số rows ở frontend để đảm bảo đúng limit
   const flattenedRows: Array<{ order: Order; sale: SaleItem | null }> = [];
-  enrichedDisplayedOrders.forEach((order) => {
+  const maxRows = pagination.limit; // Giới hạn số rows theo pagination limit
+  
+  for (const order of enrichedDisplayedOrders) {
+    if (flattenedRows.length >= maxRows) {
+      break; // Đã đủ rows, dừng lại
+    }
+    
     if (order.sales && order.sales.length > 0) {
-      order.sales.forEach((sale) => {
+      for (const sale of order.sales) {
+        if (flattenedRows.length >= maxRows) {
+          break; // Đã đủ rows, dừng lại
+        }
         flattenedRows.push({ order, sale });
-      });
+      }
     } else {
       // Nếu order không có sales, dùng totalItems để tạo rows
       const rowCount = order.totalItems > 0 ? order.totalItems : 1;
       for (let i = 0; i < rowCount; i++) {
+        if (flattenedRows.length >= maxRows) {
+          break; // Đã đủ rows, dừng lại
+        }
         flattenedRows.push({ order, sale: null });
       }
     }
-  });
+  }
 
   const filteredColumns = Object.entries(FIELD_LABELS).filter(([key]) =>
     columnSearchQuery.trim() === '' ||
