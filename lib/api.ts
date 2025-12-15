@@ -41,6 +41,19 @@ export const salesApi = {
   createStockTransfer: (data: { data: any[] }) => {
     return api.post('/sales/stock-transfer', data);
   },
+  getCheckFaceIdByPartnerCode: (partnerCode: string, date?: string) => {
+    return api.get(`/sales/check-face-id/${partnerCode}`, { params: { date } });
+  },
+  getOrdersWithCheckFaceId: (partnerCode: string, date?: string) => {
+    return api.get(`/sales/orders-with-check-face-id/${partnerCode}`, { params: { date } });
+  },
+  getAllGiaiTrinhFaceId: (params?: {
+    page?: number;
+    limit?: number;
+    date?: string;
+  }) => {
+    return api.get('/sales/giai-trinh-faceid', { params });
+  },
 };
 
 // Invoices API

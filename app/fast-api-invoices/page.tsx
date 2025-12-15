@@ -53,6 +53,56 @@ export default function FastApiInvoicesPage() {
     setTimeout(() => setToast(null), 3000);
   };
 
+  const loadInvoices = async () => {
+    try {
+      setLoading(true);
+      const params: any = {
+        page: pagination.page,
+        limit: pagination.limit,
+      };
+
+      if (filters.status) params.status = parseInt(filters.status);
+      if (filters.docCode) params.docCode = filters.docCode;
+      if (filters.maKh) params.maKh = filters.maKh;
+      if (filters.tenKh) params.tenKh = filters.tenKh;
+      if (filters.maDvcs) params.maDvcs = filters.maDvcs;
+      if (filters.startDate) params.startDate = filters.startDate;
+      if (filters.endDate) params.endDate = filters.endDate;
+
+      const response = await fastApiInvoicesApi.getAll(params);
+      const data = response.data;
+
+      const invoiceList = data.items || [];
+      setInvoices(invoiceList);
+      setPagination({
+        ...pagination,
+        total: data.pagination?.total || 0,
+        totalPages: data.pagination?.totalPages || 0,
+        hasNext: data.pagination?.hasNext || false,
+        hasPrev: data.pagination?.hasPrev || false,
+      });
+    } catch (error: any) {
+      console.error('Error loading invoices:', error);
+      showToast('error', error?.response?.data?.message || 'Lỗi khi tải danh sách hóa đơn');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadStatistics = async () => {
+    try {
+      const params: any = {};
+      if (filters.startDate) params.startDate = filters.startDate;
+      if (filters.endDate) params.endDate = filters.endDate;
+      if (filters.maDvcs) params.maDvcs = filters.maDvcs;
+
+      const response = await fastApiInvoicesApi.getStatistics(params);
+      setStatistics(response.data);
+    } catch (error: any) {
+      console.error('Error loading statistics:', error);
+    }
+  };
+
   const handleRetry = async (docCode: string) => {
     try {
       setRetrying((prev) => ({ ...prev, [docCode]: true }));
@@ -115,56 +165,6 @@ export default function FastApiInvoicesPage() {
       showToast('error', errorMessage);
     } finally {
       setRetrying((prev) => ({ ...prev, [docCode]: false }));
-    }
-  };
-
-  const loadInvoices = async () => {
-    try {
-      setLoading(true);
-      const params: any = {
-        page: pagination.page,
-        limit: pagination.limit,
-      };
-
-      if (filters.status) params.status = parseInt(filters.status);
-      if (filters.docCode) params.docCode = filters.docCode;
-      if (filters.maKh) params.maKh = filters.maKh;
-      if (filters.tenKh) params.tenKh = filters.tenKh;
-      if (filters.maDvcs) params.maDvcs = filters.maDvcs;
-      if (filters.startDate) params.startDate = filters.startDate;
-      if (filters.endDate) params.endDate = filters.endDate;
-
-      const response = await fastApiInvoicesApi.getAll(params);
-      const data = response.data;
-
-      const invoiceList = data.items || [];
-      setInvoices(invoiceList);
-      setPagination({
-        ...pagination,
-        total: data.pagination?.total || 0,
-        totalPages: data.pagination?.totalPages || 0,
-        hasNext: data.pagination?.hasNext || false,
-        hasPrev: data.pagination?.hasPrev || false,
-      });
-    } catch (error: any) {
-      console.error('Error loading invoices:', error);
-      showToast('error', error?.response?.data?.message || 'Lỗi khi tải danh sách hóa đơn');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadStatistics = async () => {
-    try {
-      const params: any = {};
-      if (filters.startDate) params.startDate = filters.startDate;
-      if (filters.endDate) params.endDate = filters.endDate;
-      if (filters.maDvcs) params.maDvcs = filters.maDvcs;
-
-      const response = await fastApiInvoicesApi.getStatistics(params);
-      setStatistics(response.data);
-    } catch (error: any) {
-      console.error('Error loading statistics:', error);
     }
   };
 
@@ -242,6 +242,7 @@ export default function FastApiInvoicesPage() {
     }
   };
 
+
   // Basic columns for main table
   const basicColumns = [
     { key: 'docCode', label: 'Mã đơn hàng', width: 'w-32' },
@@ -269,35 +270,38 @@ export default function FastApiInvoicesPage() {
       )}
 
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Bảng kê hóa đơn</h1>
-        <p className="text-sm text-gray-600 mt-1">Danh sách chi tiết các hóa đơn đã tạo từ Fast API</p>
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">Bảng kê hóa đơn</h1>
+        <p className="text-sm text-gray-600 mb-4">Danh sách chi tiết các hóa đơn đã tạo từ Fast API</p>
+        
       </div>
 
-      {/* Statistics */}
-      {statistics && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white p-4 rounded-lg shadow">
-            <div className="text-sm text-gray-600">Tổng số</div>
-            <div className="text-2xl font-bold text-gray-900">{statistics.total}</div>
+      {/* Content */}
+      <>
+        {/* Statistics */}
+        {statistics && (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div className="bg-white p-4 rounded-lg shadow">
+              <div className="text-sm text-gray-600">Tổng số</div>
+              <div className="text-2xl font-bold text-gray-900">{statistics.total}</div>
+            </div>
+            <div className="bg-white p-4 rounded-lg shadow">
+              <div className="text-sm text-gray-600">Thành công</div>
+              <div className="text-2xl font-bold text-green-600">{statistics.success}</div>
+            </div>
+            <div className="bg-white p-4 rounded-lg shadow">
+              <div className="text-sm text-gray-600">Thất bại</div>
+              <div className="text-2xl font-bold text-red-600">{statistics.failed}</div>
+            </div>
+            <div className="bg-white p-4 rounded-lg shadow">
+              <div className="text-sm text-gray-600">Tỷ lệ thành công</div>
+              <div className="text-2xl font-bold text-blue-600">{statistics.successRate}%</div>
+            </div>
           </div>
-          <div className="bg-white p-4 rounded-lg shadow">
-            <div className="text-sm text-gray-600">Thành công</div>
-            <div className="text-2xl font-bold text-green-600">{statistics.success}</div>
-          </div>
-          <div className="bg-white p-4 rounded-lg shadow">
-            <div className="text-sm text-gray-600">Thất bại</div>
-            <div className="text-2xl font-bold text-red-600">{statistics.failed}</div>
-          </div>
-          <div className="bg-white p-4 rounded-lg shadow">
-            <div className="text-sm text-gray-600">Tỷ lệ thành công</div>
-            <div className="text-2xl font-bold text-blue-600">{statistics.successRate}%</div>
-          </div>
-        </div>
-      )}
+        )}
 
-      {/* Filters */}
-      <div className="bg-white p-4 rounded-lg shadow mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {/* Filters */}
+        <div className="bg-white p-4 rounded-lg shadow mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Trạng thái</label>
             <select
@@ -382,11 +386,11 @@ export default function FastApiInvoicesPage() {
               Reset
             </button>
           </div>
+          </div>
         </div>
-      </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+        {/* Table */}
+        <div className="bg-white rounded-lg shadow overflow-hidden">
         {/* Table Header with Count - Always visible */}
         <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
           <div className="flex items-center justify-between">
@@ -543,7 +547,8 @@ export default function FastApiInvoicesPage() {
             </div>
           </>
         )}
-      </div>
+        </div>
+      </>
     </div>
   );
 }
