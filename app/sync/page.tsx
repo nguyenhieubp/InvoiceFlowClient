@@ -46,6 +46,7 @@ export default function SyncPage() {
     type: 'success' | 'error';
     message: string;
   } | null>(null);
+  const [rangeSyncing, setRangeSyncing] = useState(false);
 
   const handleSyncAll = async () => {
     const syncDate = getSyncDate();
@@ -107,17 +108,22 @@ export default function SyncPage() {
   };
 
   const isSyncing = loading || syncingBrand !== null;
+  const isAnySyncing = isSyncing || rangeSyncing;
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Overlay khi đang đồng bộ */}
-      {isSyncing && (
+      {isAnySyncing && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
           <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4 shadow-xl">
             <div className="flex flex-col items-center">
               <div className="animate-spin rounded-full h-12 w-12 border-2 border-gray-200 border-t-blue-600 mb-4"></div>
               <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                {syncingBrand ? `Đang đồng bộ ${syncingBrand.toUpperCase()}` : 'Đang đồng bộ dữ liệu'}
+                {syncingBrand
+                  ? `Đang đồng bộ ${syncingBrand.toUpperCase()}`
+                  : rangeSyncing
+                  ? 'Đang đồng bộ 01/10/2025 - 30/11/2025'
+                  : 'Đang đồng bộ dữ liệu'}
               </h3>
               <p className="text-sm text-gray-600 text-center">
                 Vui lòng đợi trong giây lát...
@@ -203,12 +209,12 @@ export default function SyncPage() {
             <div>
               <h2 className="text-base font-semibold text-gray-900 mb-1">Đồng bộ tất cả nhãn hàng</h2>
               <p className="text-sm text-gray-600">
-                Đồng bộ dữ liệu từ tất cả 5 nhãn hàng
+                Đồng bộ dữ liệu từ tất cả 5 nhãn hàng cho <span className="font-mono">{getSyncDate()}</span>
               </p>
             </div>
             <button
               onClick={handleSyncAll}
-              disabled={isSyncing}
+              disabled={isAnySyncing}
               className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed inline-flex items-center gap-2"
             >
               {loading ? (
@@ -221,6 +227,61 @@ export default function SyncPage() {
                 </>
               ) : (
                 'Đồng bộ tất cả'
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Backfill fixed range */}
+        <div className="bg-white rounded-lg border border-amber-200 p-4 mb-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-semibold text-gray-900 mb-1">Đồng bộ toàn bộ 01/10/2025 - 30/11/2025</h2>
+              <p className="text-sm text-gray-600">
+                Chạy đồng bộ tất cả brand cho từng ngày trong khoảng <span className="font-mono">01OCT2025 → 30NOV2025</span>
+              </p>
+            </div>
+            <button
+              onClick={async () => {
+                setResult(null);
+                setRangeSyncing(true);
+                try {
+                  const response = await syncApi.syncAllRangeOctNov2025();
+                  setResult({
+                    type: 'success',
+                    message:
+                      response.data?.message ||
+                      'Đã kích hoạt đồng bộ toàn bộ 01/10/2025 - 30/11/2025. Vui lòng xem log server để theo dõi tiến trình.',
+                  });
+                } catch (error: any) {
+                  setResult({
+                    type: 'error',
+                    message:
+                      error.response?.data?.message ||
+                      error.message ||
+                      'Lỗi khi đồng bộ khoảng 01/10/2025 - 30/11/2025',
+                  });
+                } finally {
+                  setRangeSyncing(false);
+                }
+              }}
+              disabled={isAnySyncing}
+              className="px-4 py-2 text-sm font-medium text-white bg-amber-600 rounded hover:bg-amber-700 disabled:bg-gray-300 disabled:cursor-not-allowed inline-flex items-center gap-2"
+            >
+              {rangeSyncing ? (
+                <>
+                  <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                  Đang chạy backfill...
+                </>
+              ) : (
+                'Đồng bộ khoảng 01/10 - 30/11/2025'
               )}
             </button>
           </div>

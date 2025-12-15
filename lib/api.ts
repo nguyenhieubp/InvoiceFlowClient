@@ -89,6 +89,10 @@ export const syncApi = {
   syncBrand: (brandName: string, date: string) => {
     return api.post(`/sync/brand/${brandName}`, { date });
   },
+  // Backfill toàn bộ đơn hàng 01/10/2025 - 30/11/2025 (không cần chọn ngày)
+  syncAllRangeOctNov2025: () => {
+    return api.post('/sync/all-range-oct-nov-2025');
+  },
 };
 
 // Categories API
