@@ -1387,25 +1387,35 @@ export default function OrdersPage() {
       case 'tkDoanhThu':
         // Nếu department.type = "bán lẻ" → hiển thị retailRevenueAccount (tkDoanhThuBanLe)
         // Nếu department.type = "bán buôn" → hiển thị wholesaleRevenueAccount (tkDoanhThuBanBuon)
+        // Nếu không có department.type, ưu tiên bán lẻ (tkDoanhThuBanLe)
         const deptTypeDoanhThu = sale?.department?.type;
         let tkDoanhThu = '-';
         // So sánh không phân biệt hoa thường
-        if (deptTypeDoanhThu?.toLowerCase() === 'bán lẻ') {
+        const deptTypeLower = deptTypeDoanhThu?.toLowerCase()?.trim();
+        if (deptTypeLower === 'bán lẻ') {
           tkDoanhThu = sale?.product?.tkDoanhThuBanLe || '-';
-        } else if (deptTypeDoanhThu?.toLowerCase() === 'bán buôn') {
+        } else if (deptTypeLower === 'bán buôn') {
           tkDoanhThu = sale?.product?.tkDoanhThuBanBuon || '-';
+        } else {
+          // Nếu không có department.type hoặc không khớp, ưu tiên bán lẻ
+          tkDoanhThu = sale?.product?.tkDoanhThuBanLe || sale?.product?.tkDoanhThuBanBuon || '-';
         }
         return <div className="text-sm text-gray-900">{tkDoanhThu}</div>;
       case 'tkGiaVon':
         // Nếu department.type = "bán lẻ" → hiển thị retailCostAccount (tkGiaVonBanLe)
         // Nếu department.type = "bán buôn" → hiển thị wholesaleCostAccount (tkGiaVonBanBuon)
+        // Nếu không có department.type, ưu tiên bán lẻ (tkGiaVonBanLe)
         const deptTypeGiaVon = sale?.department?.type;
         let tkGiaVon = '-';
         // So sánh không phân biệt hoa thường
-        if (deptTypeGiaVon?.toLowerCase() === 'bán lẻ') {
+        const deptTypeGiaVonLower = deptTypeGiaVon?.toLowerCase()?.trim();
+        if (deptTypeGiaVonLower === 'bán lẻ') {
           tkGiaVon = sale?.product?.tkGiaVonBanLe || '-';
-        } else if (deptTypeGiaVon?.toLowerCase() === 'bán buôn') {
+        } else if (deptTypeGiaVonLower === 'bán buôn') {
           tkGiaVon = sale?.product?.tkGiaVonBanBuon || '-';
+        } else {
+          // Nếu không có department.type hoặc không khớp, ưu tiên bán lẻ
+          tkGiaVon = sale?.product?.tkGiaVonBanLe || sale?.product?.tkGiaVonBanBuon || '-';
         }
         return <div className="text-sm text-gray-900">{tkGiaVon}</div>;
       case 'tkChiPhiKhuyenMai':
