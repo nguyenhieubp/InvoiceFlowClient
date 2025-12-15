@@ -422,7 +422,12 @@ export default function OrdersPage() {
               // Làm tròn tất cả các số về số nguyên (bỏ phần thập phân)
               // Đảm bảo convert sang number trước khi làm tròn
               const numValue = typeof value === 'string' ? parseFloat(value) : Number(value);
-              cellValue = Math.round(numValue);
+              // Kiểm tra nếu giá trị hợp lệ (không phải NaN hoặc Infinity)
+              if (isNaN(numValue) || !isFinite(numValue)) {
+                cellValue = ''; // Để trống nếu không hợp lệ
+              } else {
+                cellValue = Math.round(numValue);
+              }
             } else {
               cellValue = value; // Các số khác cũng giữ nguyên
             }
@@ -474,18 +479,53 @@ export default function OrdersPage() {
               const cellAddress = colLetter + (row + 1);
               const cell = ws[cellAddress];
               if (cell) {
+                // Kiểm tra nếu cell rỗng hoặc không có giá trị hợp lệ
+                if (cell.v === null || cell.v === undefined || cell.v === '' || cell.v === 'NaN' || cell.v === 'null' || cell.v === 'undefined') {
+                  // Để trống cell
+                  cell.v = '';
+                  cell.t = 's'; // string type
+                  cell.z = undefined;
+                  continue;
+                }
+                
                 // Convert giá trị sang number nếu là string
                 let numValue: number;
                 if (typeof cell.v === 'string') {
                   numValue = parseFloat(cell.v);
+                  // Nếu parseFloat trả về NaN, để trống
+                  if (isNaN(numValue) || !isFinite(numValue)) {
+                    cell.v = '';
+                    cell.t = 's'; // string type
+                    cell.z = undefined;
+                    continue;
+                  }
                 } else if (typeof cell.v === 'number') {
                   numValue = cell.v;
+                  // Nếu là NaN hoặc Infinity, để trống
+                  if (isNaN(numValue) || !isFinite(numValue)) {
+                    cell.v = '';
+                    cell.t = 's'; // string type
+                    cell.z = undefined;
+                    continue;
+                  }
                 } else {
-                  continue; // Skip nếu không phải number hoặc string có thể parse
+                  // Không phải number hoặc string có thể parse, để trống
+                  cell.v = '';
+                  cell.t = 's'; // string type
+                  cell.z = undefined;
+                  continue;
                 }
                 
                 // Làm tròn về số nguyên (bỏ phần thập phân)
                 const intValue = Math.round(numValue);
+                
+                // Kiểm tra lại sau khi làm tròn
+                if (isNaN(intValue) || !isFinite(intValue)) {
+                  cell.v = '';
+                  cell.t = 's'; // string type
+                  cell.z = undefined;
+                  continue;
+                }
                 
                 // Set cell type là number
                 cell.t = 'n'; // number type
