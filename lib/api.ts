@@ -26,8 +26,16 @@ export const salesApi = {
   printOrders: (docCodes: string[]) => {
     return api.post('/sales/orders/print', { docCodes });
   },
-  getAllOrders: (params?: { brand?: string; processed?: boolean; page?: number; limit?: number; date?: string; dateFrom?: string; dateTo?: string; search?: string }) => {
-    return api.get('/sales', { params: { ...params } });
+  getAllOrders: (params?: { brand?: string; processed?: boolean; page?: number; limit?: number; date?: string; dateFrom?: string; dateTo?: string; search?: string; statusAsys?: boolean }) => {
+    // Convert boolean values to strings for query params
+    const queryParams: any = { ...params };
+    if (queryParams.statusAsys !== undefined) {
+      queryParams.statusAsys = queryParams.statusAsys.toString();
+    }
+    if (queryParams.processed !== undefined) {
+      queryParams.processed = queryParams.processed.toString();
+    }
+    return api.get('/sales', { params: queryParams });
   },
   syncFromZappy: (date: string) => {
     return api.post('/sales/sync-from-zappy', { date });

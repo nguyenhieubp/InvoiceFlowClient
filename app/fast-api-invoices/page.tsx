@@ -47,6 +47,7 @@ export default function FastApiInvoicesPage() {
   } | null>(null);
   const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
   const [retrying, setRetrying] = useState<Record<string, boolean>>({});
+  const [syncingAll, setSyncingAll] = useState(false);
 
   const showToast = (type: 'success' | 'error' | 'info', message: string) => {
     setToast({ type, message });
@@ -196,6 +197,65 @@ export default function FastApiInvoicesPage() {
     setPagination({ ...pagination, page: 1 });
   };
 
+  const handleSyncAllFailed = async () => {
+    try {
+      setSyncingAll(true);
+      showToast('info', 'Đang đồng bộ lại tất cả invoice thất bại lên Fast API...');
+
+      // Lấy tất cả invoice thất bại (status = 0)
+      const failedInvoices = invoices.filter(inv => inv.status === 0);
+      
+      if (failedInvoices.length === 0) {
+        showToast('info', 'Không có invoice thất bại nào để đồng bộ');
+        return;
+      }
+
+      let successCount = 0;
+      let failCount = 0;
+      const errors: string[] = [];
+
+      // Đồng bộ từng invoice
+      for (const invoice of failedInvoices) {
+        try {
+          setRetrying((prev) => ({ ...prev, [invoice.docCode]: true }));
+          const response = await salesApi.createInvoiceViaFastApi(invoice.docCode, true);
+          const data = response.data;
+
+          if (data.success) {
+            successCount++;
+          } else {
+            failCount++;
+            errors.push(`${invoice.docCode}: ${data.message || 'Thất bại'}`);
+          }
+        } catch (error: any) {
+          failCount++;
+          const errorMsg = error?.response?.data?.message || error?.message || 'Lỗi không xác định';
+          errors.push(`${invoice.docCode}: ${errorMsg}`);
+        } finally {
+          setRetrying((prev) => ({ ...prev, [invoice.docCode]: false }));
+        }
+      }
+
+      // Reload data
+      await loadInvoices();
+      await loadStatistics();
+
+      // Hiển thị kết quả
+      if (successCount > 0 && failCount === 0) {
+        showToast('success', `Đồng bộ thành công ${successCount} invoice`);
+      } else if (successCount > 0 && failCount > 0) {
+        showToast('info', `Đồng bộ thành công ${successCount} invoice, thất bại ${failCount} invoice`);
+      } else {
+        showToast('error', `Đồng bộ thất bại ${failCount} invoice. ${errors.slice(0, 3).join('; ')}`);
+      }
+    } catch (error: any) {
+      console.error('Error syncing all failed invoices:', error);
+      showToast('error', error?.message || 'Lỗi khi đồng bộ lại tất cả invoice');
+    } finally {
+      setSyncingAll(false);
+    }
+  };
+
   const formatDate = (dateString: string | null) => {
     if (!dateString) return '-';
     try {
@@ -270,9 +330,34 @@ export default function FastApiInvoicesPage() {
       )}
 
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Bảng kê hóa đơn</h1>
-        <p className="text-sm text-gray-600 mb-4">Danh sách chi tiết các hóa đơn đã tạo từ Fast API</p>
-        
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Bảng kê hóa đơn</h1>
+            <p className="text-sm text-gray-600 mb-4">Danh sách chi tiết các hóa đơn đã tạo từ Fast API</p>
+          </div>
+          <button
+            onClick={handleSyncAllFailed}
+            disabled={syncingAll || invoices.filter(inv => inv.status === 0).length === 0}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            {syncingAll ? (
+              <>
+                <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>Đang đồng bộ...</span>
+              </>
+            ) : (
+              <>
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                <span>Đồng bộ lại lên Fast</span>
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Content */}
