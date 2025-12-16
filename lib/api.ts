@@ -56,6 +56,7 @@ export const salesApi = {
     orderCode?: string;
     partnerCode?: string;
     faceStatus?: 'yes' | 'no';
+    brandCode?: string;
   }) => {
     return api.get('/sales/giai-trinh-faceid', { params });
   },

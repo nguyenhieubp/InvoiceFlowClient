@@ -34,6 +34,7 @@ export default function GiaiTrinhFaceIdPage() {
     dateFrom: string;
     dateTo: string;
     faceStatus: FaceStatusFilter;
+    brandCode: string;
   }>(() => {
     return {
       orderCode: '',
@@ -41,6 +42,7 @@ export default function GiaiTrinhFaceIdPage() {
       dateFrom: '',
       dateTo: '',
       faceStatus: 'all',
+      brandCode: '',
     };
   });
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -96,6 +98,7 @@ export default function GiaiTrinhFaceIdPage() {
         orderCode: filters.orderCode?.trim() || undefined,
         partnerCode: filters.partnerCode?.trim() || undefined,
         faceStatus: filters.faceStatus !== 'all' ? filters.faceStatus : undefined,
+        brandCode: filters.brandCode?.trim() || undefined,
       });
       const result = response.data;
       const sortedItems: GiaiTrinhItem[] = [...(result.items || [])].sort((a, b) => {
@@ -126,8 +129,8 @@ export default function GiaiTrinhFaceIdPage() {
   };
 
   useEffect(() => {
-    // Debounce cho partnerCode và orderCode (input fields)
-    const isInputFilter = filters.partnerCode || filters.orderCode;
+    // Debounce cho partnerCode, orderCode và brandCode (input fields)
+    const isInputFilter = filters.partnerCode || filters.orderCode || filters.brandCode;
     if (isInputFilter) {
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
@@ -145,7 +148,7 @@ export default function GiaiTrinhFaceIdPage() {
       loadData();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pagination.page, pagination.limit, filters.dateFrom, filters.dateTo, filters.orderCode, filters.partnerCode, filters.faceStatus]);
+  }, [pagination.page, pagination.limit, filters.dateFrom, filters.dateTo, filters.orderCode, filters.partnerCode, filters.faceStatus, filters.brandCode]);
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -175,7 +178,7 @@ export default function GiaiTrinhFaceIdPage() {
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         {/* Filters */}
         <div className="px-6 py-4 border-b border-gray-200 bg-white">
-          <div className="grid grid-cols-1 md:grid-cols-6 gap-3 items-end">
+          <div className="grid grid-cols-1 md:grid-cols-7 gap-3 items-end">
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Mã đơn hàng</label>
               <input
@@ -229,6 +232,19 @@ export default function GiaiTrinhFaceIdPage() {
               />
             </div>
              <div>
+               <label className="block text-xs font-medium text-gray-600 mb-1">Brand Code</label>
+               <input
+                 value={filters.brandCode}
+                 onChange={(e) => {
+                   const value = e.target.value;
+                   setFilters((prev) => ({ ...prev, brandCode: value }));
+                   setPagination((prev) => ({ ...prev, page: 1 }));
+                 }}
+                 placeholder="Nhập brand code"
+                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+               />
+             </div>
+             <div>
                <label className="block text-xs font-medium text-gray-600 mb-1">Đã FaceID?</label>
                <select
                  value={filters.faceStatus}
@@ -248,7 +264,7 @@ export default function GiaiTrinhFaceIdPage() {
              <div className="flex gap-2">
                <button
                  onClick={() => {
-                   setFilters({ orderCode: '', partnerCode: '', dateFrom: '', dateTo: '', faceStatus: 'all' });
+                   setFilters({ orderCode: '', partnerCode: '', dateFrom: '', dateTo: '', faceStatus: 'all', brandCode: '' });
                    setPagination((prev) => ({ ...prev, page: 1 }));
                  }}
                  className="flex-1 inline-flex items-center justify-center rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
