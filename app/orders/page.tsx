@@ -33,8 +33,12 @@ export default function OrdersPage() {
   // Track searchQuery và filter trước đó để chỉ reset page khi chúng thay đổi
   const prevSearchQueryRef = useRef<string>('');
   const prevFilterRef = useRef<{ brand?: string; dateFrom?: string; dateTo?: string }>({});
+  // Filter input values (không trigger API)
+  const [filterInput, setFilterInput] = useState<{ brand?: string; dateFrom?: string; dateTo?: string }>({});
+  // Filter thực tế (trigger API)
   const [filter, setFilter] = useState<{ brand?: string; dateFrom?: string; dateTo?: string }>({});
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchInputValue, setSearchInputValue] = useState(''); // Giá trị trong input (không trigger API)
+  const [searchQuery, setSearchQuery] = useState(''); // Giá trị search thực tế (trigger API)
   const [selectedColumns, setSelectedColumns] = useState<OrderColumn[]>([...MAIN_COLUMNS]);
   const [showColumnSelector, setShowColumnSelector] = useState(false);
   const [columnSearchQuery, setColumnSearchQuery] = useState('');
@@ -654,11 +658,25 @@ export default function OrdersPage() {
     }
   }, [searchQuery, filter.brand, filter.dateFrom, filter.dateTo]);
 
-  // Load orders khi pagination hoặc filter thay đổi
+  // Load orders khi pagination hoặc filter thay đổi (chỉ khi click nút Tìm kiếm)
   useEffect(() => {
     loadOrders();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter.brand, filter.dateFrom, filter.dateTo, pagination.page, pagination.limit, searchQuery]);
+  
+  // Hàm xử lý search/filter khi click nút Tìm kiếm
+  const handleSearch = () => {
+    setSearchQuery(searchInputValue);
+    setFilter({ ...filterInput }); // Áp dụng filter input vào filter thực tế
+    setPagination((prev) => ({ ...prev, page: 1 }));
+  };
+  
+  // Hàm xử lý Enter key trong input search
+  const handleSearchKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
 
   // Backend đã filter và paginate rồi, frontend chỉ cần hiển thị những gì backend trả về
   useEffect(() => {
@@ -2103,26 +2121,35 @@ export default function OrdersPage() {
             )}
 
             {/* Search Bar */}
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+                <input
+                  type="text"
+                  placeholder="Tìm kiếm theo mã đơn, tên khách hàng, số điện thoại..."
+                  value={searchInputValue}
+                  onChange={(e) => setSearchInputValue(e.target.value)}
+                  onKeyPress={handleSearchKeyPress}
+                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                />
               </div>
-              <input
-                type="text"
-                placeholder="Tìm kiếm theo mã đơn, tên khách hàng, số điện thoại..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-              />
+              <button
+                onClick={handleSearch}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors text-sm font-medium"
+              >
+                Tìm kiếm
+              </button>
             </div>
 
             {/* Filters */}
             <div className="flex items-center gap-2 flex-wrap">
               <select
-                value={filter.brand || ''}
-                onChange={(e) => setFilter({ ...filter, brand: e.target.value || undefined })}
+                value={filterInput.brand || ''}
+                onChange={(e) => setFilterInput({ ...filterInput, brand: e.target.value || undefined })}
                 className="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               >
                 <option value="">Tất cả nhãn hàng</option>
@@ -2136,8 +2163,8 @@ export default function OrdersPage() {
                 <label className="text-sm text-gray-700 whitespace-nowrap">Từ ngày:</label>
                 <input
                   type="date"
-                  value={filter.dateFrom || ''}
-                  onChange={(e) => setFilter({ ...filter, dateFrom: e.target.value })}
+                  value={filterInput.dateFrom || ''}
+                  onChange={(e) => setFilterInput({ ...filterInput, dateFrom: e.target.value })}
                   className="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                 />
               </div>
@@ -2145,8 +2172,8 @@ export default function OrdersPage() {
                 <label className="text-sm text-gray-700 whitespace-nowrap">Đến ngày:</label>
                 <input
                   type="date"
-                  value={filter.dateTo || ''}
-                  onChange={(e) => setFilter({ ...filter, dateTo: e.target.value })}
+                  value={filterInput.dateTo || ''}
+                  onChange={(e) => setFilterInput({ ...filterInput, dateTo: e.target.value })}
                   className="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                 />
               </div>

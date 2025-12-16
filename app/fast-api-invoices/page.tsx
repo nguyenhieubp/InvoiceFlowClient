@@ -128,6 +128,8 @@ export default function FastApiInvoicesPage() {
 
       if (data.success && !hasError) {
         showToast('success', data.message || `Đồng bộ lại ${docCode} thành công`);
+        // Đợi một chút để đảm bảo database đã được cập nhật
+        await new Promise(resolve => setTimeout(resolve, 300));
         await loadInvoices();
         await loadStatistics();
       } else {
@@ -221,11 +223,20 @@ export default function FastApiInvoicesPage() {
           const response = await salesApi.createInvoiceViaFastApi(invoice.docCode, true);
           const data = response.data;
 
-          if (data.success) {
+          // Kiểm tra success giống như handleRetry
+          let hasError = false;
+          if (Array.isArray(data.result) && data.result.length > 0) {
+            hasError = data.result.some((item: any) => item.status === 0);
+          } else if (data.result && typeof data.result === 'object') {
+            hasError = data.result.status === 0;
+          }
+
+          if (data.success && !hasError) {
             successCount++;
           } else {
             failCount++;
-            errors.push(`${invoice.docCode}: ${data.message || 'Thất bại'}`);
+            const errorMsg = data.message || 'Thất bại';
+            errors.push(`${invoice.docCode}: ${errorMsg}`);
           }
         } catch (error: any) {
           failCount++;
@@ -235,6 +246,9 @@ export default function FastApiInvoicesPage() {
           setRetrying((prev) => ({ ...prev, [invoice.docCode]: false }));
         }
       }
+
+      // Đợi một chút để đảm bảo database đã được cập nhật
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       // Reload data
       await loadInvoices();
