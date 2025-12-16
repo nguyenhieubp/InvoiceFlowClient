@@ -57,6 +57,20 @@ export const salesApi = {
   }) => {
     return api.get('/sales/giai-trinh-faceid', { params });
   },
+  exportOrders: (params?: {
+    brand?: string;
+    processed?: boolean;
+    date?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    search?: string;
+    statusAsys?: boolean;
+  }) => {
+    return api.get('/sales/export-orders', {
+      params,
+      responseType: 'blob', // Để nhận file Excel
+    });
+  },
 };
 
 // Invoices API
