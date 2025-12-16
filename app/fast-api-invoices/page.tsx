@@ -202,15 +202,31 @@ export default function FastApiInvoicesPage() {
   const handleSyncAllFailed = async () => {
     try {
       setSyncingAll(true);
-      showToast('info', 'Đang đồng bộ lại tất cả invoice thất bại lên Fast API...');
+      showToast('info', 'Đang tải danh sách invoice thất bại...');
 
-      // Lấy tất cả invoice thất bại (status = 0)
-      const failedInvoices = invoices.filter(inv => inv.status === 0);
+      // Lấy TẤT CẢ invoice thất bại từ API (không chỉ trang hiện tại)
+      // Sử dụng limit lớn để lấy tất cả
+      const params: any = {
+        page: 1,
+        limit: 10000, // Limit lớn để lấy tất cả
+        status: 0, // Chỉ lấy invoice thất bại
+      };
+
+      // Áp dụng các filter hiện tại (nếu có) để lấy đúng danh sách
+      if (filters.maDvcs) params.maDvcs = filters.maDvcs;
+      if (filters.startDate) params.startDate = filters.startDate;
+      if (filters.endDate) params.endDate = filters.endDate;
+
+      const response = await fastApiInvoicesApi.getAll(params);
+      const failedInvoices = response.data.items || [];
       
       if (failedInvoices.length === 0) {
         showToast('info', 'Không có invoice thất bại nào để đồng bộ');
+        setSyncingAll(false);
         return;
       }
+
+      showToast('info', `Đang đồng bộ lại ${failedInvoices.length} invoice thất bại lên Fast API...`);
 
       let successCount = 0;
       let failCount = 0;
