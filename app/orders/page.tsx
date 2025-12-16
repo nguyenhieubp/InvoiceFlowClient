@@ -708,11 +708,18 @@ export default function OrdersPage() {
   // Enrich orders với products và departments (batch fetch để tối ưu) - sử dụng cache
   const enrichOrdersWithProducts = async (orders: Order[]): Promise<Order[]> => {
     // Collect tất cả itemCodes và branchCodes cần fetch (chỉ những cái chưa có trong cache)
+    // BỎ QUA các sale có statusAsys = false (đơn lỗi) - không fetch từ Loyalty API
     const itemCodesToFetch = new Set<string>();
     const branchCodesToFetch = new Set<string>();
 
     orders.forEach(order => {
       order.sales?.forEach(sale => {
+        // Chỉ fetch product/department cho các sale không phải đơn lỗi
+        // statusAsys = false → đơn lỗi → skip fetch
+        if (sale.statusAsys === false) {
+          return; // Skip đơn lỗi
+        }
+        
         if (sale.itemCode && !productCacheRef.current.has(sale.itemCode)) {
           itemCodesToFetch.add(sale.itemCode);
         }
@@ -891,10 +898,13 @@ export default function OrdersPage() {
       // Cập nhật pagination từ backend response
       // Backend trả về total là tổng số rows (sale items) trong database
       // Frontend sẽ paginate lại sau khi flatten, nên dùng total từ backend
+      const calculatedTotalPages = backendTotal > 0 ? Math.ceil(backendTotal / pagination.limit) : 0;
       setPagination((prev) => ({
         ...prev,
         total: backendTotal,
-        totalPages: Math.ceil(backendTotal / prev.limit),
+        totalPages: calculatedTotalPages,
+        // Đảm bảo page không vượt quá totalPages, reset về 1 nếu vượt quá
+        page: calculatedTotalPages > 0 && prev.page > calculatedTotalPages ? 1 : (calculatedTotalPages === 0 ? 1 : prev.page),
       }));
     } catch (error: any) {
       console.error('Error loading orders:', error);
@@ -2146,7 +2156,8 @@ export default function OrdersPage() {
   };
 
   // Flatten enrichedDisplayedOrders thành rows để hiển thị
-  // Backend đã paginate theo rows rồi, nhưng cần giới hạn số rows ở frontend để đảm bảo đúng limit
+  // Backend đã paginate theo rows rồi, nhưng sau khi fetch full data, số rows có thể thay đổi
+  // Cần giới hạn lại để đảm bảo không vượt quá limit
   const flattenedRows: Array<{ order: Order; sale: SaleItem | null }> = [];
   const maxRows = pagination.limit; // Giới hạn số rows theo pagination limit
 
@@ -2496,8 +2507,11 @@ export default function OrdersPage() {
                   </span>
 
                   <button
-                    onClick={() => setPagination((prev) => ({ ...prev, page: Math.min(prev.totalPages, prev.page + 1) }))}
-                    disabled={pagination.page === pagination.totalPages || pagination.totalPages === 0}
+                    onClick={() => setPagination((prev) => {
+                      const maxPage = Math.max(1, prev.totalPages);
+                      return { ...prev, page: Math.min(maxPage, prev.page + 1) };
+                    })}
+                    disabled={pagination.page >= Math.max(1, pagination.totalPages) || pagination.totalPages === 0}
                     className="relative inline-flex items-center px-3 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
