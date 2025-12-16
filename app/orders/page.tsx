@@ -12,7 +12,8 @@ import { calculateMaLo, parsePromCode, convertPromCodeToTangSp } from '@/lib/uti
 import { normalizeOrderData } from '@/lib/utils/order-mapper.utils';
 import { mapLoyaltyApiProductToProductItem } from '@/lib/utils/product.utils';
 import { OrderProduct, OrderDepartment } from '@/types/order.types';
-import * as XLSX from 'xlsx';
+// @ts-ignore - xlsx-js-style không có type definitions
+import * as XLSX from 'xlsx-js-style';
 
 
 export default function OrdersPage() {
@@ -46,7 +47,7 @@ export default function OrdersPage() {
   const [syncing, setSyncing] = useState(false);
   const [retrying, setRetrying] = useState<Record<string, boolean>>({});
   const [isExporting, setIsExporting] = useState(false);
-  
+
   // Hàm convert từ Date object hoặc YYYY-MM-DD sang DDMMMYYYY
   const convertDateToDDMMMYYYY = (date: Date | string): string => {
     const d = typeof date === 'string' ? new Date(date) : date;
@@ -180,14 +181,14 @@ export default function OrdersPage() {
         if (sale?.maLo) {
           return sale.maLo;
         }
-        
+
         // Nếu không có, tính toán từ serial
         const serial = sale?.serial || '';
         if (serial) {
           // Lấy brand để phân biệt logic cho F3
           const brand = order.customer?.brand || order.brand || '';
           const brandLower = (brand || '').toLowerCase().trim();
-          
+
           // Kiểm tra nếu serial có dạng "XXX_YYYY" (có dấu gạch dưới), lấy phần sau dấu gạch dưới
           const underscoreIndex = serial.indexOf('_');
           if (underscoreIndex > 0 && underscoreIndex < serial.length - 1) {
@@ -195,7 +196,7 @@ export default function OrdersPage() {
             const maLo = serial.substring(underscoreIndex + 1);
             return maLo;
           }
-          
+
           // Nếu không có dấu gạch dưới, kiểm tra trackBatch
           const trackBatch = sale?.product?.trackBatch === true;
           if (trackBatch) {
@@ -203,7 +204,7 @@ export default function OrdersPage() {
             if (brandLower === 'f3') {
               return serial;
             }
-            
+
             // Các brand khác: tính toán theo productType
             let maLo = serial;
             const productTypeFromLoyalty = sale?.productType || sale?.product?.productType;
@@ -229,12 +230,12 @@ export default function OrdersPage() {
         const trackSerialForRaw = sale?.product?.trackSerial === true;
         const trackBatchForSoSerialRaw = sale?.product?.trackBatch === true;
         const serialForSoSerialRaw = sale?.serial || '';
-        
+
         // Nếu serial có dạng "XXX_YYYY", không hiển thị so_serial (đã dùng cho ma_lo)
         if (serialForSoSerialRaw && serialForSoSerialRaw.indexOf('_') > 0) {
           return '';
         }
-        
+
         if (trackSerialForRaw && !trackBatchForSoSerialRaw) {
           return serialForSoSerialRaw || '';
         }
@@ -252,7 +253,7 @@ export default function OrdersPage() {
             giaBanForPromCodeRaw = tienHangForPromCodeRaw / qtyNum;
           }
         }
-        
+
         // Lấy brand để phân biệt logic F3
         const brandForPromCodeRaw = order?.customer?.brand || order?.brand || '';
         let brandLowerForPromCodeRaw = (brandForPromCodeRaw || '').toLowerCase().trim();
@@ -260,25 +261,25 @@ export default function OrdersPage() {
         if (brandLowerForPromCodeRaw === 'facialbar') {
           brandLowerForPromCodeRaw = 'f3';
         }
-        
+
         const hasPromCodeForPromCodeRaw = sale?.promCode && String(sale.promCode).trim() !== '';
         let isTangHangForPromCodeRaw = giaBanForPromCodeRaw === 0 && tienHangForPromCodeRaw === 0 && revenueForPromCodeRaw === 0;
-        
+
         // Với F3: Nếu có promCode và giaBan = 0 && tienHang = 0 → là "mua hàng giảm giá" (giảm 100%), không phải "tặng hàng"
         if (brandLowerForPromCodeRaw === 'f3' && hasPromCodeForPromCodeRaw && isTangHangForPromCodeRaw) {
           isTangHangForPromCodeRaw = false;
         }
-        
+
         // Các ordertype dịch vụ không được coi là hàng tặng (không hiển thị "1")
         const ordertypeNameForPromCodeRaw = sale?.ordertype || '';
-        const isDichVuForPromCodeRaw = ordertypeNameForPromCodeRaw.includes('02. Làm dịch vụ') || 
-                                        ordertypeNameForPromCodeRaw.includes('04. Đổi DV') ||
-                                        ordertypeNameForPromCodeRaw.includes('08. Tách thẻ') ||
-                                        ordertypeNameForPromCodeRaw.includes('Đổi thẻ KEEP->Thẻ DV');
+        const isDichVuForPromCodeRaw = ordertypeNameForPromCodeRaw.includes('02. Làm dịch vụ') ||
+          ordertypeNameForPromCodeRaw.includes('04. Đổi DV') ||
+          ordertypeNameForPromCodeRaw.includes('08. Tách thẻ') ||
+          ordertypeNameForPromCodeRaw.includes('Đổi thẻ KEEP->Thẻ DV');
         if (isDichVuForPromCodeRaw) {
           isTangHangForPromCodeRaw = false;
         }
-        
+
         // Kiểm tra có mã số thẻ (maThe) không - nếu có thì km_yn = 0 (không hiển thị "1")
         const hasMaTheForPromCodeRaw = sale?.maThe && String(sale.maThe).trim() !== '';
         // Kiểm tra nếu ma_ctkm_th = "TT DAU TU" thì cũng không hiển thị "1"
@@ -290,17 +291,17 @@ export default function OrdersPage() {
           }
         }
         const isTTDauTuForPromCodeRaw = maCtkmTangHangForPromCodeRaw.trim() === 'TT DAU TU';
-        
+
         // Nếu có mã số thẻ (maThe) hoặc ma_ctkm_th = "TT DAU TU" thì không hiển thị "1"
         if (hasMaTheForPromCodeRaw || isTTDauTuForPromCodeRaw) {
           return '';
         }
-        
+
         // Chỉ hiển thị khi là hàng tặng → hiển thị "1" (giống km_yn = 1 trong backend)
         if (isTangHangForPromCodeRaw) {
           return '1';
         }
-        
+
         // Các trường hợp khác (không phải hàng tặng) → bỏ trống
         return '';
       default:
@@ -314,27 +315,27 @@ export default function OrdersPage() {
   const handleExportExcel = async () => {
     try {
       setIsExporting(true);
-      
+
       // Fetch tất cả orders (không paginate, không filter)
       showToast('info', 'Đang tải dữ liệu để xuất Excel...');
       const response = await salesApi.getAllOrders({
         brand: filter.brand, // Vẫn giữ brand filter nếu có
         page: 1,
-        limit: 10000, // Lấy tối đa 10000 orders
+        limit: 100000, // Lấy tối đa 10000 orders
         dateFrom: filter.dateFrom,
         dateTo: filter.dateTo,
         search: searchQuery.trim() || undefined,
       });
-      
+
       const rawData = response.data.data || [];
       const ordersData = normalizeOrderData(rawData);
-      
+
       if (ordersData.length === 0) {
         showToast('info', 'Không có dữ liệu để xuất Excel');
         setIsExporting(false);
         return;
       }
-      
+
       // Enrich tất cả orders (fetch full data nếu cần)
       showToast('info', `Đang xử lý ${ordersData.length} đơn hàng...`);
       const ordersWithFullData = await Promise.all(
@@ -343,7 +344,7 @@ export default function OrdersPage() {
           if (fullOrderCacheRef.current.has(order.docCode)) {
             return fullOrderCacheRef.current.get(order.docCode)!;
           }
-          
+
           // Nếu không có sales, fetch full data
           if (!order.sales || order.sales.length === 0) {
             try {
@@ -357,14 +358,14 @@ export default function OrdersPage() {
               return order;
             }
           }
-          
+
           return order;
         })
       );
-      
+
       // Enrich với products và departments
       const enrichedOrders = await enrichOrdersWithProducts(ordersWithFullData);
-      
+
       // Tính toán flattened rows từ tất cả enriched orders
       const rowsToExport: Array<{ order: Order; sale: SaleItem | null }> = [];
       enrichedOrders.forEach((order) => {
@@ -407,7 +408,7 @@ export default function OrdersPage() {
         selectedColumns.forEach((column) => {
           const label = FIELD_LABELS[column];
           const value = getRawCellValue(row.order, row.sale, column);
-          
+
           // Format giá trị - Giữ số dạng số để Excel có thể tính toán
           let cellValue: any = '';
           if (value === null || value === undefined) {
@@ -432,7 +433,7 @@ export default function OrdersPage() {
               'troGia', 'ckTheoChinhSach', 'ckThem1', 'ckThem2', 'ckThem3',
               'thuongBangHang'
             ];
-            
+
             // Giữ nguyên giá trị number cho các cột số
             if (numericColumns.includes(column) || column.includes('chietKhau') || column.includes('ThanhToan') || column.includes('thanhToan')) {
               // Giữ nguyên giá trị (không làm tròn), chỉ convert sang number
@@ -450,7 +451,7 @@ export default function OrdersPage() {
           } else {
             cellValue = String(value);
           }
-          
+
           rowData[label] = cellValue;
         });
         return rowData;
@@ -488,7 +489,7 @@ export default function OrdersPage() {
           const columnLabel = headerCell.v;
           // Tìm column tương ứng với label
           const column = selectedColumns.find(col => FIELD_LABELS[col] === columnLabel);
-          
+
           if (column && (numericColumns.includes(column) || column.includes('chietKhau') || column.includes('ThanhToan') || column.includes('thanhToan'))) {
             // Set format cho tất cả cells trong cột này (trừ header)
             for (let row = range.s.r + 1; row <= range.e.r; row++) {
@@ -503,7 +504,7 @@ export default function OrdersPage() {
                   cell.z = undefined;
                   continue;
                 }
-                
+
                 // Convert giá trị sang number nếu là string
                 let numValue: number;
                 if (typeof cell.v === 'string') {
@@ -531,7 +532,7 @@ export default function OrdersPage() {
                   cell.z = undefined;
                   continue;
                 }
-                
+
                 // Giữ nguyên giá trị (không làm tròn), nhưng format dựa trên có phần thập phân hay không
                 // Kiểm tra lại sau khi parse
                 if (isNaN(numValue) || !isFinite(numValue)) {
@@ -540,10 +541,10 @@ export default function OrdersPage() {
                   cell.z = undefined;
                   continue;
                 }
-                
+
                 // Set cell type là number
                 cell.t = 'n'; // number type
-                
+
                 // Kiểm tra nếu có phần thập phân
                 if (numValue % 1 !== 0) {
                   // Có phần thập phân → format với 2 chữ số sau dấu phẩy
@@ -552,7 +553,7 @@ export default function OrdersPage() {
                   // Số nguyên → format số nguyên không có dấu phân cách hàng nghìn
                   cell.z = '0'; // Format '0' = số nguyên, không có số thập phân, không có dấu phân cách
                 }
-                
+
                 // Set giá trị (giữ nguyên, không làm tròn)
                 cell.v = numValue;
               }
@@ -572,6 +573,59 @@ export default function OrdersPage() {
       });
       ws['!cols'] = colWidths;
 
+      // Bôi đỏ các dòng đơn lỗi (statusAsys = false)
+      // Style cho header row (row 1)
+      const headerRow = 1;
+      for (let col = range.s.c; col <= range.e.c; col++) {
+        const colLetter = XLSX.utils.encode_col(col);
+        const headerCellAddress = colLetter + headerRow;
+        if (!ws[headerCellAddress]) continue;
+        ws[headerCellAddress].s = {
+          fill: { fgColor: { rgb: 'E5E7EB' } }, // Gray background for header
+          font: { bold: true },
+          alignment: { horizontal: 'left', vertical: 'center' },
+        };
+      }
+
+      // Style cho data rows - bôi đỏ các dòng có statusAsys = false
+      for (let row = range.s.r + 1; row <= range.e.r; row++) {
+        const dataRowIndex = row - 1; // Index trong rowsToExport (0-based)
+        const rowData = rowsToExport[dataRowIndex];
+        
+        // Kiểm tra nếu dòng này có statusAsys = false
+        const isErrorRow = rowData?.sale?.statusAsys === false;
+        
+        // Style cho tất cả cells trong row này
+        for (let col = range.s.c; col <= range.e.c; col++) {
+          const colLetter = XLSX.utils.encode_col(col);
+          const cellAddress = colLetter + (row + 1);
+          const cell = ws[cellAddress];
+          
+          if (cell) {
+            // Nếu chưa có style, khởi tạo
+            if (!cell.s) {
+              cell.s = {};
+            }
+            
+            // Set background color: đỏ nhạt cho đơn lỗi, trắng cho đơn bình thường
+            if (isErrorRow) {
+              cell.s.fill = { fgColor: { rgb: 'FFE5E5' } }; // Light red background
+              cell.s.font = { color: { rgb: '000000' } }; // Black text
+            } else {
+              cell.s.fill = { fgColor: { rgb: 'FFFFFF' } }; // White background
+              cell.s.font = { color: { rgb: '000000' } }; // Black text
+            }
+            
+            // Alignment
+            if (!cell.s.alignment) {
+              cell.s.alignment = {};
+            }
+            cell.s.alignment.vertical = 'center';
+            cell.s.alignment.horizontal = 'left';
+          }
+        }
+      }
+
       // Thêm worksheet vào workbook
       XLSX.utils.book_append_sheet(wb, ws, 'Đơn hàng');
 
@@ -583,7 +637,7 @@ export default function OrdersPage() {
 
       // Xuất file
       XLSX.writeFile(wb, fileName);
-      
+
       showToast('success', `Đã xuất Excel thành công: ${fileName} (${excelData.length} dòng)`);
     } catch (error: any) {
       console.error('Error exporting Excel:', error);
@@ -627,7 +681,7 @@ export default function OrdersPage() {
     try {
       const response = await categoriesApi.getProductByCode(itemCode);
       const product = response.data;
-      
+
       if (product) {
         return mapLoyaltyApiProductToProductItem(product);
       }
@@ -809,7 +863,7 @@ export default function OrdersPage() {
       setLoading(true);
       // Khi có search query, backend đã filter rồi, vẫn cần gửi page để backend trả về đúng trang
       // Chỉ reset về page 1 khi searchQuery thay đổi (xử lý ở useEffect khác)
-      
+
       // Lấy orders từ backend API - chỉ lấy basic data (backend đã tối ưu)
       // Nếu có search query, gửi lên backend để search trực tiếp trên database
       // Khi có search query, gửi dateFrom/dateTo để search trong date range
@@ -833,7 +887,7 @@ export default function OrdersPage() {
 
       setRawOrders(ordersData);
       setAllOrders(ordersData);
-      
+
       // Cập nhật pagination từ backend response
       // Backend trả về total là tổng số rows (sale items) trong database
       // Frontend sẽ paginate lại sau khi flatten, nên dùng total từ backend
@@ -853,11 +907,11 @@ export default function OrdersPage() {
   // Reset về trang 1 khi search query hoặc filter thay đổi
   useEffect(() => {
     const searchQueryChanged = prevSearchQueryRef.current !== searchQuery;
-    const filterChanged = 
+    const filterChanged =
       prevFilterRef.current.brand !== filter.brand ||
       prevFilterRef.current.dateFrom !== filter.dateFrom ||
       prevFilterRef.current.dateTo !== filter.dateTo;
-    
+
     if (searchQueryChanged || filterChanged) {
       prevSearchQueryRef.current = searchQuery;
       prevFilterRef.current = { ...filter };
@@ -885,11 +939,11 @@ export default function OrdersPage() {
 
     // Kiểm tra xem có orders nào cần fetch full data không (sales array rỗng)
     const ordersNeedingFullData = displayedOrders.filter(order => !order.sales || order.sales.length === 0);
-    
+
     const enrichDisplayed = async () => {
       try {
         setEnriching(true);
-        
+
         // Fetch full data cho các orders chưa có sales (từ cache hoặc API)
         const ordersWithFullData = await Promise.all(
           displayedOrders.map(async (order) => {
@@ -897,7 +951,7 @@ export default function OrdersPage() {
             if (fullOrderCacheRef.current.has(order.docCode)) {
               return fullOrderCacheRef.current.get(order.docCode)!;
             }
-            
+
             // Nếu không có sales, fetch full data
             if (!order.sales || order.sales.length === 0) {
               try {
@@ -911,11 +965,11 @@ export default function OrdersPage() {
                 return order;
               }
             }
-            
+
             return order;
           })
         );
-        
+
         // Enrich với products và departments
         const enriched = await enrichOrdersWithProducts(ordersWithFullData);
         setEnrichedDisplayedOrders(enriched);
@@ -973,7 +1027,7 @@ export default function OrdersPage() {
     if (typeof value === 'string' && value.trim() !== '') {
       // Thử parse trực tiếp trước (cho số thuần như "118000.00" hoặc "118000")
       let numValue = parseFloat(value);
-      
+
       // Nếu parse trực tiếp không được (có dấu phân cách hàng nghìn), thử clean trước
       if (isNaN(numValue) || String(numValue).replace('.', '') !== value.replace(/[^\d]/g, '')) {
         // Format VN: "118.000,00" → loại bỏ dấu chấm, thay dấu phẩy bằng dấu chấm
@@ -988,25 +1042,25 @@ export default function OrdersPage() {
         }
         numValue = parseFloat(cleanedValue);
       }
-      
+
       if (!isNaN(numValue)) {
         // Format tất cả số tiền đều có 2 chữ số thập phân và nhất quán
         // Sử dụng locale 'vi-VN' với dấu chấm (.) phân cách hàng nghìn, dấu phẩy (,) phân cách thập phân
-        return numValue.toLocaleString('vi-VN', { 
-          minimumFractionDigits: 2, 
-          maximumFractionDigits: 2 
+        return numValue.toLocaleString('vi-VN', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
         });
       }
     }
     if (typeof value === 'number') {
       // Format tất cả số tiền đều có 2 chữ số thập phân và nhất quán
       // Sử dụng locale 'vi-VN' với dấu chấm (.) phân cách hàng nghìn, dấu phẩy (,) phân cách thập phân
-      return value.toLocaleString('vi-VN', { 
-        minimumFractionDigits: 2, 
-        maximumFractionDigits: 2 
+      return value.toLocaleString('vi-VN', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
       });
-        }
-        return String(value);
+    }
+    return String(value);
   };
 
   const renderCellValue = (order: Order, sale: SaleItem | null, field: OrderColumn): React.ReactNode => {
@@ -1100,7 +1154,7 @@ export default function OrdersPage() {
             giaBanForPromCode = tienHangForPromCode / qtyNum;
           }
         }
-        
+
         // Lấy brand để phân biệt logic F3
         const brandForPromCode = order?.customer?.brand || order?.brand || '';
         let brandLowerForPromCode = (brandForPromCode || '').toLowerCase().trim();
@@ -1108,25 +1162,25 @@ export default function OrdersPage() {
         if (brandLowerForPromCode === 'facialbar') {
           brandLowerForPromCode = 'f3';
         }
-        
+
         const hasPromCodeForPromCode = sale?.promCode && String(sale.promCode).trim() !== '';
         let isTangHangForPromCode = giaBanForPromCode === 0 && tienHangForPromCode === 0 && revenueForPromCode === 0;
-        
+
         // Với F3: Nếu có promCode và giaBan = 0 && tienHang = 0 → là "mua hàng giảm giá" (giảm 100%), không phải "tặng hàng"
         if (brandLowerForPromCode === 'f3' && hasPromCodeForPromCode && isTangHangForPromCode) {
           isTangHangForPromCode = false;
         }
-        
+
         // Các ordertype dịch vụ không được coi là hàng tặng (không hiển thị "1")
         const ordertypeNameForPromCode = sale?.ordertype || '';
-        const isDichVuForPromCode = ordertypeNameForPromCode.includes('02. Làm dịch vụ') || 
-                                     ordertypeNameForPromCode.includes('04. Đổi DV') ||
-                                     ordertypeNameForPromCode.includes('08. Tách thẻ') ||
-                                     ordertypeNameForPromCode.includes('Đổi thẻ KEEP->Thẻ DV');
+        const isDichVuForPromCode = ordertypeNameForPromCode.includes('02. Làm dịch vụ') ||
+          ordertypeNameForPromCode.includes('04. Đổi DV') ||
+          ordertypeNameForPromCode.includes('08. Tách thẻ') ||
+          ordertypeNameForPromCode.includes('Đổi thẻ KEEP->Thẻ DV');
         if (isDichVuForPromCode) {
           isTangHangForPromCode = false;
         }
-        
+
         // Kiểm tra có mã số thẻ (maThe) không - nếu có thì km_yn = 0 (không hiển thị "1")
         const hasMaTheForPromCode = sale?.maThe && String(sale.maThe).trim() !== '';
         // Kiểm tra nếu ma_ctkm_th = "TT DAU TU" thì cũng không hiển thị "1"
@@ -1138,12 +1192,12 @@ export default function OrdersPage() {
           }
         }
         const isTTDauTuForPromCode = maCtkmTangHangForPromCode.trim() === 'TT DAU TU';
-        
+
         // Nếu có mã số thẻ (maThe) hoặc ma_ctkm_th = "TT DAU TU" thì không hiển thị "1"
         if (hasMaTheForPromCode || isTTDauTuForPromCode) {
           return <div className="text-sm text-gray-400 italic">-</div>;
         }
-        
+
         // Chỉ hiển thị khi là hàng tặng → hiển thị "1" (giống km_yn = 1 trong backend)
         if (isTangHangForPromCode) {
           return <div className="text-sm text-gray-900">1</div>;
@@ -1165,7 +1219,7 @@ export default function OrdersPage() {
             giaBanForMuaHangGiamGiaRender = tienHangForMuaHangGiamGiaRender / qtyNum;
           }
         }
-        
+
         // Lấy brand để phân biệt logic F3
         const brandForMuaHangGiamGia = order?.customer?.brand || order?.brand || '';
         let brandLowerForMuaHangGiamGia = (brandForMuaHangGiamGia || '').toLowerCase().trim();
@@ -1173,10 +1227,10 @@ export default function OrdersPage() {
         if (brandLowerForMuaHangGiamGia === 'facialbar') {
           brandLowerForMuaHangGiamGia = 'f3';
         }
-        
+
         const hasPromCodeForMuaHangGiamGia = sale?.promCode && String(sale.promCode).trim() !== '';
         const isTangHangForMuaHangGiamGia = giaBanForMuaHangGiamGiaRender === 0 && tienHangForMuaHangGiamGiaRender === 0 && revenueForMuaHangGiamGiaRender === 0;
-        
+
         // Với F3: Nếu có promCode và giaBan = 0 && tienHang = 0 → là "mua hàng giảm giá" (giảm 100%), không phải "tặng hàng"
         // → Hiển thị ở cột này
         if (brandLowerForMuaHangGiamGia === 'f3' && hasPromCodeForMuaHangGiamGia && isTangHangForMuaHangGiamGia) {
@@ -1185,12 +1239,12 @@ export default function OrdersPage() {
             return <div className="text-sm text-gray-900">{displayCode}</div>;
           }
         }
-        
+
         // Nếu là hàng tặng (giaBan = 0 và tienHang = 0 và revenue = 0), không hiển thị ở cột này
         if (isTangHangForMuaHangGiamGia) {
           return <div className="text-sm text-gray-400 italic">-</div>;
         }
-        
+
         // Sử dụng promotionDisplayCode từ backend
         const displayCode = sale?.promotionDisplayCode || sale?.promCode;
         if (!displayCode) {
@@ -1221,16 +1275,16 @@ export default function OrdersPage() {
         if (brandLowerForTangHang === 'facialbar') {
           brandLowerForTangHang = 'f3';
         }
-        
+
         const hasPromCodeForTangHang = sale?.promCode && String(sale.promCode).trim() !== '';
         const isTangHangForTangHangRender = giaBanForTangHangRender === 0 && tienHangForTangHangRender === 0 && revenueForTangHangRender === 0;
-        
+
         // Với F3: Nếu có promCode và giaBan = 0 && tienHang = 0 → là "mua hàng giảm giá" (giảm 100%), không phải "tặng hàng"
         // → Không hiển thị ở cột này
         if (brandLowerForTangHang === 'f3' && hasPromCodeForTangHang && isTangHangForTangHangRender) {
           return <div className="text-sm text-gray-400 italic">-</div>;
         }
-        
+
         // Nếu là hàng tặng (giaBan = 0 và tienHang = 0 và revenue = 0)
         if (isTangHangForTangHangRender) {
           // Quy tắc: Nếu ordertype_name = "06. Đầu tư" → ma_ctkm_th = "TT DAU TU"
@@ -1238,7 +1292,7 @@ export default function OrdersPage() {
           if (ordertypeName.includes('06. Đầu tư') || ordertypeName.includes('06.Đầu tư')) {
             return <div className="text-sm text-gray-900">TT DAU TU</div>;
           }
-          
+
           // Nếu ordertype_name = "01.Thường", "07. Bán tài khoản", "9. Sàn TMDT" → quy đổi prom_code sang TANGSP
           if (
             (ordertypeName.includes('01.Thường') || ordertypeName.includes('01. Thường')) ||
@@ -1253,7 +1307,7 @@ export default function OrdersPage() {
               }
             }
           }
-          
+
           // Các trường hợp khác: hiển thị promCode (đã parse) nếu có
           const promCodeValue = sale?.promotionDisplayCode || sale?.promCode;
           if (!promCodeValue || promCodeValue.trim() === '') {
@@ -1276,14 +1330,14 @@ export default function OrdersPage() {
         if (sale?.maLo) {
           return <div className="text-sm text-gray-900">{sale.maLo}</div>;
         }
-        
+
         // Nếu không có, tính toán từ serial
         const serial = sale?.serial || '';
         if (serial) {
           // Lấy brand để phân biệt logic cho F3
           const brand = order.customer?.brand || order.brand || '';
           const brandLower = (brand || '').toLowerCase().trim();
-          
+
           // Kiểm tra nếu serial có dạng "XXX_YYYY" (có dấu gạch dưới), lấy phần sau dấu gạch dưới
           const underscoreIndex = serial.indexOf('_');
           if (underscoreIndex > 0 && underscoreIndex < serial.length - 1) {
@@ -1291,17 +1345,17 @@ export default function OrdersPage() {
             const maLo = serial.substring(underscoreIndex + 1);
             return <div className="text-sm text-gray-900">{maLo}</div>;
           }
-          
+
           // Nếu không có dấu gạch dưới, kiểm tra trackBatch
-        const trackBatchRender = sale?.product?.trackBatch === true;
-        if (trackBatchRender) {
+          const trackBatchRender = sale?.product?.trackBatch === true;
+          if (trackBatchRender) {
             // Với F3, lấy toàn bộ serial (không cắt, không xử lý)
             if (brandLower === 'f3') {
               return <div className="text-sm text-gray-900">{serial}</div>;
             }
-            
+
             // Các brand khác: tính toán theo productType
-          let maLo = serial;
+            let maLo = serial;
             const productTypeFromLoyaltyRender = sale?.productType || sale?.product?.productType;
             const productTypeUpperRender = productTypeFromLoyaltyRender ? String(productTypeFromLoyaltyRender).toUpperCase().trim() : null;
             if (productTypeUpperRender === 'TPCN') {
@@ -1505,11 +1559,11 @@ export default function OrdersPage() {
           // Lấy brand từ order để phân biệt logic VIP
           const brand = order.customer?.brand || order.brand || '';
           const brandLower = (brand || '').toLowerCase().trim();
-          
+
           const productType = sale?.productType || sale?.product?.productType || sale?.product?.producttype || null;
-          
+
           let muaHangCkVipValue = '';
-          
+
           // Logic VIP khác nhau cho từng brand
           if (brandLower === 'f3') {
             // Logic cũ cho f3: DIVU → "FBV CKVIP DV", còn lại → "FBV CKVIP SP"
@@ -1524,7 +1578,7 @@ export default function OrdersPage() {
             const code = sale?.itemCode || null;
             const trackInventory = sale?.trackInventory ?? sale?.product?.trackInventory ?? null;
             const trackSerial = (sale?.product as any)?.trackSerial ?? null;
-            
+
             // Nếu productType == "DIVU"
             if (productType === 'DIVU') {
               muaHangCkVipValue = 'VIP DV MAT';
@@ -1537,11 +1591,11 @@ export default function OrdersPage() {
               const codeStr = code || '';
               const itemCodeStr = sale?.itemCode || '';
               // Kiểm tra "VC" trong materialCode, code, hoặc itemCode (không phân biệt hoa thường)
-              const hasVC = 
+              const hasVC =
                 materialCodeStr.toUpperCase().includes('VC') ||
                 codeStr.toUpperCase().includes('VC') ||
                 itemCodeStr.toUpperCase().includes('VC');
-              
+
               if (
                 materialCodeStr.startsWith('E.') ||
                 hasVC ||
@@ -1554,7 +1608,7 @@ export default function OrdersPage() {
               }
             }
           }
-          
+
           if (muaHangCkVipValue) {
             return <div className="text-sm text-gray-900">{muaHangCkVipValue}</div>;
           }
@@ -1584,20 +1638,20 @@ export default function OrdersPage() {
         const chietKhauTkTienAoForVoucherCheck = sale?.chietKhauThanhToanTkTienAo ?? 0;
         const isEcoinForVoucherCheck = order?.cashioFopSyscode === 'ECOIN';
         const cashioTotalInForVoucherCheck = order?.cashioTotalIn ?? 0;
-        
+
         // Check nếu có ECOIN: chietKhauThanhToanTkTienAo > 0 HOẶC (cashioFopSyscode = 'ECOIN' và có cashioTotalIn > 0)
         if (chietKhauTkTienAoForVoucherCheck > 0 || (isEcoinForVoucherCheck && cashioTotalInForVoucherCheck > 0)) {
           // Có ECOIN → không hiển thị voucher
           return <div className="text-sm text-gray-400 italic">-</div>;
         }
-        
+
         // Convert sang number để so sánh đúng
         const chietKhauVoucherDp1ForChietKhau = Number(sale?.chietKhauVoucherDp1 ?? 0) || 0;
         const pkgCodeForChietKhauVoucher = (sale as any)?.pkg_code || (sale as any)?.pkgCode || null;
         const promCodeForChietKhauVoucher = sale?.promCode || null;
         const soSourceForChietKhauVoucher = sale?.order_source || (sale as any)?.so_source || null;
         const paidByVoucherForChietKhau = Number(sale?.paid_by_voucher_ecode_ecoin_bp ?? sale?.chietKhauThanhToanVoucher ?? 0) || 0;
-        
+
         // Kiểm tra điều kiện voucher dự phòng - Logic giống hệt backend
         // Xác định isVoucherDuPhong dựa trên so_source và prom_code/pkg_code (KHÔNG check chietKhauVoucherDp1)
         const brandForChietKhau = order?.customer?.brand || order?.brand || '';
@@ -1605,7 +1659,7 @@ export default function OrdersPage() {
         const isShopeeForChietKhau = Boolean(soSourceForChietKhauVoucher && String(soSourceForChietKhauVoucher).toUpperCase() === 'SHOPEE');
         const hasPkgCodeForChietKhau = pkgCodeForChietKhauVoucher && pkgCodeForChietKhauVoucher.trim() !== '';
         const hasPromCodeForChietKhau = promCodeForChietKhauVoucher && promCodeForChietKhauVoucher.trim() !== '';
-        
+
         // Xác định voucher dự phòng theo logic mới (giống backend)
         let isVoucherDuPhongForChietKhau: boolean = false;
         if (brandLowerForChietKhau === 'f3') {
@@ -1615,7 +1669,7 @@ export default function OrdersPage() {
           // Với các brand khác: SHOPEE hoặc (có prom_code và không có pkg_code)
           isVoucherDuPhongForChietKhau = isShopeeForChietKhau || Boolean(hasPromCodeForChietKhau && !hasPkgCodeForChietKhau);
         }
-        
+
         // DEBUG LOG
         console.log('[chietKhauThanhToanVoucher]', {
           itemCode: sale?.itemCode,
@@ -1631,7 +1685,7 @@ export default function OrdersPage() {
           paidByVoucher: paidByVoucherForChietKhau,
           isVoucherDuPhong: isVoucherDuPhongForChietKhau,
         });
-        
+
         // Nếu có chietKhauVoucherDp1 > 0 nhưng theo logic mới không phải voucher dự phòng
         // → Chuyển sang voucher chính (dữ liệu cũ đã sync với logic cũ)
         // Frontend: Nếu không phải voucher dự phòng, hiển thị là voucher chính
@@ -1639,25 +1693,25 @@ export default function OrdersPage() {
           // Chuyển sang voucher chính - không ẩn, sẽ hiển thị giá trị
           isVoucherDuPhongForChietKhau = false;
         }
-        
+
         // Chỉ ẩn nếu thực sự là voucher dự phòng VÀ có paid_by_voucher > 0
         if (isVoucherDuPhongForChietKhau && paidByVoucherForChietKhau > 0) {
           return <div className="text-sm text-gray-400 italic">-</div>;
         }
-        
+
         // Hiển thị giá trị voucher chính
         // Nếu có chietKhauVoucherDp1 > 0 nhưng không phải voucher dự phòng (dữ liệu cũ)
         // → Hiển thị giá trị đó như voucher chính (giống backend logic)
         const chietKhauThanhToanVoucher = chietKhauVoucherDp1ForChietKhau > 0 && !isVoucherDuPhongForChietKhau
           ? chietKhauVoucherDp1ForChietKhau
           : paidByVoucherForChietKhau;
-        
+
         console.log('[chietKhauThanhToanVoucher] Final value:', chietKhauThanhToanVoucher);
-        
+
         if (chietKhauThanhToanVoucher > 0) {
-        return <div className="text-sm text-gray-900">{formatValue(chietKhauThanhToanVoucher)}</div>;
+          return <div className="text-sm text-gray-900">{formatValue(chietKhauThanhToanVoucher)}</div>;
         }
-        
+
         return <div className="text-sm text-gray-400 italic">-</div>;
       case 'thanhToanVoucher':
         // Mã voucher chính: chỉ hiển thị nếu không phải voucher dự phòng và không phải ECOIN
@@ -1665,20 +1719,20 @@ export default function OrdersPage() {
         const chietKhauTkTienAoForVoucherLabel = sale?.chietKhauThanhToanTkTienAo ?? 0;
         const isEcoinForVoucherLabel = order?.cashioFopSyscode === 'ECOIN';
         const cashioTotalInForVoucherLabel = order?.cashioTotalIn ?? 0;
-        
+
         // Check nếu có ECOIN: chietKhauThanhToanTkTienAo > 0 HOẶC (cashioFopSyscode = 'ECOIN' và có cashioTotalIn > 0)
         if (chietKhauTkTienAoForVoucherLabel > 0 || (isEcoinForVoucherLabel && cashioTotalInForVoucherLabel > 0)) {
           // Có ECOIN → không hiển thị voucher
           return <div className="text-sm text-gray-400 italic">-</div>;
         }
-        
+
         // Convert sang number để so sánh đúng
         const chietKhauVoucherDp1ForLabel = Number(sale?.chietKhauVoucherDp1 ?? 0) || 0;
         const pkgCodeForLabel = (sale as any)?.pkg_code || (sale as any)?.pkgCode || null;
         const promCodeForLabel = sale?.promCode || null;
         const soSourceForLabel = sale?.order_source || (sale as any)?.so_source || null;
         const paidByVoucherForLabel = Number(sale?.paid_by_voucher_ecode_ecoin_bp ?? 0) || 0;
-        
+
         // Kiểm tra điều kiện voucher dự phòng - Logic giống hệt backend
         // Xác định isVoucherDuPhong dựa trên so_source và prom_code/pkg_code (KHÔNG check chietKhauVoucherDp1)
         const brandForLabel = order?.customer?.brand || order?.brand || '';
@@ -1686,7 +1740,7 @@ export default function OrdersPage() {
         const isShopeeForLabel = Boolean(soSourceForLabel && String(soSourceForLabel).toUpperCase() === 'SHOPEE');
         const hasPkgCodeForLabel = pkgCodeForLabel && pkgCodeForLabel.trim() !== '';
         const hasPromCodeForLabel = promCodeForLabel && promCodeForLabel.trim() !== '';
-        
+
         // Xác định voucher dự phòng theo logic mới (giống backend)
         let isVoucherDuPhongForLabel: boolean = false;
         if (brandLowerForLabel === 'f3') {
@@ -1696,7 +1750,7 @@ export default function OrdersPage() {
           // Với các brand khác: SHOPEE hoặc (có prom_code và không có pkg_code)
           isVoucherDuPhongForLabel = isShopeeForLabel || Boolean(hasPromCodeForLabel && !hasPkgCodeForLabel);
         }
-        
+
         // DEBUG LOG
         console.log('[thanhToanVoucher]', {
           itemCode: sale?.itemCode,
@@ -1712,7 +1766,7 @@ export default function OrdersPage() {
           paidByVoucher: paidByVoucherForLabel,
           isVoucherDuPhong: isVoucherDuPhongForLabel,
         });
-        
+
         // Nếu có chietKhauVoucherDp1 > 0 nhưng theo logic mới không phải voucher dự phòng
         // → Chuyển sang voucher chính (dữ liệu cũ đã sync với logic cũ)
         // Frontend: Nếu không phải voucher dự phòng, hiển thị label voucher chính
@@ -1720,18 +1774,18 @@ export default function OrdersPage() {
           // Chuyển sang voucher chính - không ẩn, sẽ hiển thị label
           isVoucherDuPhongForLabel = false;
         }
-        
+
         if (isVoucherDuPhongForLabel) {
           return <div className="text-sm text-gray-400 italic">-</div>;
         }
-        
+
         // Truyền customer từ order vào sale để tính brand
         // Nếu có chietKhauVoucherDp1 > 0 nhưng không phải voucher dự phòng (dữ liệu cũ)
         // → Truyền giá trị đó vào paid_by_voucher_ecode_ecoin_bp để tính label
         const paidByVoucherForLabelCalc = chietKhauVoucherDp1ForLabel > 0 && !isVoucherDuPhongForLabel
           ? chietKhauVoucherDp1ForLabel
           : paidByVoucherForLabel;
-        
+
         const saleWithCustomerForRender = sale ? {
           paid_by_voucher_ecode_ecoin_bp: paidByVoucherForLabelCalc,
           revenue: sale.revenue,
@@ -1757,12 +1811,12 @@ export default function OrdersPage() {
         const trackSerialRender = sale?.product?.trackSerial === true;
         const trackBatchForSoSerialRender = sale?.product?.trackBatch === true;
         const serialForSoSerial = sale?.serial || '';
-        
+
         // Nếu serial có dạng "XXX_YYYY", không hiển thị so_serial (đã dùng cho ma_lo)
         if (serialForSoSerial && serialForSoSerial.indexOf('_') > 0) {
           return <div className="text-sm text-gray-400 italic">-</div>;
         }
-        
+
         if (trackSerialRender && !trackBatchForSoSerialRender) {
           return <div className="text-sm text-gray-900">{serialForSoSerial || '-'}</div>;
         }
@@ -1777,12 +1831,12 @@ export default function OrdersPage() {
         const soSourceForVoucherDp1 = sale?.order_source || (sale as any)?.so_source || null;
         const paidByVoucherForVoucherDp1 = sale?.paid_by_voucher_ecode_ecoin_bp ?? 0;
         const chietKhauVoucherDp1ForVoucherDp1 = sale?.chietKhauVoucherDp1 ?? 0;
-        
+
         // Kiểm tra điều kiện voucher dự phòng
         const isShopeeForVoucherDp1 = soSourceForVoucherDp1 && String(soSourceForVoucherDp1).toUpperCase() === 'SHOPEE';
         const hasPkgCodeForVoucherDp1 = pkgCodeForVoucherDp1 && pkgCodeForVoucherDp1.trim() !== '';
         const hasPromCodeForVoucherDp1 = promCodeForVoucherDp1 && promCodeForVoucherDp1.trim() !== '';
-        
+
         // Xác định voucher dự phòng theo logic mới (giống backend)
         let isVoucherDuPhongForVoucherDp1 = false;
         if (brandLowerForVoucherDp1 === 'f3') {
@@ -1792,13 +1846,13 @@ export default function OrdersPage() {
           // Với các brand khác: SHOPEE hoặc (có prom_code và không có pkg_code)
           isVoucherDuPhongForVoucherDp1 = isShopeeForVoucherDp1 || (hasPromCodeForVoucherDp1 && !hasPkgCodeForVoucherDp1);
         }
-        
+
         // Nếu có chietKhauVoucherDp1 > 0 nhưng theo logic mới không phải voucher dự phòng
         // → Không hiển thị (đã chuyển sang voucher chính)
         if (chietKhauVoucherDp1ForVoucherDp1 > 0 && !isVoucherDuPhongForVoucherDp1) {
           return <div className="text-sm text-gray-400 italic">-</div>;
         }
-        
+
         // Chỉ hiển thị nếu thực sự là voucher dự phòng VÀ có giá trị
         if (isVoucherDuPhongForVoucherDp1 && (chietKhauVoucherDp1ForVoucherDp1 > 0 || paidByVoucherForVoucherDp1 > 0)) {
           return <div className="text-sm text-gray-900">VC CTKM SÀN</div>;
@@ -1814,12 +1868,12 @@ export default function OrdersPage() {
         const promCodeForChietKhauDp1 = sale?.promCode || null;
         const soSourceForChietKhauDp1 = sale?.order_source || (sale as any)?.so_source || null;
         const paidByVoucherForChietKhauDp1 = sale?.paid_by_voucher_ecode_ecoin_bp ?? 0;
-        
+
         // Kiểm tra điều kiện voucher dự phòng
         const isShopeeForChietKhauDp1 = soSourceForChietKhauDp1 && String(soSourceForChietKhauDp1).toUpperCase() === 'SHOPEE';
         const hasPkgCodeForChietKhauDp1 = pkgCodeForChietKhauDp1 && pkgCodeForChietKhauDp1.trim() !== '';
         const hasPromCodeForChietKhauDp1 = promCodeForChietKhauDp1 && promCodeForChietKhauDp1.trim() !== '';
-        
+
         // Xác định voucher dự phòng theo logic mới (giống backend)
         let isVoucherDuPhongForChietKhauDp1 = false;
         if (brandLowerForChietKhauDp1 === 'f3') {
@@ -1829,19 +1883,19 @@ export default function OrdersPage() {
           // Với các brand khác: SHOPEE hoặc (có prom_code và không có pkg_code)
           isVoucherDuPhongForChietKhauDp1 = isShopeeForChietKhauDp1 || (hasPromCodeForChietKhauDp1 && !hasPkgCodeForChietKhauDp1);
         }
-        
+
         // Nếu có chietKhauVoucherDp1 > 0 nhưng theo logic mới không phải voucher dự phòng
         // → Không hiển thị (đã chuyển sang voucher chính)
         if (chietKhauVoucherDp1Value > 0 && !isVoucherDuPhongForChietKhauDp1) {
           return <div className="text-sm text-gray-400 italic">-</div>;
         }
-        
+
         // Chỉ hiển thị nếu thực sự là voucher dự phòng VÀ có giá trị
         let chietKhauVoucherDp1Final = chietKhauVoucherDp1Value;
         if (chietKhauVoucherDp1Final === 0 && isVoucherDuPhongForChietKhauDp1 && paidByVoucherForChietKhauDp1 > 0) {
           chietKhauVoucherDp1Final = paidByVoucherForChietKhauDp1;
         }
-        
+
         // Hiển thị chiết khấu Voucher DP1: nếu có phần thập phân thì hiển thị 2 chữ số, nếu là số nguyên thì hiển thị số nguyên
         if (isVoucherDuPhongForChietKhauDp1 && chietKhauVoucherDp1Final > 0) {
           const numValue = Number(chietKhauVoucherDp1Final);
@@ -1860,11 +1914,11 @@ export default function OrdersPage() {
         // Không hiển thị cho items có v_paid = 0
         const chietKhauTkTienAo = sale?.chietKhauThanhToanTkTienAo ?? 0;
         const vPaidForEcoin = sale?.paid_by_voucher_ecode_ecoin_bp ?? 0;
-        
+
         // Map brand name sang brand code
         const mapBrandToCode = (brand: string | null | undefined): string => {
           if (!brand) return 'MN'; // Default
-          
+
           const brandLower = String(brand).toLowerCase().trim();
           const brandMap: Record<string, string> = {
             'menard': 'MN',
@@ -1874,7 +1928,7 @@ export default function OrdersPage() {
             'labhair': 'LHV',
             'yaman': 'BTH',
           };
-          
+
           return brandMap[brandLower] || 'MN'; // Default to MN
         };
 
@@ -1898,26 +1952,26 @@ export default function OrdersPage() {
             // Fallback: dùng ngày hiện tại
             docDate = new Date();
           }
-          
+
           const year = docDate.getFullYear();
           const month = docDate.getMonth() + 1;
           const yy = String(year).slice(-2);
           const mm = String(month).padStart(2, '0');
-          
+
           // Ưu tiên lấy brand code từ customer.brand
           const brand = order?.customer?.brand || (sale as any)?.customer?.brand || '';
-          
+
           // Map brand name sang brand code (menard → MN, f3 → FBV, etc.)
           const brandCode = mapBrandToCode(brand);
-          
+
           return `${yy}${mm}${brandCode}.TKDV`;
         };
-        
+
         // Chỉ hiển thị nếu có chietKhauThanhToanTkTienAo > 0 hoặc (v_paid > 0 và có ECOIN trong cashio)
         if (chietKhauTkTienAo > 0) {
           return <div className="text-sm text-gray-900">{generateTkTienAoLabel()}</div>;
         }
-        
+
         // Fallback: nếu chưa có chietKhauThanhToanTkTienAo nhưng có v_paid > 0 và có ECOIN trong cashio
         if (vPaidForEcoin > 0 && order?.cashioData && Array.isArray(order.cashioData)) {
           const ecoinCashio = order.cashioData.find((c: any) => c.fop_syscode === 'ECOIN');
@@ -1925,19 +1979,19 @@ export default function OrdersPage() {
             return <div className="text-sm text-gray-900">{generateTkTienAoLabel()}</div>;
           }
         }
-        
+
         return <div className="text-sm text-gray-400 italic">-</div>;
       case 'chietKhauThanhToanTkTienAo':
         // Chiết khấu thanh toán TK tiền ảo - chỉ hiển thị nếu có ECOIN
         // Không hiển thị nếu chỉ có voucher (paid_by_voucher_ecode_ecoin_bp > 0 nhưng không có ECOIN)
         const chietKhauTkTienAoForChietKhau = sale?.chietKhauThanhToanTkTienAo ?? 0;
         const vPaidForEcoinForChietKhau = sale?.paid_by_voucher_ecode_ecoin_bp ?? 0;
-        
+
         // Ưu tiên chietKhauThanhToanTkTienAo (đã được lưu trong sync) - chỉ hiển thị nếu > 0
         if (chietKhauTkTienAoForChietKhau > 0) {
           return <div className="text-sm text-gray-900">{formatValue(chietKhauTkTienAoForChietKhau)}</div>;
         }
-        
+
         // Fallback: nếu chưa có chietKhauThanhToanTkTienAo nhưng có v_paid > 0 VÀ có ECOIN trong cashio
         // Chỉ hiển thị khi THỰC SỰ có ECOIN, không phải chỉ vì có v_paid > 0
         if (vPaidForEcoinForChietKhau > 0 && order?.cashioData && Array.isArray(order.cashioData)) {
@@ -1949,12 +2003,12 @@ export default function OrdersPage() {
             }
           }
         }
-        
+
         // Không hiển thị nếu không có ECOIN (chỉ có voucher thông thường)
         return <div className="text-sm text-gray-400 italic">-</div>;
       case 'maThe':
         // Ưu tiên mvc_serial (từ Zappy API)
-          return <div className="text-sm text-gray-900">{sale?.maThe ?? '-'}</div>;
+        return <div className="text-sm text-gray-900">{sale?.maThe ?? '-'}</div>;
       default:
         // Xử lý các trường còn lại
         const value = sale?.[field as keyof typeof sale];
@@ -1987,7 +2041,7 @@ export default function OrdersPage() {
       }
 
       // Check success flag và status trong result (status === 0 là lỗi)
-      const hasError = Array.isArray(result.result) 
+      const hasError = Array.isArray(result.result)
         ? result.result.some((item: any) => item.status === 0)
         : (result.result?.status === 0);
 
@@ -1997,7 +2051,7 @@ export default function OrdersPage() {
       } else {
         // Xử lý lỗi chi tiết hơn
         let errorMessage = result.message || 'Tạo hóa đơn thất bại';
-        
+
         if (Array.isArray(result.result) && result.result.length > 0) {
           const firstError = result.result[0];
           if (firstError.message) {
@@ -2006,14 +2060,14 @@ export default function OrdersPage() {
         } else if (result.result?.message) {
           errorMessage = result.result.message;
         }
-        
+
         showToast('error', errorMessage);
       }
     } catch (error: any) {
       console.error('Error handling row double click:', error);
       // Xử lý lỗi từ response hoặc error object
       let errorMessage = 'Lỗi không xác định';
-      
+
       if (error?.response?.data) {
         const errorData = error.response.data;
         if (errorData.message) {
@@ -2026,7 +2080,7 @@ export default function OrdersPage() {
       } else if (error?.message) {
         errorMessage = error.message;
       }
-      
+
       showToast('error', `Lỗi: ${errorMessage}`);
     } finally {
       setSubmittingInvoice(false);
@@ -2056,7 +2110,7 @@ export default function OrdersPage() {
         showToast('success', data.message || `Đồng bộ lại ${docCode} thành công`);
       } else {
         let errorMessage = data.message || `Đồng bộ lại ${docCode} thất bại`;
-        
+
         if (Array.isArray(data.result) && data.result.length > 0) {
           const firstError = data.result[0];
           if (firstError.message) {
@@ -2065,13 +2119,13 @@ export default function OrdersPage() {
         } else if (data.result?.message) {
           errorMessage = data.result.message;
         }
-        
+
         showToast('error', errorMessage);
       }
     } catch (error: any) {
       console.error('Error retrying invoice:', error);
       let errorMessage = `Lỗi khi đồng bộ lại ${docCode}`;
-      
+
       if (error?.response?.data) {
         const errorData = error.response.data;
         if (errorData.message) {
@@ -2084,7 +2138,7 @@ export default function OrdersPage() {
       } else if (error?.message) {
         errorMessage = error.message;
       }
-      
+
       showToast('error', errorMessage);
     } finally {
       setRetrying((prev) => ({ ...prev, [docCode]: false }));
@@ -2095,12 +2149,12 @@ export default function OrdersPage() {
   // Backend đã paginate theo rows rồi, nhưng cần giới hạn số rows ở frontend để đảm bảo đúng limit
   const flattenedRows: Array<{ order: Order; sale: SaleItem | null }> = [];
   const maxRows = pagination.limit; // Giới hạn số rows theo pagination limit
-  
+
   for (const order of enrichedDisplayedOrders) {
     if (flattenedRows.length >= maxRows) {
       break; // Đã đủ rows, dừng lại
     }
-    
+
     if (order.sales && order.sales.length > 0) {
       for (const sale of order.sales) {
         if (flattenedRows.length >= maxRows) {
@@ -2116,7 +2170,7 @@ export default function OrdersPage() {
           break; // Đã đủ rows, dừng lại
         }
         flattenedRows.push({ order, sale: null });
-    }
+      }
     }
   }
 
@@ -2373,12 +2427,11 @@ export default function OrdersPage() {
                             setSelectedRowKey(isSelected ? null : rowKey);
                             handleRowDoubleClick(row.order, row.sale);
                           }}
-                          className={`transition-colors cursor-pointer ${
-                            isStatusAsysFalse
+                          className={`transition-colors cursor-pointer ${isStatusAsysFalse
                               ? 'bg-red-100 hover:bg-red-200' // Bôi đỏ nếu statusAsys = false
                               : isSelected
-                              ? 'bg-blue-100 hover:bg-blue-200'
-                              : 'hover:bg-gray-50'
+                                ? 'bg-blue-100 hover:bg-blue-200'
+                                : 'hover:bg-gray-50'
                             } ${submittingInvoice ? 'opacity-50 cursor-wait' : ''}`}
                         >
                           {selectedColumns.map((column) => (
