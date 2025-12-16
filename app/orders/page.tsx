@@ -1098,7 +1098,9 @@ export default function OrdersPage() {
           ) {
             const promCodeValue = sale?.promCode || '';
             if (promCodeValue && promCodeValue.trim() !== '') {
-              const tangSpCode = convertPromCodeToTangSp(promCodeValue);
+              // Quy đổi prom_code sang TANGSP - lấy năm/tháng từ ngày đơn hàng
+              const docDate = order?.docDate || sale?.docDate || sale?.docdate;
+              const tangSpCode = convertPromCodeToTangSp(promCodeValue, docDate);
               if (tangSpCode) {
                 return <div className="text-sm text-gray-900">{tangSpCode}</div>;
               }
