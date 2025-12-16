@@ -51,6 +51,8 @@ export const salesApi = {
     page?: number;
     limit?: number;
     date?: string;
+    dateFrom?: string;
+    dateTo?: string;
     orderCode?: string;
     partnerCode?: string;
     faceStatus?: 'yes' | 'no';

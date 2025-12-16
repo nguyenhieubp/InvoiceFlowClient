@@ -9,6 +9,7 @@ interface GiaiTrinhItem {
   partnerCode: string;
   partnerName: string;
   checkFaceIds: any[];
+  isCheckFaceId: boolean;
   orders: Order[];
 }
 
@@ -30,13 +31,15 @@ export default function GiaiTrinhFaceIdPage() {
   const [filters, setFilters] = useState<{
     orderCode: string;
     partnerCode: string;
-    date: string;
+    dateFrom: string;
+    dateTo: string;
     faceStatus: FaceStatusFilter;
   }>(() => {
     return {
       orderCode: '',
       partnerCode: '',
-      date: '',
+      dateFrom: '',
+      dateTo: '',
       faceStatus: 'all',
     };
   });
@@ -88,7 +91,8 @@ export default function GiaiTrinhFaceIdPage() {
       const response = await salesApi.getAllGiaiTrinhFaceId({
         page: pagination.page,
         limit: pagination.limit,
-        date: filters.date || undefined,
+        dateFrom: filters.dateFrom || undefined,
+        dateTo: filters.dateTo || undefined,
         orderCode: filters.orderCode?.trim() || undefined,
         partnerCode: filters.partnerCode?.trim() || undefined,
         faceStatus: filters.faceStatus !== 'all' ? filters.faceStatus : undefined,
@@ -141,7 +145,7 @@ export default function GiaiTrinhFaceIdPage() {
       loadData();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pagination.page, pagination.limit, filters.date, filters.orderCode, filters.partnerCode, filters.faceStatus]);
+  }, [pagination.page, pagination.limit, filters.dateFrom, filters.dateTo, filters.orderCode, filters.partnerCode, filters.faceStatus]);
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -160,12 +164,7 @@ export default function GiaiTrinhFaceIdPage() {
         <h1 className="text-2xl font-semibold text-gray-900">Giải trình FaceID</h1>
         <p className="text-sm text-gray-600">Danh sách đơn hàng đã làm phẳng theo khách hàng và FaceID.</p>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-            <p className="text-xs font-medium text-gray-600">Tổng khách hàng</p>
-            <p className="mt-1 text-xl font-semibold text-gray-900">{pagination.total}</p>
-            <p className="text-xs text-gray-500">Trang {pagination.page} / {pagination.totalPages || 1}</p>
-          </div>
+        <div className="grid grid-cols-1 gap-3">
           <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
             <p className="text-xs font-medium text-gray-600">Tổng dòng hàng (order_line) theo ngày</p>
             <p className="mt-1 text-xl font-semibold text-gray-900">{pagination.totalLines}</p>
@@ -176,7 +175,7 @@ export default function GiaiTrinhFaceIdPage() {
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         {/* Filters */}
         <div className="px-6 py-4 border-b border-gray-200 bg-white">
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
+          <div className="grid grid-cols-1 md:grid-cols-6 gap-3 items-end">
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Mã đơn hàng</label>
               <input
@@ -204,13 +203,26 @@ export default function GiaiTrinhFaceIdPage() {
                />
              </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Ngày đơn</label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Từ ngày</label>
               <input
                 type="date"
-                value={filters.date}
+                value={filters.dateFrom}
                 onChange={(e) => {
                   const value = e.target.value;
-                  setFilters((prev) => ({ ...prev, date: value }));
+                  setFilters((prev) => ({ ...prev, dateFrom: value }));
+                  setPagination((prev) => ({ ...prev, page: 1 }));
+                }}
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Đến ngày</label>
+              <input
+                type="date"
+                value={filters.dateTo}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setFilters((prev) => ({ ...prev, dateTo: value }));
                   setPagination((prev) => ({ ...prev, page: 1 }));
                 }}
                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -236,7 +248,7 @@ export default function GiaiTrinhFaceIdPage() {
              <div className="flex gap-2">
                <button
                  onClick={() => {
-                   setFilters({ orderCode: '', partnerCode: '', date: '', faceStatus: 'all' });
+                   setFilters({ orderCode: '', partnerCode: '', dateFrom: '', dateTo: '', faceStatus: 'all' });
                    setPagination((prev) => ({ ...prev, page: 1 }));
                  }}
                  className="flex-1 inline-flex items-center justify-center rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
@@ -251,18 +263,7 @@ export default function GiaiTrinhFaceIdPage() {
         <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
           <div className="flex items-center justify-between">
             <div className="text-sm font-medium text-gray-700">
-              {loading ? (
-                <span>Đang tải...</span>
-              ) : (
-                <>
-                  Tổng số: <span className="font-bold text-gray-900">{pagination.total}</span> khách hàng
-                  {pagination.total > 0 && (
-                    <span className="ml-2 text-gray-500">
-                      (Hiển thị {Math.min((pagination.page - 1) * pagination.limit + 1, pagination.total)} - {Math.min(pagination.page * pagination.limit, pagination.total)})
-                    </span>
-                  )}
-                </>
-              )}
+              {loading && <span>Đang tải...</span>}
             </div>
             <div className="flex items-center gap-2">
               <label className="text-sm text-gray-700">Hiển thị:</label>
@@ -405,8 +406,6 @@ export default function GiaiTrinhFaceIdPage() {
                     <p className="text-sm text-gray-700">
                       Đang hiển thị <span className="font-medium">{displayedOrders.length}</span> /{' '}
                       <span className="font-medium">{flattenedLines.length}</span> dòng đơn của trang hiện tại
-                      {' • '}
-                      Tổng khách: <span className="font-medium">{pagination.total}</span>
                     </p>
                   </div>
                 </div>
