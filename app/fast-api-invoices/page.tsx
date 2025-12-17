@@ -48,6 +48,11 @@ export default function FastApiInvoicesPage() {
   const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
   const [retrying, setRetrying] = useState<Record<string, boolean>>({});
   const [syncingAll, setSyncingAll] = useState(false);
+  const [showSyncModal, setShowSyncModal] = useState(false);
+  const [syncDateRange, setSyncDateRange] = useState({
+    startDate: '',
+    endDate: '',
+  });
 
   const showToast = (type: 'success' | 'error' | 'info', message: string) => {
     setToast({ type, message });
@@ -197,6 +202,117 @@ export default function FastApiInvoicesPage() {
       endDate: '',
     });
     setPagination({ ...pagination, page: 1 });
+  };
+
+  const handleSyncByDateRange = async () => {
+    if (!syncDateRange.startDate || !syncDateRange.endDate) {
+      showToast('error', 'Vui lòng chọn từ ngày và đến ngày');
+      return;
+    }
+
+    if (new Date(syncDateRange.startDate) > new Date(syncDateRange.endDate)) {
+      showToast('error', 'Từ ngày phải nhỏ hơn hoặc bằng đến ngày');
+      return;
+    }
+
+    try {
+      setSyncingAll(true);
+      setShowSyncModal(false);
+      showToast('info', 'Đang tải danh sách invoice thất bại...');
+
+      // Lấy TẤT CẢ invoice thất bại từ API trong khoảng thời gian đã chọn
+      const params: any = {
+        page: 1,
+        limit: 10000, // Limit lớn để lấy tất cả
+        status: 0, // Chỉ lấy invoice thất bại
+        startDate: syncDateRange.startDate,
+        endDate: syncDateRange.endDate,
+      };
+
+      // Áp dụng filter maDvcs nếu có
+      if (filters.maDvcs) params.maDvcs = filters.maDvcs;
+
+      const response = await fastApiInvoicesApi.getAll(params);
+      let failedInvoices = response.data.items || [];
+      
+      // FIX: Filter lại ở frontend để đảm bảo chỉ lấy invoice trong khoảng thời gian đã chọn
+      // Chuyển đổi ngày để so sánh (chỉ so sánh phần ngày, bỏ qua giờ)
+      const startDateObj = new Date(syncDateRange.startDate);
+      startDateObj.setHours(0, 0, 0, 0);
+      const endDateObj = new Date(syncDateRange.endDate);
+      endDateObj.setHours(23, 59, 59, 999); // Set đến cuối ngày
+
+      failedInvoices = failedInvoices.filter((invoice: FastApiInvoice) => {
+        if (!invoice.ngayCt) return false;
+        const invoiceDate = new Date(invoice.ngayCt);
+        invoiceDate.setHours(0, 0, 0, 0);
+        return invoiceDate >= startDateObj && invoiceDate <= endDateObj;
+      });
+      
+      if (failedInvoices.length === 0) {
+        showToast('info', 'Không có invoice thất bại nào trong khoảng thời gian đã chọn');
+        setSyncingAll(false);
+        return;
+      }
+
+      showToast('info', `Đang đồng bộ lại ${failedInvoices.length} invoice thất bại lên Fast API...`);
+
+      let successCount = 0;
+      let failCount = 0;
+      const errors: string[] = [];
+
+      // Đồng bộ từng invoice
+      for (const invoice of failedInvoices) {
+        try {
+          setRetrying((prev) => ({ ...prev, [invoice.docCode]: true }));
+          const response = await salesApi.createInvoiceViaFastApi(invoice.docCode, true);
+          const data = response.data;
+
+          // Kiểm tra success giống như handleRetry
+          let hasError = false;
+          if (Array.isArray(data.result) && data.result.length > 0) {
+            hasError = data.result.some((item: any) => item.status === 0);
+          } else if (data.result && typeof data.result === 'object') {
+            hasError = data.result.status === 0;
+          }
+
+          if (data.success && !hasError) {
+            successCount++;
+          } else {
+            failCount++;
+            const errorMsg = data.message || 'Thất bại';
+            errors.push(`${invoice.docCode}: ${errorMsg}`);
+          }
+        } catch (error: any) {
+          failCount++;
+          const errorMsg = error?.response?.data?.message || error?.message || 'Lỗi không xác định';
+          errors.push(`${invoice.docCode}: ${errorMsg}`);
+        } finally {
+          setRetrying((prev) => ({ ...prev, [invoice.docCode]: false }));
+        }
+      }
+
+      // Đợi một chút để đảm bảo database đã được cập nhật
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Reload data
+      await loadInvoices();
+      await loadStatistics();
+
+      // Hiển thị kết quả
+      if (successCount > 0 && failCount === 0) {
+        showToast('success', `Đồng bộ thành công ${successCount} invoice`);
+      } else if (successCount > 0 && failCount > 0) {
+        showToast('info', `Đồng bộ thành công ${successCount} invoice, thất bại ${failCount} invoice`);
+      } else {
+        showToast('error', `Đồng bộ thất bại ${failCount} invoice. ${errors.slice(0, 3).join('; ')}`);
+      }
+    } catch (error: any) {
+      console.error('Error syncing invoices by date range:', error);
+      showToast('error', error?.message || 'Lỗi khi đồng bộ lại invoice theo khoảng thời gian');
+    } finally {
+      setSyncingAll(false);
+    }
   };
 
   const handleSyncAllFailed = async () => {
@@ -365,30 +481,103 @@ export default function FastApiInvoicesPage() {
             <h1 className="text-2xl font-bold text-gray-900 mb-2">Bảng kê hóa đơn</h1>
             <p className="text-sm text-gray-600 mb-4">Danh sách chi tiết các hóa đơn đã tạo từ Fast API</p>
           </div>
-          <button
-            onClick={handleSyncAllFailed}
-            disabled={syncingAll || invoices.filter(inv => inv.status === 0).length === 0}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-          >
-            {syncingAll ? (
-              <>
-                <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                <span>Đang đồng bộ...</span>
-              </>
-            ) : (
-              <>
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                <span>Đồng bộ lại lên Fast</span>
-              </>
-            )}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowSyncModal(true)}
+              disabled={syncingAll}
+              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <span>Đồng bộ theo ngày</span>
+            </button>
+            <button
+              onClick={handleSyncAllFailed}
+              disabled={syncingAll || invoices.filter(inv => inv.status === 0).length === 0}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {syncingAll ? (
+                <>
+                  <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span>Đang đồng bộ...</span>
+                </>
+              ) : (
+                <>
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  <span>Đồng bộ lại lên Fast</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* Modal đồng bộ theo ngày */}
+      {showSyncModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-gray-900">Đồng bộ theo khoảng thời gian</h2>
+              <button
+                onClick={() => setShowSyncModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Từ ngày</label>
+                <input
+                  type="date"
+                  value={syncDateRange.startDate}
+                  onChange={(e) => setSyncDateRange({ ...syncDateRange, startDate: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Đến ngày</label>
+                <input
+                  type="date"
+                  value={syncDateRange.endDate}
+                  onChange={(e) => setSyncDateRange({ ...syncDateRange, endDate: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                />
+              </div>
+              {filters.maDvcs && (
+                <div className="bg-blue-50 p-3 rounded-md">
+                  <p className="text-sm text-blue-800">
+                    <strong>Lưu ý:</strong> Sẽ áp dụng filter Mã ĐVCS: <strong>{filters.maDvcs}</strong>
+                  </p>
+                </div>
+              )}
+            </div>
+            <div className="flex items-center justify-end gap-2 mt-6">
+              <button
+                onClick={() => setShowSyncModal(false)}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleSyncByDateRange}
+                disabled={syncingAll || !syncDateRange.startDate || !syncDateRange.endDate}
+                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {syncingAll ? 'Đang đồng bộ...' : 'Đồng bộ'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Content */}
       <>
