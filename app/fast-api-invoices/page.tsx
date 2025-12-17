@@ -210,7 +210,10 @@ export default function FastApiInvoicesPage() {
       return;
     }
 
-    if (new Date(syncDateRange.startDate) > new Date(syncDateRange.endDate)) {
+    const startDate = new Date(syncDateRange.startDate);
+    const endDate = new Date(syncDateRange.endDate);
+    
+    if (startDate > endDate) {
       showToast('error', 'Từ ngày phải nhỏ hơn hoặc bằng đến ngày');
       return;
     }
@@ -218,79 +221,16 @@ export default function FastApiInvoicesPage() {
     try {
       setSyncingAll(true);
       setShowSyncModal(false);
-      showToast('info', 'Đang tải danh sách invoice thất bại...');
+      showToast('info', 'Đang đồng bộ invoice thất bại theo khoảng thời gian...');
 
-      // Lấy TẤT CẢ invoice thất bại từ API trong khoảng thời gian đã chọn
-      const params: any = {
-        page: 1,
-        limit: 10000, // Limit lớn để lấy tất cả
-        status: 0, // Chỉ lấy invoice thất bại
+      // Gọi API backend để xử lý đồng bộ
+      const response = await fastApiInvoicesApi.syncByDateRange({
         startDate: syncDateRange.startDate,
         endDate: syncDateRange.endDate,
-      };
-
-      // Áp dụng filter maDvcs nếu có
-      if (filters.maDvcs) params.maDvcs = filters.maDvcs;
-
-      const response = await fastApiInvoicesApi.getAll(params);
-      let failedInvoices = response.data.items || [];
-      
-      // FIX: Filter lại ở frontend để đảm bảo chỉ lấy invoice trong khoảng thời gian đã chọn
-      // Chuyển đổi ngày để so sánh (chỉ so sánh phần ngày, bỏ qua giờ)
-      const startDateObj = new Date(syncDateRange.startDate);
-      startDateObj.setHours(0, 0, 0, 0);
-      const endDateObj = new Date(syncDateRange.endDate);
-      endDateObj.setHours(23, 59, 59, 999); // Set đến cuối ngày
-
-      failedInvoices = failedInvoices.filter((invoice: FastApiInvoice) => {
-        if (!invoice.ngayCt) return false;
-        const invoiceDate = new Date(invoice.ngayCt);
-        invoiceDate.setHours(0, 0, 0, 0);
-        return invoiceDate >= startDateObj && invoiceDate <= endDateObj;
+        maDvcs: filters.maDvcs || undefined,
       });
-      
-      if (failedInvoices.length === 0) {
-        showToast('info', 'Không có invoice thất bại nào trong khoảng thời gian đã chọn');
-        setSyncingAll(false);
-        return;
-      }
 
-      showToast('info', `Đang đồng bộ lại ${failedInvoices.length} invoice thất bại lên Fast API...`);
-
-      let successCount = 0;
-      let failCount = 0;
-      const errors: string[] = [];
-
-      // Đồng bộ từng invoice
-      for (const invoice of failedInvoices) {
-        try {
-          setRetrying((prev) => ({ ...prev, [invoice.docCode]: true }));
-          const response = await salesApi.createInvoiceViaFastApi(invoice.docCode, true);
-          const data = response.data;
-
-          // Kiểm tra success giống như handleRetry
-          let hasError = false;
-          if (Array.isArray(data.result) && data.result.length > 0) {
-            hasError = data.result.some((item: any) => item.status === 0);
-          } else if (data.result && typeof data.result === 'object') {
-            hasError = data.result.status === 0;
-          }
-
-          if (data.success && !hasError) {
-            successCount++;
-          } else {
-            failCount++;
-            const errorMsg = data.message || 'Thất bại';
-            errors.push(`${invoice.docCode}: ${errorMsg}`);
-          }
-        } catch (error: any) {
-          failCount++;
-          const errorMsg = error?.response?.data?.message || error?.message || 'Lỗi không xác định';
-          errors.push(`${invoice.docCode}: ${errorMsg}`);
-        } finally {
-          setRetrying((prev) => ({ ...prev, [invoice.docCode]: false }));
-        }
-      }
+      const data = response.data;
 
       // Đợi một chút để đảm bảo database đã được cập nhật
       await new Promise(resolve => setTimeout(resolve, 500));
@@ -300,16 +240,25 @@ export default function FastApiInvoicesPage() {
       await loadStatistics();
 
       // Hiển thị kết quả
-      if (successCount > 0 && failCount === 0) {
-        showToast('success', `Đồng bộ thành công ${successCount} invoice`);
-      } else if (successCount > 0 && failCount > 0) {
-        showToast('info', `Đồng bộ thành công ${successCount} invoice, thất bại ${failCount} invoice`);
+      if (data.successCount > 0 && data.failCount === 0 && data.alreadyExistsCount === 0) {
+        showToast('success', `Đồng bộ thành công ${data.successCount} invoice trong khoảng ${syncDateRange.startDate} - ${syncDateRange.endDate}`);
+      } else if (data.successCount > 0 && data.failCount === 0 && data.alreadyExistsCount > 0) {
+        showToast('success', `Đồng bộ thành công ${data.successCount} invoice, ${data.alreadyExistsCount} invoice đã tồn tại trước đó`);
+      } else if (data.successCount > 0 && data.failCount > 0) {
+        showToast('info', `Đồng bộ thành công ${data.successCount} invoice, thất bại ${data.failCount} invoice${data.alreadyExistsCount > 0 ? `, ${data.alreadyExistsCount} đã tồn tại` : ''}`);
+      } else if (data.successCount === 0 && data.failCount > 0) {
+        const errorMessages = data.results
+          .filter((r: any) => !r.success)
+          .slice(0, 3)
+          .map((r: any) => `${r.docCode}: ${r.error || r.message || 'Thất bại'}`)
+          .join('; ');
+        showToast('error', `Đồng bộ thất bại ${data.failCount} invoice. ${errorMessages}`);
       } else {
-        showToast('error', `Đồng bộ thất bại ${failCount} invoice. ${errors.slice(0, 3).join('; ')}`);
+        showToast('info', data.message || 'Không có invoice nào được xử lý');
       }
     } catch (error: any) {
       console.error('Error syncing invoices by date range:', error);
-      showToast('error', error?.message || 'Lỗi khi đồng bộ lại invoice theo khoảng thời gian');
+      showToast('error', error?.response?.data?.message || error?.message || 'Lỗi khi đồng bộ lại invoice theo khoảng thời gian');
     } finally {
       setSyncingAll(false);
     }

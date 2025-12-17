@@ -35,7 +35,18 @@ export default function OrdersPage() {
   const prevFilterRef = useRef<{ brand?: string; dateFrom?: string; dateTo?: string; statusAsys?: boolean }>({});
   const [filter, setFilter] = useState<{ brand?: string; dateFrom?: string; dateTo?: string; statusAsys?: boolean }>({ statusAsys: false });
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedColumns, setSelectedColumns] = useState<OrderColumn[]>([...MAIN_COLUMNS]);
+  // Chỉ hiển thị các cột cơ bản nhất cho đơn lỗi
+  const BASIC_ERROR_COLUMNS: OrderColumn[] = [
+    'docCode',        // Số hóa đơn
+    'docDate',        // Ngày
+    'itemCode',       // Mã hàng
+    'itemName',       // Tên mặt hàng
+    'qty',            // Số lượng
+    'giaBan',         // Giá bán
+    'tienHang',       // Tiền hàng
+  ];
+  
+  const [selectedColumns, setSelectedColumns] = useState<OrderColumn[]>([...BASIC_ERROR_COLUMNS]);
   const [showColumnSelector, setShowColumnSelector] = useState(false);
   const [columnSearchQuery, setColumnSearchQuery] = useState('');
   const [pagination, setPagination] = useState({
@@ -49,6 +60,7 @@ export default function OrdersPage() {
   const [syncing, setSyncing] = useState(false);
   const [retrying, setRetrying] = useState<Record<string, boolean>>({});
   const [isExporting, setIsExporting] = useState(false);
+  const [syncingErrors, setSyncingErrors] = useState(false);
   
   // Hàm convert từ Date object hoặc YYYY-MM-DD sang DDMMMYYYY
   const convertDateToDDMMMYYYY = (date: Date | string): string => {
@@ -177,7 +189,14 @@ export default function OrdersPage() {
       case 'dvt':
         return sale?.dvt || sale?.product?.dvt || '';
       case 'maKho':
-        return sale?.maKho || '';
+        // FIX: Nếu ma_bp = "MSO1" và có mã kho, fix cứng mã kho = "BMHT2"
+        let maKhoRaw = sale?.maKho || '';
+        // Lấy ma_bp từ order hoặc sale
+        const maBpRaw = sale?.department?.ma_bp || sale?.branchCode || order?.branchCode || '';
+        if (maBpRaw === 'MSO1' && maKhoRaw) {
+          maKhoRaw = 'BMHT2';
+        }
+        return maKhoRaw;
       case 'maLo':
         // Hiển thị ma_lo - ưu tiên lấy từ backend nếu có, nếu không thì tính toán từ serial
         if (sale?.maLo) {
@@ -374,6 +393,32 @@ export default function OrdersPage() {
       showToast('error', `Lỗi khi xuất Excel: ${errorMessage}`);
     } finally {
       setIsExporting(false);
+    }
+  };
+
+  // Hàm đồng bộ lại đơn lỗi - check lại với Loyalty API
+  const handleSyncErrorOrders = async () => {
+    try {
+      setSyncingErrors(true);
+      showToast('info', 'Đang đồng bộ lại đơn lỗi với Loyalty API...');
+
+      const response = await salesApi.syncErrorOrders();
+      const data = response.data;
+
+      if (data.success > 0) {
+        showToast('success', `Đồng bộ thành công: ${data.success} đơn đã được cập nhật, ${data.failed} đơn vẫn lỗi`);
+        // Reload orders sau khi đồng bộ thành công
+        await loadOrders();
+      } else if (data.failed > 0) {
+        showToast('info', `Không có đơn nào được cập nhật. ${data.failed} đơn vẫn không tìm thấy trong Loyalty API`);
+      } else {
+        showToast('info', 'Không có đơn lỗi nào để đồng bộ');
+      }
+    } catch (error: any) {
+      console.error('Error syncing error orders:', error);
+      showToast('error', error?.response?.data?.message || 'Lỗi khi đồng bộ lại đơn lỗi');
+    } finally {
+      setSyncingErrors(false);
     }
   };
 
@@ -598,44 +643,78 @@ export default function OrdersPage() {
   const loadOrders = async () => {
     try {
       setLoading(true);
-      // Khi có search query, backend đã filter rồi, vẫn cần gửi page để backend trả về đúng trang
-      // Chỉ reset về page 1 khi searchQuery thay đổi (xử lý ở useEffect khác)
       
-      // Lấy orders từ backend API - chỉ lấy basic data (backend đã tối ưu)
-      // Nếu có search query, gửi lên backend để search trực tiếp trên database
-      // Khi có search query, gửi dateFrom/dateTo để search trong date range
-      // Khi không có search query, có thể dùng date (single day) để lấy từ Zappy API
-      const response = await salesApi.getAllOrders({
-        brand: filter.brand,
+      // Gọi API status-asys để lấy các sales có statusAsys = false (đơn lỗi)
+      const response = await salesApi.getStatusAsys({
+        statusAsys: 'false', // Chỉ lấy đơn lỗi
         page: pagination.page,
         limit: pagination.limit,
-        // Nếu có search query, dùng dateFrom/dateTo (date range)
-        // Nếu không có search query, dùng date (single day) để lấy từ Zappy API
-        date: (!searchQuery.trim() && filter.dateFrom && !filter.dateTo) ? convertDateToDDMMMYYYY(filter.dateFrom) : undefined,
-        dateFrom: (searchQuery.trim() || filter.dateTo) ? filter.dateFrom : undefined,
-        dateTo: filter.dateTo || undefined,
-        search: searchQuery.trim() || undefined, // Gửi search query lên backend
-        statusAsys: filter.statusAsys !== undefined ? filter.statusAsys : false, // Mặc định filter đơn lỗi
       });
-      const rawData = response.data.data || [];
+      
+      const salesData = response.data.data || [];
       const backendTotal = response.data.total || 0;
+      const totalPages = response.data.totalPages || 0;
 
-      // Normalize dữ liệu - hỗ trợ cả format cũ và format mới từ ERP
-      const ordersData = normalizeOrderData(rawData);
+      // Convert sales thành orders format đơn giản - chỉ lấy thông tin chính
+      // Group sales theo docCode để tạo orders
+      const ordersMap = new Map<string, Order>();
+      
+      salesData.forEach((sale: any) => {
+        const docCode = sale.docCode || sale.doc_code || '';
+        if (!docCode) return;
+        
+        if (!ordersMap.has(docCode)) {
+          // Tạo order mới với thông tin cơ bản
+          ordersMap.set(docCode, {
+            docCode,
+            docDate: sale.docDate || sale.doc_date || new Date().toISOString(),
+            branchCode: sale.branchCode || sale.branch_code || '',
+            docSourceType: sale.docSourceType || sale.doc_source_type || '',
+            customer: {
+              name: sale.customer?.name || '',
+              code: sale.customer?.code || '',
+              brand: sale.customer?.brand || sale.brand || '',
+              mobile: sale.customer?.mobile || '',
+            },
+            totalRevenue: 0,
+            totalQty: 0,
+            totalItems: 0,
+            isProcessed: false,
+            sales: [],
+          });
+        }
+        
+        const order = ordersMap.get(docCode)!;
+        // Thêm sale vào order
+        order.sales!.push({
+          id: sale.id || '',
+          itemCode: sale.itemCode || sale.item_code || '',
+          itemName: sale.itemName || sale.item_name || '',
+          qty: sale.qty || 0,
+          tienHang: sale.tienHang || sale.tien_hang || sale.linetotal || 0,
+          linetotal: sale.linetotal || sale.tienHang || sale.tien_hang || 0,
+          giaBan: sale.giaBan || sale.gia_ban || 0,
+          statusAsys: sale.statusAsys || false,
+          // Chỉ lấy các thông tin chính cần thiết
+          branchCode: sale.branchCode || sale.branch_code || '',
+        });
+        order.totalItems = (order.totalItems || 0) + 1;
+        order.totalQty = (order.totalQty || 0) + (sale.qty || 0);
+        order.totalRevenue = (order.totalRevenue || 0) + (sale.linetotal || sale.tienHang || sale.tien_hang || 0);
+      });
+
+      const ordersData = Array.from(ordersMap.values());
 
       setRawOrders(ordersData);
       setAllOrders(ordersData);
       
       // Cập nhật pagination từ backend response
-      // Backend trả về total là tổng số rows (sale items) trong database
-      // Frontend sẽ paginate lại sau khi flatten, nên dùng total từ backend
-      const calculatedTotalPages = backendTotal > 0 ? Math.ceil(backendTotal / pagination.limit) : 0;
       setPagination((prev) => ({
         ...prev,
         total: backendTotal,
-        totalPages: calculatedTotalPages,
+        totalPages: totalPages,
         // Đảm bảo page không vượt quá totalPages, reset về 1 nếu vượt quá
-        page: calculatedTotalPages > 0 && prev.page > calculatedTotalPages ? 1 : (calculatedTotalPages === 0 ? 1 : prev.page),
+        page: totalPages > 0 && prev.page > totalPages ? 1 : (totalPages === 0 ? 1 : prev.page),
       }));
     } catch (error: any) {
       console.error('Error loading orders:', error);
@@ -1116,7 +1195,13 @@ export default function OrdersPage() {
         return <div className="text-sm text-gray-400 italic">-</div>;
       case 'maKho':
         // Sử dụng maKho từ backend (đã được tính sẵn)
-        return <div className="text-sm text-gray-900">{sale?.maKho || '-'}</div>;
+        // FIX: Nếu ma_bp = "MSO1" và có mã kho, fix cứng mã kho = "BMHT2"
+        let maKhoValue = sale?.maKho || '';
+        const maBp = sale?.department?.ma_bp || sale?.branchCode || order?.branchCode || '';
+        if (maBp === 'MSO1' && maKhoValue) {
+          maKhoValue = 'BMHT2';
+        }
+        return <div className="text-sm text-gray-900">{maKhoValue || '-'}</div>;
       case 'maLo':
         // Hiển thị ma_lo - ưu tiên lấy từ backend nếu có, nếu không thì tính toán
         // Nếu có ma_lo từ backend (đã được tính sẵn), dùng nó
@@ -1809,52 +1894,28 @@ export default function OrdersPage() {
     }
   };
 
-  // Hàm xử lý double click - gọi backend API để tạo hóa đơn
+  // Hàm xử lý double click - đồng bộ lại đơn hàng với Loyalty API
   const handleRowDoubleClick = async (order: Order, sale: SaleItem | null) => {
-    if (!sale) {
-      showToast('error', 'Không có dữ liệu bán hàng cho dòng này');
-      return;
-    }
-
     if (submittingInvoice) {
       return;
     }
 
     try {
       setSubmittingInvoice(true);
+      showToast('info', `Đang đồng bộ lại đơn ${order.docCode} với Loyalty API...`);
 
-      // Gọi backend API để tạo hóa đơn với forceRetry = true để cho phép retry nếu đã tồn tại
-      const response = await salesApi.createInvoiceViaFastApi(order.docCode, true);
+      // Gọi backend API để đồng bộ lại đơn hàng
+      const response = await salesApi.syncErrorOrderByDocCode(order.docCode);
       const result = response.data;
 
-      // Nếu đã tồn tại (alreadyExists = true), vẫn coi như thành công
-      if (result.alreadyExists) {
-        showToast('info', result.message || 'Đơn hàng đã được tạo hóa đơn trước đó');
-        return;
-      }
-
-      // Check success flag và status trong result (status === 0 là lỗi)
-      const hasError = Array.isArray(result.result) 
-        ? result.result.some((item: any) => item.status === 0)
-        : (result.result?.status === 0);
-
-      if (result.success && !hasError) {
-        showToast('success', result.message || 'Tạo hóa đơn thành công');
-        // Reload invoice statuses sau khi tạo thành công
+      if (result.success && result.updated > 0) {
+        showToast('success', result.message || `Đồng bộ thành công: ${result.updated} dòng đã được cập nhật`);
+        // Reload orders sau khi đồng bộ thành công
+        await loadOrders();
+      } else if (result.updated === 0 && result.failed > 0) {
+        showToast('info', result.message || `Không có dòng nào được cập nhật. ${result.failed} dòng vẫn không tìm thấy trong Loyalty API`);
       } else {
-        // Xử lý lỗi chi tiết hơn
-        let errorMessage = result.message || 'Tạo hóa đơn thất bại';
-        
-        if (Array.isArray(result.result) && result.result.length > 0) {
-          const firstError = result.result[0];
-          if (firstError.message) {
-            errorMessage = firstError.message;
-          }
-        } else if (result.result?.message) {
-          errorMessage = result.result.message;
-        }
-        
-        showToast('error', errorMessage);
+        showToast('info', result.message || 'Đơn hàng không có dòng nào cần đồng bộ');
       }
     } catch (error: any) {
       console.error('Error handling row double click:', error);
@@ -2020,6 +2081,26 @@ export default function OrdersPage() {
                   </button>
                 </div>
                 <button
+                  onClick={handleSyncErrorOrders}
+                  disabled={syncingErrors}
+                  className="px-4 py-2 text-sm font-medium text-white bg-orange-600 border border-orange-600 rounded-lg hover:bg-orange-700 transition-colors inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Đồng bộ lại đơn lỗi với Loyalty API"
+                >
+                  {syncingErrors ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Đang đồng bộ...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      Đồng bộ đơn lỗi
+                    </>
+                  )}
+                </button>
+                <button
                   onClick={() => setShowColumnSelector(!showColumnSelector)}
                   className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors inline-flex items-center gap-2"
                 >
@@ -2061,7 +2142,7 @@ export default function OrdersPage() {
                   <h3 className="text-sm font-semibold text-gray-700">Chọn cột hiển thị</h3>
                   <div className="flex gap-2">
                     <button
-                      onClick={() => setSelectedColumns([...MAIN_COLUMNS])}
+                      onClick={() => setSelectedColumns([...BASIC_ERROR_COLUMNS])}
                       className="text-xs px-2 py-1 text-blue-600 hover:bg-blue-50 rounded"
                     >
                       Mặc định

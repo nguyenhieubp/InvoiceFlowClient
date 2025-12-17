@@ -82,6 +82,19 @@ export const salesApi = {
       responseType: 'blob', // Để nhận file Excel
     });
   },
+  getStatusAsys: (params?: {
+    statusAsys?: string;
+    page?: number;
+    limit?: number;
+  }) => {
+    return api.get('/sales/status-asys', { params });
+  },
+  syncErrorOrders: () => {
+    return api.post('/sales/sync-error-orders');
+  },
+  syncErrorOrderByDocCode: (docCode: string) => {
+    return api.post(`/sales/sync-error-order/${docCode}`);
+  },
 };
 
 // Invoices API
@@ -251,6 +264,13 @@ export const fastApiInvoicesApi = {
     maDvcs?: string;
   }) => {
     return api.get('/fast-api-invoices/statistics', { params });
+  },
+  syncByDateRange: (data: {
+    startDate: string;
+    endDate: string;
+    maDvcs?: string;
+  }) => {
+    return api.post('/fast-api-invoices/sync-by-date-range', data);
   },
 };
 
