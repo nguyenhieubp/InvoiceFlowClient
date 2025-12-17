@@ -86,6 +86,10 @@ export const salesApi = {
     statusAsys?: string;
     page?: number;
     limit?: number;
+    brand?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    search?: string;
   }) => {
     return api.get('/sales/status-asys', { params });
   },

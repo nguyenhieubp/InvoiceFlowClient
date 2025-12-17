@@ -34,7 +34,8 @@ export default function OrdersPage() {
   const prevSearchQueryRef = useRef<string>('');
   const prevFilterRef = useRef<{ brand?: string; dateFrom?: string; dateTo?: string; statusAsys?: boolean }>({});
   const [filter, setFilter] = useState<{ brand?: string; dateFrom?: string; dateTo?: string; statusAsys?: boolean }>({ statusAsys: false });
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(''); // Query thực sự dùng để search
+  const [searchInput, setSearchInput] = useState(''); // Giá trị trong input (chưa search)
   // Chỉ hiển thị các cột cơ bản nhất cho đơn lỗi
   const BASIC_ERROR_COLUMNS: OrderColumn[] = [
     'docCode',        // Số hóa đơn
@@ -405,14 +406,23 @@ export default function OrdersPage() {
       const response = await salesApi.syncErrorOrders();
       const data = response.data;
 
-      if (data.success > 0) {
-        showToast('success', `Đồng bộ thành công: ${data.success} đơn đã được cập nhật, ${data.failed} đơn vẫn lỗi`);
+      // Backend trả về: { total, success, failed, updated }
+      // - total: tổng số dòng sale lỗi cần check
+      // - success: số dòng đã cập nhật thành công (có materialCode và đã update)
+      // - failed: số dòng vẫn không tìm thấy (cả 2 API đều không có)
+      if (data.total === 0) {
+        showToast('info', 'Không có dòng lỗi nào để đồng bộ');
+      } else if (data.success > 0) {
+        const message = data.failed > 0
+          ? `Đồng bộ thành công: ${data.success} dòng đã được cập nhật với materialCode, ${data.failed} dòng vẫn không tìm thấy trong Loyalty API`
+          : `Đồng bộ thành công: ${data.success} dòng đã được cập nhật với materialCode`;
+        showToast('success', message);
         // Reload orders sau khi đồng bộ thành công
         await loadOrders();
       } else if (data.failed > 0) {
-        showToast('info', `Không có đơn nào được cập nhật. ${data.failed} đơn vẫn không tìm thấy trong Loyalty API`);
+        showToast('info', `Không có dòng nào được cập nhật. ${data.failed} dòng vẫn không tìm thấy trong cả 2 API (code và old-code)`);
       } else {
-        showToast('info', 'Không có đơn lỗi nào để đồng bộ');
+        showToast('info', `Đã kiểm tra ${data.total} dòng nhưng không có dòng nào được cập nhật`);
       }
     } catch (error: any) {
       console.error('Error syncing error orders:', error);
@@ -420,6 +430,19 @@ export default function OrdersPage() {
     } finally {
       setSyncingErrors(false);
     }
+  };
+
+  // Hàm xử lý search
+  const handleSearch = () => {
+    setSearchQuery(searchInput);
+    setPagination((prev) => ({ ...prev, page: 1 })); // Reset về trang 1 khi search
+  };
+
+  // Hàm xóa search
+  const handleClearSearch = () => {
+    setSearchInput('');
+    setSearchQuery('');
+    setPagination((prev) => ({ ...prev, page: 1 })); // Reset về trang 1 khi xóa search
   };
 
   // Hàm đồng bộ từ Zappy
@@ -644,9 +667,13 @@ export default function OrdersPage() {
     try {
       setLoading(true);
       
-      // Gọi API status-asys để lấy các sales có statusAsys = false (đơn lỗi)
+      // Gọi API status-asys với các params filter/search
       const response = await salesApi.getStatusAsys({
         statusAsys: 'false', // Chỉ lấy đơn lỗi
+        brand: filter.brand,
+        dateFrom: filter.dateFrom,
+        dateTo: filter.dateTo,
+        search: searchQuery.trim() || undefined,
         page: pagination.page,
         limit: pagination.limit,
       });
@@ -1908,13 +1935,24 @@ export default function OrdersPage() {
       const response = await salesApi.syncErrorOrderByDocCode(order.docCode);
       const result = response.data;
 
-      if (result.success && result.updated > 0) {
-        showToast('success', result.message || `Đồng bộ thành công: ${result.updated} dòng đã được cập nhật`);
+      // Backend trả về: { success, message, updated, failed, details }
+      // - success: boolean (true nếu có dòng được cập nhật)
+      // - message: string (message đã được format từ backend)
+      // - updated: số dòng đã cập nhật thành công
+      // - failed: số dòng vẫn không tìm thấy
+      if (result.updated > 0) {
+        // Có dòng được cập nhật thành công
+        const message = result.failed > 0
+          ? `Đồng bộ thành công: ${result.updated} dòng đã được cập nhật với materialCode, ${result.failed} dòng vẫn không tìm thấy`
+          : `Đồng bộ thành công: ${result.updated} dòng đã được cập nhật với materialCode`;
+        showToast('success', result.message || message);
         // Reload orders sau khi đồng bộ thành công
         await loadOrders();
-      } else if (result.updated === 0 && result.failed > 0) {
-        showToast('info', result.message || `Không có dòng nào được cập nhật. ${result.failed} dòng vẫn không tìm thấy trong Loyalty API`);
+      } else if (result.failed > 0) {
+        // Không có dòng nào được cập nhật, nhưng có dòng lỗi
+        showToast('info', result.message || `Không có dòng nào được cập nhật. ${result.failed} dòng vẫn không tìm thấy trong cả 2 API (code và old-code)`);
       } else {
+        // Không có dòng nào cần đồng bộ hoặc không có lỗi
         showToast('info', result.message || 'Đơn hàng không có dòng nào cần đồng bộ');
       }
     } catch (error: any) {
@@ -2198,19 +2236,47 @@ export default function OrdersPage() {
             )}
 
             {/* Search Bar */}
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+                <input
+                  type="text"
+                  placeholder="Tìm kiếm theo mã đơn, tên khách hàng, số điện thoại..."
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handleSearch();
+                    }
+                  }}
+                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                />
+              </div>
+              <button
+                onClick={handleSearch}
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-blue-600 rounded-lg hover:bg-blue-700 transition-colors inline-flex items-center gap-2"
+                title="Tìm kiếm"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
-              </div>
-              <input
-                type="text"
-                placeholder="Tìm kiếm theo mã đơn, tên khách hàng, số điện thoại..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-              />
+                Tìm kiếm
+              </button>
+              {searchQuery && (
+                <button
+                  onClick={handleClearSearch}
+                  className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                  title="Xóa tìm kiếm"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
             </div>
 
             {/* Filters */}
