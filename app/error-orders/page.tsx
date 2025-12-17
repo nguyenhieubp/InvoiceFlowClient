@@ -294,6 +294,11 @@ export default function OrdersPage() {
         }
         const isTTDauTuForPromCodeRaw = maCtkmTangHangForPromCodeRaw.trim() === 'TT DAU TU';
         
+        // Với FBV (f3): luôn không hiển thị "1" (km_yn = 0) theo yêu cầu Fast API
+        if (brandLowerForPromCodeRaw === 'f3') {
+          return '';
+        }
+        
         // Nếu có mã số thẻ (maThe) hoặc ma_ctkm_th = "TT DAU TU" thì không hiển thị "1"
         if (hasMaTheForPromCodeRaw || isTTDauTuForPromCodeRaw) {
           return '';
@@ -973,6 +978,11 @@ export default function OrdersPage() {
           }
         }
         const isTTDauTuForPromCode = maCtkmTangHangForPromCode.trim() === 'TT DAU TU';
+        
+        // Với FBV (f3): luôn không hiển thị "1" (km_yn = 0) theo yêu cầu Fast API
+        if (brandLowerForPromCode === 'f3') {
+          return <div className="text-sm text-gray-400 italic">-</div>;
+        }
         
         // Nếu có mã số thẻ (maThe) hoặc ma_ctkm_th = "TT DAU TU" thì không hiển thị "1"
         if (hasMaTheForPromCode || isTTDauTuForPromCode) {
