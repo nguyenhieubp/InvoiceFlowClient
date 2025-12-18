@@ -16,20 +16,9 @@ import { OrderProduct, OrderDepartment } from '@/types/order.types';
 
 export default function OrdersPage() {
   const [allOrders, setAllOrders] = useState<Order[]>([]);
-  const [rawOrders, setRawOrders] = useState<Order[]>([]);
   const [displayedOrders, setDisplayedOrders] = useState<Order[]>([]);
   const [enrichedDisplayedOrders, setEnrichedDisplayedOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const [enriching, setEnriching] = useState(false);
-  // Cache để tránh fetch lại products và departments (dùng useRef để không trigger re-render)
-  const productCacheRef = useRef<Map<string, OrderProduct>>(new Map());
-  const departmentCacheRef = useRef<Map<string, OrderDepartment>>(new Map());
-  // Cache full order data để tránh fetch lại
-  const fullOrderCacheRef = useRef<Map<string, Order>>(new Map());
-  // Track các orders đang được fetch để tránh fetch trùng lặp
-  const fetchingOrdersRef = useRef<Set<string>>(new Set());
-  // Track các orders đã fetch thất bại để tránh retry quá nhiều
-  const failedOrdersRef = useRef<Set<string>>(new Set());
   // Track searchQuery và filter trước đó để chỉ reset page khi chúng thay đổi
   const prevSearchQueryRef = useRef<string>('');
   const prevFilterRef = useRef<{ brand?: string; dateFrom?: string; dateTo?: string }>({});
@@ -397,194 +386,7 @@ export default function OrdersPage() {
     }
   };
 
-  // Fetch product từ backend API (proxy đến Loyalty API)
-  const fetchProduct = async (itemCode: string): Promise<OrderProduct | null> => {
-    if (!itemCode) return null;
-    try {
-      const response = await categoriesApi.getProductByCode(itemCode);
-      const product = response.data;
-      
-      if (product) {
-        return mapLoyaltyApiProductToProductItem(product);
-      }
-
-      return null;
-    } catch (error) {
-        console.error(`Error fetching product ${itemCode}:`, error);
-      return null;
-    }
-  };
-
-  // Fetch department từ backend API (proxy đến Loyalty API)
-  const fetchDepartment = async (branchcode: string): Promise<OrderDepartment | null> => {
-    if (!branchcode) return null;
-    try {
-      const response = await categoriesApi.getDepartmentByBranchCode(branchcode);
-      return response.data || null;
-    } catch (error) {
-      console.error(`Error fetching department ${branchcode}:`, error);
-      return null;
-    }
-  };
-
-  // Enrich orders với products và departments (batch fetch để tối ưu) - sử dụng cache
-  const enrichOrdersWithProducts = async (orders: Order[]): Promise<Order[]> => {
-    // Collect tất cả itemCodes và branchCodes cần fetch (chỉ những cái chưa có trong cache)
-    // BỎ QUA các sale có statusAsys = false (đơn lỗi) - không fetch từ Loyalty API
-    const itemCodesToFetch = new Set<string>();
-    const branchCodesToFetch = new Set<string>();
-
-    orders.forEach(order => {
-      order.sales?.forEach(sale => {
-        // Chỉ fetch product/department cho các sale không phải đơn lỗi
-        // statusAsys = false → đơn lỗi → skip fetch
-        if (sale.statusAsys === false) {
-          return; // Skip đơn lỗi
-        }
-        
-        if (sale.itemCode && !productCacheRef.current.has(sale.itemCode)) {
-          itemCodesToFetch.add(sale.itemCode);
-        }
-        if (sale.branchCode && !departmentCacheRef.current.has(sale.branchCode)) {
-          branchCodesToFetch.add(sale.branchCode);
-        }
-      });
-    });
-
-    // Batch fetch products (50 items một lần để tối ưu)
-    const BATCH_SIZE = 50;
-    const itemCodesArray = Array.from(itemCodesToFetch);
-
-    if (itemCodesArray.length > 0) {
-      for (let i = 0; i < itemCodesArray.length; i += BATCH_SIZE) {
-        const batch = itemCodesArray.slice(i, i + BATCH_SIZE);
-        const products = await Promise.all(
-          batch.map(itemCode => fetchProduct(itemCode))
-        );
-
-        batch.forEach((itemCode, index) => {
-          const product = products[index];
-          if (product) {
-            productCacheRef.current.set(itemCode, product);
-          }
-        });
-      }
-    }
-
-    // Batch fetch departments (50 items một lần để tối ưu)
-    const BATCH_SIZE_DEPT = 50;
-    const branchCodesArray = Array.from(branchCodesToFetch);
-
-    if (branchCodesArray.length > 0) {
-      for (let i = 0; i < branchCodesArray.length; i += BATCH_SIZE_DEPT) {
-        const batch = branchCodesArray.slice(i, i + BATCH_SIZE_DEPT);
-        const departments = await Promise.all(
-          batch.map(branchCode => fetchDepartment(branchCode))
-        );
-
-        batch.forEach((branchCode, index) => {
-          const department = departments[index];
-          if (department) {
-            departmentCacheRef.current.set(branchCode, department);
-          }
-        });
-      }
-    }
-
-    // Sử dụng cache đã có
-    const finalProductCache = productCacheRef.current;
-    const finalDepartmentCache = departmentCacheRef.current;
-
-    // Enrich orders với products và departments từ cache
-    const enrichedOrders = orders.map(order => {
-      if (!order.sales || order.sales.length === 0) return order;
-
-      // Tìm department đầu tiên để lấy company/brand
-      let departmentForBrand: OrderDepartment | null = null;
-      if (order.sales.length > 0 && order.sales[0].branchCode) {
-        departmentForBrand = finalDepartmentCache.get(order.sales[0].branchCode) || null;
-      }
-
-      // Map company từ department sang brand cho customer
-      const brandFromDepartment = departmentForBrand?.company
-        ? mapCompanyToBrand(departmentForBrand.company)
-        : undefined;
-
-      const enrichedSales = order.sales.map(sale => {
-        let enrichedSale = { ...sale };
-
-        // Enrich product
-        if (sale.itemCode) {
-          const product = finalProductCache.get(sale.itemCode);
-          if (product) {
-            enrichedSale = {
-              ...enrichedSale,
-              dvt: product.dvt || enrichedSale.dvt,
-              itemCode: product.maVatTu || enrichedSale.itemCode,
-              itemName: product.tenVatTu || enrichedSale.itemName,
-              productType: product.productType || enrichedSale.productType,
-              trackInventory: product.trackInventory ?? enrichedSale.trackInventory,
-              product,
-              // Giữ lại maKho, maCtkmTangHang và muaHangCkVip từ backend
-              maKho: enrichedSale.maKho || sale.maKho,
-              maCtkmTangHang: enrichedSale.maCtkmTangHang || sale.maCtkmTangHang,
-              muaHangCkVip: enrichedSale.muaHangCkVip || sale.muaHangCkVip,
-              grade_discamt: enrichedSale.grade_discamt ?? sale.grade_discamt,
-              chietKhauMuaHangCkVip: enrichedSale.chietKhauMuaHangCkVip ?? sale.chietKhauMuaHangCkVip,
-            };
-          }
-        }
-
-        // Enrich department
-        if (sale.branchCode) {
-          const department = finalDepartmentCache.get(sale.branchCode);
-          if (department) {
-            enrichedSale = {
-              ...enrichedSale,
-              department,
-              // Giữ lại maKho, maCtkmTangHang và muaHangCkVip từ backend
-              maKho: enrichedSale.maKho || sale.maKho,
-              maCtkmTangHang: enrichedSale.maCtkmTangHang || sale.maCtkmTangHang,
-              muaHangCkVip: enrichedSale.muaHangCkVip || sale.muaHangCkVip,
-              grade_discamt: enrichedSale.grade_discamt ?? sale.grade_discamt,
-              chietKhauMuaHangCkVip: enrichedSale.chietKhauMuaHangCkVip ?? sale.chietKhauMuaHangCkVip,
-            };
-          }
-        }
-
-        // Đảm bảo maKho, maCtkmTangHang và muaHangCkVip luôn được giữ lại
-        if (!enrichedSale.maKho && sale.maKho) {
-          enrichedSale.maKho = sale.maKho;
-        }
-        if (!enrichedSale.maCtkmTangHang && sale.maCtkmTangHang) {
-          enrichedSale.maCtkmTangHang = sale.maCtkmTangHang;
-        }
-        // Giữ lại muaHangCkVip từ sale gốc (ưu tiên từ sale gốc)
-        if (sale.muaHangCkVip) {
-          enrichedSale.muaHangCkVip = sale.muaHangCkVip;
-        }
-        if (sale.grade_discamt !== undefined) {
-          enrichedSale.grade_discamt = sale.grade_discamt;
-        }
-        if (sale.chietKhauMuaHangCkVip !== undefined) {
-          enrichedSale.chietKhauMuaHangCkVip = sale.chietKhauMuaHangCkVip;
-        }
-        return enrichedSale;
-      });
-
-      return {
-        ...order,
-        customer: {
-          ...order.customer,
-          // Cập nhật brand từ department.company nếu có
-          brand: brandFromDepartment || order.customer?.brand || '',
-        },
-        sales: enrichedSales,
-      };
-    });
-
-    return enrichedOrders;
-  };
+  // Backend đã enrich đầy đủ, frontend chỉ cần hiển thị data
 
 
   const loadOrders = async () => {
@@ -614,7 +416,6 @@ export default function OrdersPage() {
       // Normalize dữ liệu - hỗ trợ cả format cũ và format mới từ ERP
       const ordersData = normalizeOrderData(rawData);
 
-      setRawOrders(ordersData);
       setAllOrders(ordersData);
       
       // Cập nhật pagination từ backend response
@@ -671,109 +472,11 @@ export default function OrdersPage() {
     }
   };
 
-  // Backend đã filter và paginate rồi, frontend chỉ cần hiển thị những gì backend trả về
+  // Backend đã enrich đầy đủ, frontend chỉ cần hiển thị data từ backend
   useEffect(() => {
     setDisplayedOrders(allOrders);
+    setEnrichedDisplayedOrders(allOrders);
   }, [allOrders]);
-
-  // Tạo một key duy nhất từ displayedOrders để track thay đổi
-  const displayedOrdersKey = useMemo(() => {
-    return displayedOrders.map(o => `${o.docCode}:${o.sales?.length || 0}`).join(',');
-  }, [displayedOrders]);
-
-  // Enrich products chỉ cho displayedOrders (theo phân trang) - chỉ khi có sales
-  useEffect(() => {
-    if (displayedOrders.length === 0) {
-      setEnrichedDisplayedOrders([]);
-      return;
-    }
-    
-    const enrichDisplayed = async () => {
-      try {
-        setEnriching(true);
-        
-        // Fetch full data CHỈ cho các orders chưa có sales VÀ chưa có trong cache
-        // Batch processing: chỉ fetch 3 orders một lần để tránh quá tải
-        // GIỚI HẠN: chỉ fetch tối đa số orders bằng limit (ví dụ: 10 orders)
-        const BATCH_SIZE = 3;
-        const MAX_ORDERS_TO_FETCH = pagination.limit; // Chỉ fetch tối đa số orders bằng limit
-        const ordersToFetch = displayedOrders
-          .filter(order => {
-            // Nếu đã có sales, không cần fetch
-            if (order.sales && order.sales.length > 0) {
-              return false;
-            }
-            // Nếu đã có trong cache, không cần fetch
-            if (fullOrderCacheRef.current.has(order.docCode)) {
-              return false;
-            }
-            // Nếu đã fetch thất bại, không cần fetch lại
-            if (failedOrdersRef.current.has(order.docCode)) {
-              return false;
-            }
-            // Nếu đang fetch, không cần fetch lại
-            if (fetchingOrdersRef.current.has(order.docCode)) {
-              return false;
-            }
-            return true;
-          })
-          .slice(0, MAX_ORDERS_TO_FETCH); // GIỚI HẠN số lượng orders fetch
-
-        // Fetch từng batch (3 orders một lần) để tránh quá tải
-        for (let i = 0; i < ordersToFetch.length; i += BATCH_SIZE) {
-          const batch = ordersToFetch.slice(i, i + BATCH_SIZE);
-          await Promise.all(
-            batch.map(async (order) => {
-              try {
-                fetchingOrdersRef.current.add(order.docCode);
-                const response = await salesApi.getByOrderCode(order.docCode);
-                const fullOrder = normalizeOrderData([response.data])[0];
-                // Lưu vào cache
-                fullOrderCacheRef.current.set(order.docCode, fullOrder);
-                // Xóa khỏi failed list nếu có
-                failedOrdersRef.current.delete(order.docCode);
-              } catch (error) {
-                console.error(`Error fetching full data for order ${order.docCode}:`, error);
-                // Đánh dấu là đã fetch thất bại để tránh retry
-                failedOrdersRef.current.add(order.docCode);
-                // Lưu order hiện tại vào cache để tránh fetch lại
-                fullOrderCacheRef.current.set(order.docCode, order);
-              } finally {
-                // Xóa khỏi fetching list
-                fetchingOrdersRef.current.delete(order.docCode);
-              }
-            })
-          );
-        }
-
-        // Sau khi fetch xong, map lại displayedOrders với data từ cache
-        const ordersWithFullData = displayedOrders.map(order => {
-          // Nếu đã có sales, dùng luôn
-          if (order.sales && order.sales.length > 0) {
-            return order;
-          }
-          // Nếu đã có trong cache, dùng cache
-          if (fullOrderCacheRef.current.has(order.docCode)) {
-            return fullOrderCacheRef.current.get(order.docCode)!;
-          }
-          // Nếu không có, trả về order hiện tại
-          return order;
-        });
-        
-        // Enrich với products và departments
-        const enriched = await enrichOrdersWithProducts(ordersWithFullData);
-        setEnrichedDisplayedOrders(enriched);
-      } catch (error) {
-        console.error('Error enriching orders:', error);
-        setEnrichedDisplayedOrders(displayedOrders);
-      } finally {
-        setEnriching(false);
-      }
-    };
-
-    enrichDisplayed();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [displayedOrdersKey]); // Dùng key thay vì toàn bộ displayedOrders array
 
   const toggleColumn = (field: OrderColumn) => {
     setSelectedColumns(prev => {
@@ -2158,13 +1861,6 @@ export default function OrdersPage() {
             <div className="flex flex-col items-center justify-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-3"></div>
               <p className="text-gray-500">Đang tải dữ liệu...</p>
-            </div>
-          </div>
-        ) : enriching ? (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
-            <div className="flex flex-col items-center justify-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-3"></div>
-              <p className="text-gray-500">Đang tải chi tiết đơn hàng...</p>
             </div>
           </div>
         ) : (
