@@ -54,30 +54,27 @@ export default function GiaiTrinhFaceIdPage() {
   const flattenedLines = useMemo(
     () =>
       data.flatMap((item) =>
-        (item.orders || []).flatMap((order) => {
-          const sales = order.sales && order.sales.length > 0 ? order.sales : [null];
-          return sales.map((sale) => {
-            const explainedFaceIds = (item.checkFaceIds || []).filter((cf: any) => cf.isExplained === true);
-            const explanationMessages = explainedFaceIds
-              .map((cf: any) => cf.explanationMessage)
-              .filter((msg: string) => msg && msg.trim());
-            return {
-              order,
-              sale,
-              item,
-              hasFaceId: (item.checkFaceIds?.length || 0) > 0,
-              faceCount: item.checkFaceIds?.length || 0,
-              hasExplained: explainedFaceIds.length > 0,
-              explanationMessages: explanationMessages,
-            };
-          });
+        (item.orders || []).map((order) => {
+          const explainedFaceIds = (item.checkFaceIds || []).filter((cf: any) => cf.isExplained === true);
+          const explanationMessages = explainedFaceIds
+            .map((cf: any) => cf.explanationMessage)
+            .filter((msg: string) => msg && msg.trim());
+          return {
+            order,
+            item,
+            hasFaceId: (item.checkFaceIds?.length || 0) > 0,
+            faceCount: item.checkFaceIds?.length || 0,
+            hasExplained: explainedFaceIds.length > 0,
+            explanationMessages: explanationMessages,
+          };
         }),
       ),
     [data],
   );
+  // Hiển thị tất cả orders từ các items đã được paginate ở backend
   const displayedOrders = useMemo(
-    () => flattenedLines.slice(0, pagination.limit),
-    [flattenedLines, pagination.limit],
+    () => flattenedLines,
+    [flattenedLines],
   );
 
   const showToast = (type: 'success' | 'error' | 'info', message: string) => {
@@ -126,17 +123,11 @@ export default function GiaiTrinhFaceIdPage() {
     }
   };
 
-  // Chỉ tự động load khi thay đổi pagination
+  // Tự động load khi component mount hoặc khi thay đổi pagination
   useEffect(() => {
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pagination.page, pagination.limit]);
-
-  // Load dữ liệu lần đầu khi component mount
-  useEffect(() => {
-    loadData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -329,19 +320,15 @@ export default function GiaiTrinhFaceIdPage() {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-100">
                   {displayedOrders.length > 0 ? (
-                    displayedOrders.map(({ order, sale, item, hasFaceId, faceCount, hasExplained, explanationMessages }, idx) => (
+                    displayedOrders.map(({ order, item, hasFaceId, faceCount, hasExplained, explanationMessages }, idx) => (
                       <tr key={`${order.docCode}-${idx}`} className="hover:bg-gray-50 transition-colors">
                         <td className="px-6 py-4 text-sm text-gray-900 font-medium">
                           <div className="flex flex-col gap-1">
                             <span>{order.docCode}</span>
-                            {sale ? (
-                              <span className="text-xs text-gray-500">
-                                {sale.itemCode || sale.itemName || 'Dòng hàng'}{' '}
-                                {sale.qty ? `• SL: ${sale.qty}` : ''}
-                              </span>
-                            ) : (
-                              <span className="text-xs text-gray-400">Không có dòng hàng</span>
-                            )}
+                            <span className="text-xs text-gray-500">
+                              {order.docDate ? new Date(order.docDate).toLocaleDateString('vi-VN') : '-'}
+                              {order.totalItems ? ` • ${order.totalItems} dòng` : ''}
+                            </span>
                           </div>
                         </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
