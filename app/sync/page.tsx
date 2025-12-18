@@ -47,6 +47,11 @@ export default function SyncPage() {
     message: string;
   } | null>(null);
   const [rangeSyncing, setRangeSyncing] = useState(false);
+  const [faceIdSyncing, setFaceIdSyncing] = useState(false);
+  const [faceIdResult, setFaceIdResult] = useState<{
+    savedCount?: number;
+    skippedCount?: number;
+  } | null>(null);
 
   const handleSyncAll = async () => {
     const syncDate = getSyncDate();
@@ -108,7 +113,40 @@ export default function SyncPage() {
   };
 
   const isSyncing = loading || syncingBrand !== null;
-  const isAnySyncing = isSyncing || rangeSyncing;
+  const isAnySyncing = isSyncing || rangeSyncing || faceIdSyncing;
+
+  const handleSyncFaceId = async () => {
+    const syncDate = getSyncDate();
+    if (!syncDate) {
+      setResult({
+        type: 'error',
+        message: 'Vui lòng chọn ngày cần đồng bộ',
+      });
+      return;
+    }
+
+    setFaceIdSyncing(true);
+    setResult(null);
+    setFaceIdResult(null);
+    try {
+      const response = await syncApi.syncFaceId(syncDate);
+      setResult({
+        type: 'success',
+        message: response.data.message || 'Đồng bộ FaceID thành công',
+      });
+      setFaceIdResult({
+        savedCount: response.data.savedCount,
+        skippedCount: response.data.skippedCount,
+      });
+    } catch (error: any) {
+      setResult({
+        type: 'error',
+        message: error.response?.data?.message || error.message || 'Lỗi khi đồng bộ FaceID',
+      });
+    } finally {
+      setFaceIdSyncing(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -123,6 +161,8 @@ export default function SyncPage() {
                   ? `Đang đồng bộ ${syncingBrand.toUpperCase()}`
                   : rangeSyncing
                   ? 'Đang đồng bộ 01/10/2025 - 30/11/2025'
+                  : faceIdSyncing
+                  ? 'Đang đồng bộ FaceID'
                   : 'Đang đồng bộ dữ liệu'}
               </h3>
               <p className="text-sm text-gray-600 text-center">
@@ -227,6 +267,41 @@ export default function SyncPage() {
                 </>
               ) : (
                 'Đồng bộ tất cả'
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Sync FaceID */}
+        <div className="bg-white rounded-lg border border-purple-200 p-4 mb-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-semibold text-gray-900 mb-1">Đồng bộ FaceID</h2>
+              <p className="text-sm text-gray-600">
+                Đồng bộ dữ liệu FaceID từ API inout-customer cho ngày <span className="font-mono">{getSyncDate()}</span>
+              </p>
+              {faceIdResult && (
+                <p className="text-xs text-gray-500 mt-1">
+                  Đã lưu: <span className="font-semibold text-green-600">{faceIdResult.savedCount || 0}</span> records mới, 
+                  bỏ qua: <span className="font-semibold text-gray-600">{faceIdResult.skippedCount || 0}</span> records đã tồn tại
+                </p>
+              )}
+            </div>
+            <button
+              onClick={handleSyncFaceId}
+              disabled={isAnySyncing}
+              className="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed inline-flex items-center gap-2"
+            >
+              {faceIdSyncing ? (
+                <>
+                  <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Đang đồng bộ...
+                </>
+              ) : (
+                'Đồng bộ FaceID'
               )}
             </button>
           </div>
@@ -352,9 +427,10 @@ export default function SyncPage() {
           <h3 className="text-sm font-semibold text-gray-900 mb-2">Lưu ý</h3>
           <ul className="text-xs text-gray-600 space-y-1">
             <li>• Đồng bộ dữ liệu từ Zappy API (giống như trang Đơn hàng)</li>
+            <li>• Đồng bộ FaceID từ API inout-customer (https://vmt.ipchello.com/api/inout-customer/)</li>
             <li>• Chọn ngày từ lịch, hệ thống sẽ tự động convert sang format DDMMMYYYY</li>
             <li>• Đồng bộ thủ công có thể mất vài phút tùy vào lượng dữ liệu</li>
-            <li>• Dữ liệu trùng lặp sẽ được bỏ qua tự động</li>
+            <li>• Dữ liệu trùng lặp sẽ được bỏ qua tự động (kiểm tra theo apiId)</li>
           </ul>
         </div>
       </div>

@@ -135,6 +135,10 @@ export const syncApi = {
   syncAllRangeOctNov2025: () => {
     return api.post('/sync/all-range-oct-nov-2025');
   },
+  // Sync FaceID data từ API inout-customer
+  syncFaceId: (date: string, shopCodes?: string[]) => {
+    return api.post('/sync/faceid', { date, shopCodes });
+  },
 };
 
 // Categories API
