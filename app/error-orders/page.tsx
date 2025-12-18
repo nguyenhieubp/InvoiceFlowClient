@@ -287,11 +287,6 @@ export default function OrdersPage() {
         const hasPromCodeForPromCodeRaw = sale?.promCode && String(sale.promCode).trim() !== '';
         let isTangHangForPromCodeRaw = giaBanForPromCodeRaw === 0 && tienHangForPromCodeRaw === 0 && revenueForPromCodeRaw === 0;
         
-        // Với F3: Nếu có promCode và giaBan = 0 && tienHang = 0 → là "mua hàng giảm giá" (giảm 100%), không phải "tặng hàng"
-        if (brandLowerForPromCodeRaw === 'f3' && hasPromCodeForPromCodeRaw && isTangHangForPromCodeRaw) {
-          isTangHangForPromCodeRaw = false;
-        }
-        
         // Các ordertype dịch vụ không được coi là hàng tặng (không hiển thị "1")
         const ordertypeNameForPromCodeRaw = sale?.ordertype || '';
         const isDichVuForPromCodeRaw = ordertypeNameForPromCodeRaw.includes('02. Làm dịch vụ') || 
@@ -302,9 +297,7 @@ export default function OrdersPage() {
           isTangHangForPromCodeRaw = false;
         }
         
-        // Kiểm tra có mã số thẻ (maThe) không - nếu có thì km_yn = 0 (không hiển thị "1")
-        const hasMaTheForPromCodeRaw = sale?.maThe && String(sale.maThe).trim() !== '';
-        // Kiểm tra nếu ma_ctkm_th = "TT DAU TU" thì cũng không hiển thị "1"
+        // Kiểm tra nếu ma_ctkm_th = "TT DAU TU" thì không hiển thị "1"
         // Nếu chưa có từ backend, tính toán lại từ ordertype
         let maCtkmTangHangForPromCodeRaw = sale?.maCtkmTangHang || '';
         if (!maCtkmTangHangForPromCodeRaw && isTangHangForPromCodeRaw) {
@@ -314,13 +307,8 @@ export default function OrdersPage() {
         }
         const isTTDauTuForPromCodeRaw = maCtkmTangHangForPromCodeRaw.trim() === 'TT DAU TU';
         
-        // Với FBV (f3): luôn không hiển thị "1" (km_yn = 0) theo yêu cầu Fast API
-        if (brandLowerForPromCodeRaw === 'f3') {
-          return '';
-        }
-        
-        // Nếu có mã số thẻ (maThe) hoặc ma_ctkm_th = "TT DAU TU" thì không hiển thị "1"
-        if (hasMaTheForPromCodeRaw || isTTDauTuForPromCodeRaw) {
+        // Nếu ma_ctkm_th = "TT DAU TU" thì không hiển thị "1"
+        if (isTTDauTuForPromCodeRaw) {
           return '';
         }
         
@@ -1058,11 +1046,6 @@ export default function OrdersPage() {
         const hasPromCodeForPromCode = sale?.promCode && String(sale.promCode).trim() !== '';
         let isTangHangForPromCode = giaBanForPromCode === 0 && tienHangForPromCode === 0 && revenueForPromCode === 0;
         
-        // Với F3: Nếu có promCode và giaBan = 0 && tienHang = 0 → là "mua hàng giảm giá" (giảm 100%), không phải "tặng hàng"
-        if (brandLowerForPromCode === 'f3' && hasPromCodeForPromCode && isTangHangForPromCode) {
-          isTangHangForPromCode = false;
-        }
-        
         // Các ordertype dịch vụ không được coi là hàng tặng (không hiển thị "1")
         const ordertypeNameForPromCode = sale?.ordertype || '';
         const isDichVuForPromCode = ordertypeNameForPromCode.includes('02. Làm dịch vụ') || 
@@ -1073,9 +1056,7 @@ export default function OrdersPage() {
           isTangHangForPromCode = false;
         }
         
-        // Kiểm tra có mã số thẻ (maThe) không - nếu có thì km_yn = 0 (không hiển thị "1")
-        const hasMaTheForPromCode = sale?.maThe && String(sale.maThe).trim() !== '';
-        // Kiểm tra nếu ma_ctkm_th = "TT DAU TU" thì cũng không hiển thị "1"
+        // Kiểm tra nếu ma_ctkm_th = "TT DAU TU" thì không hiển thị "1"
         // Nếu chưa có từ backend, tính toán lại từ ordertype
         let maCtkmTangHangForPromCode = sale?.maCtkmTangHang || '';
         if (!maCtkmTangHangForPromCode && isTangHangForPromCode) {
@@ -1085,13 +1066,8 @@ export default function OrdersPage() {
         }
         const isTTDauTuForPromCode = maCtkmTangHangForPromCode.trim() === 'TT DAU TU';
         
-        // Với FBV (f3): luôn không hiển thị "1" (km_yn = 0) theo yêu cầu Fast API
-        if (brandLowerForPromCode === 'f3') {
-          return <div className="text-sm text-gray-400 italic">-</div>;
-        }
-        
-        // Nếu có mã số thẻ (maThe) hoặc ma_ctkm_th = "TT DAU TU" thì không hiển thị "1"
-        if (hasMaTheForPromCode || isTTDauTuForPromCode) {
+        // Nếu ma_ctkm_th = "TT DAU TU" thì không hiển thị "1"
+        if (isTTDauTuForPromCode) {
           return <div className="text-sm text-gray-400 italic">-</div>;
         }
         
@@ -1125,17 +1101,7 @@ export default function OrdersPage() {
           brandLowerForMuaHangGiamGia = 'f3';
         }
         
-        const hasPromCodeForMuaHangGiamGia = sale?.promCode && String(sale.promCode).trim() !== '';
         const isTangHangForMuaHangGiamGia = giaBanForMuaHangGiamGiaRender === 0 && tienHangForMuaHangGiamGiaRender === 0 && revenueForMuaHangGiamGiaRender === 0;
-        
-        // Với F3: Nếu có promCode và giaBan = 0 && tienHang = 0 → là "mua hàng giảm giá" (giảm 100%), không phải "tặng hàng"
-        // → Hiển thị ở cột này
-        if (brandLowerForMuaHangGiamGia === 'f3' && hasPromCodeForMuaHangGiamGia && isTangHangForMuaHangGiamGia) {
-          const displayCode = sale?.promotionDisplayCode || sale?.promCode;
-          if (displayCode) {
-            return <div className="text-sm text-gray-900">{displayCode}</div>;
-          }
-        }
         
         // Nếu là hàng tặng (giaBan = 0 và tienHang = 0 và revenue = 0), không hiển thị ở cột này
         if (isTangHangForMuaHangGiamGia) {
@@ -1173,14 +1139,7 @@ export default function OrdersPage() {
           brandLowerForTangHang = 'f3';
         }
         
-        const hasPromCodeForTangHang = sale?.promCode && String(sale.promCode).trim() !== '';
         const isTangHangForTangHangRender = giaBanForTangHangRender === 0 && tienHangForTangHangRender === 0 && revenueForTangHangRender === 0;
-        
-        // Với F3: Nếu có promCode và giaBan = 0 && tienHang = 0 → là "mua hàng giảm giá" (giảm 100%), không phải "tặng hàng"
-        // → Không hiển thị ở cột này
-        if (brandLowerForTangHang === 'f3' && hasPromCodeForTangHang && isTangHangForTangHangRender) {
-          return <div className="text-sm text-gray-400 italic">-</div>;
-        }
         
         // Nếu là hàng tặng (giaBan = 0 và tienHang = 0 và revenue = 0)
         if (isTangHangForTangHangRender) {

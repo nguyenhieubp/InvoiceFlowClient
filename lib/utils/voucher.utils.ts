@@ -99,19 +99,27 @@ export const calculateThanhToanVoucher = (sale: SaleItemForVoucher | null | unde
     return null;
   }
   
+  // Normalize "VC KM" thành "VCKM" và "VC HB" thành "VC HB" (giữ nguyên để xử lý sau cho F3)
+  let normalizedVcLabel = vcLabel;
+  // Normalize "VC KM" thành "VCKM" cho tất cả các brand
+  if (normalizedVcLabel.includes('VC KM')) {
+    normalizedVcLabel = normalizedVcLabel.replace(/VC\s+KM/g, 'VCKM');
+  }
+  
   // Với F3, thêm prefix "FBV TT" trước VC label
   // Và chuyển tất cả VCHB hoặc VCHH thành VCHH
   if (brandLower === 'f3') {
-    // Chuyển VCHB hoặc VCHH thành VCHH
-    let finalVcLabel = vcLabel;
-    // Thay thế VCHB thành VCHH
-    if (finalVcLabel.includes('VCHB')) {
+    let finalVcLabel = normalizedVcLabel;
+    // Xử lý cả "VCHB" và "VC HB" (có khoảng trắng) - chuyển thành VCHH
+    if (finalVcLabel.includes('VCHB') || finalVcLabel.includes('VC HB')) {
+      // Thay thế "VC HB" trước, sau đó thay "VCHB"
+      finalVcLabel = finalVcLabel.replace(/VC\s+HB/g, 'VCHH');
       finalVcLabel = finalVcLabel.replace(/VCHB/g, 'VCHH');
     }
     // Nếu có VCHH thì giữ nguyên (không cần thay thế)
     return `FBV TT ${finalVcLabel}`;
   }
   
-  return vcLabel;
+  return normalizedVcLabel;
 };
 
