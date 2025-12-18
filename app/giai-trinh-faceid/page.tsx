@@ -45,16 +45,6 @@ export default function GiaiTrinhFaceIdPage() {
       brandCode: '',
     };
   });
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Cleanup debounce timer khi component unmount
-  useEffect(() => {
-    return () => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
-    };
-  }, []);
 
   const totalFaceChecks = useMemo(
     () => data.reduce((sum, item) => sum + (item.checkFaceIds?.length || 0), 0),
@@ -66,13 +56,21 @@ export default function GiaiTrinhFaceIdPage() {
       data.flatMap((item) =>
         (item.orders || []).flatMap((order) => {
           const sales = order.sales && order.sales.length > 0 ? order.sales : [null];
-          return sales.map((sale) => ({
-            order,
-            sale,
-            item,
-            hasFaceId: (item.checkFaceIds?.length || 0) > 0,
-            faceCount: item.checkFaceIds?.length || 0,
-          }));
+          return sales.map((sale) => {
+            const explainedFaceIds = (item.checkFaceIds || []).filter((cf: any) => cf.isExplained === true);
+            const explanationMessages = explainedFaceIds
+              .map((cf: any) => cf.explanationMessage)
+              .filter((msg: string) => msg && msg.trim());
+            return {
+              order,
+              sale,
+              item,
+              hasFaceId: (item.checkFaceIds?.length || 0) > 0,
+              faceCount: item.checkFaceIds?.length || 0,
+              hasExplained: explainedFaceIds.length > 0,
+              explanationMessages: explanationMessages,
+            };
+          });
         }),
       ),
     [data],
@@ -128,27 +126,17 @@ export default function GiaiTrinhFaceIdPage() {
     }
   };
 
+  // Chỉ tự động load khi thay đổi pagination
   useEffect(() => {
-    // Debounce cho partnerCode, orderCode và brandCode (input fields)
-    const isInputFilter = filters.partnerCode || filters.orderCode || filters.brandCode;
-    if (isInputFilter) {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
-      debounceTimerRef.current = setTimeout(() => {
-        loadData();
-      }, 500); // Đợi 500ms sau khi user ngừng gõ
-      return () => {
-        if (debounceTimerRef.current) {
-          clearTimeout(debounceTimerRef.current);
-        }
-      };
-    } else {
-      // Gọi ngay cho date và faceStatus (không cần debounce)
-      loadData();
-    }
+    loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pagination.page, pagination.limit, filters.dateFrom, filters.dateTo, filters.orderCode, filters.partnerCode, filters.faceStatus, filters.brandCode]);
+  }, [pagination.page, pagination.limit]);
+
+  // Load dữ liệu lần đầu khi component mount
+  useEffect(() => {
+    loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -163,14 +151,16 @@ export default function GiaiTrinhFaceIdPage() {
         </div>
       )}
 
-      <div className="mb-6 space-y-2">
-        <h1 className="text-2xl font-semibold text-gray-900">Giải trình FaceID</h1>
-        <p className="text-sm text-gray-600">Danh sách đơn hàng đã làm phẳng theo khách hàng và FaceID.</p>
+      <div className="mb-6 space-y-4">
+        <div className="space-y-2">
+          <h1 className="text-2xl font-semibold text-gray-900">Giải trình FaceID</h1>
+          <p className="text-sm text-gray-600">Danh sách đơn hàng đã làm phẳng theo khách hàng và FaceID.</p>
+        </div>
 
         <div className="grid grid-cols-1 gap-3">
-          <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-            <p className="text-xs font-medium text-gray-600">Tổng dòng hàng (order_line) theo ngày</p>
-            <p className="mt-1 text-xl font-semibold text-gray-900">{pagination.totalLines}</p>
+          <div className="rounded-lg border border-gray-200 bg-white p-4">
+            <p className="text-xs font-medium text-gray-600 mb-1">Tổng dòng hàng (order_line) theo ngày</p>
+            <p className="text-xl font-semibold text-gray-900">{pagination.totalLines.toLocaleString('vi-VN')}</p>
           </div>
         </div>
       </div>
@@ -178,7 +168,7 @@ export default function GiaiTrinhFaceIdPage() {
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         {/* Filters */}
         <div className="px-6 py-4 border-b border-gray-200 bg-white">
-          <div className="grid grid-cols-1 md:grid-cols-7 gap-3 items-end">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 items-end">
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Mã đơn hàng</label>
               <input
@@ -186,7 +176,6 @@ export default function GiaiTrinhFaceIdPage() {
                 onChange={(e) => {
                   const value = e.target.value;
                   setFilters((prev) => ({ ...prev, orderCode: value }));
-                  setPagination((prev) => ({ ...prev, page: 1 }));
                 }}
                 placeholder="Nhập mã đơn"
                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -199,7 +188,6 @@ export default function GiaiTrinhFaceIdPage() {
                  onChange={(e) => {
                    const value = e.target.value;
                    setFilters((prev) => ({ ...prev, partnerCode: value }));
-                   setPagination((prev) => ({ ...prev, page: 1 }));
                  }}
                  placeholder="Nhập mã KH"
                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -213,7 +201,6 @@ export default function GiaiTrinhFaceIdPage() {
                 onChange={(e) => {
                   const value = e.target.value;
                   setFilters((prev) => ({ ...prev, dateFrom: value }));
-                  setPagination((prev) => ({ ...prev, page: 1 }));
                 }}
                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
@@ -226,7 +213,6 @@ export default function GiaiTrinhFaceIdPage() {
                 onChange={(e) => {
                   const value = e.target.value;
                   setFilters((prev) => ({ ...prev, dateTo: value }));
-                  setPagination((prev) => ({ ...prev, page: 1 }));
                 }}
                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
@@ -238,7 +224,6 @@ export default function GiaiTrinhFaceIdPage() {
                  onChange={(e) => {
                    const value = e.target.value;
                    setFilters((prev) => ({ ...prev, brandCode: value }));
-                   setPagination((prev) => ({ ...prev, page: 1 }));
                  }}
                  placeholder="Nhập brand code"
                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -251,8 +236,6 @@ export default function GiaiTrinhFaceIdPage() {
                  onChange={(e) => {
                    const value = e.target.value as FaceStatusFilter;
                    setFilters((prev) => ({ ...prev, faceStatus: value }));
-                   setPagination((prev) => ({ ...prev, page: 1 }));
-                   // useEffect sẽ tự động gọi loadData khi faceStatus thay đổi
                  }}
                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                >
@@ -264,10 +247,27 @@ export default function GiaiTrinhFaceIdPage() {
              <div className="flex gap-2">
                <button
                  onClick={() => {
+                   setPagination((prev) => ({ ...prev, page: 1 }));
+                   loadData();
+                 }}
+                 disabled={loading}
+                 className="flex-1 inline-flex items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+               >
+                 <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                 </svg>
+                 Tìm kiếm
+               </button>
+             </div>
+             <div className="flex gap-2">
+               <button
+                 onClick={() => {
                    setFilters({ orderCode: '', partnerCode: '', dateFrom: '', dateTo: '', faceStatus: 'all', brandCode: '' });
                    setPagination((prev) => ({ ...prev, page: 1 }));
+                   loadData();
                  }}
-                 className="flex-1 inline-flex items-center justify-center rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                 disabled={loading}
+                 className="flex-1 inline-flex items-center justify-center rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                >
                  Xóa lọc
                </button>
@@ -322,12 +322,14 @@ export default function GiaiTrinhFaceIdPage() {
                     <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Mã KH</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Có FaceID?</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Số lần FaceID</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Đã giải trình chưa</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Thông tin giải trình</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Thông tin FaceID</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-100">
                   {displayedOrders.length > 0 ? (
-                    displayedOrders.map(({ order, sale, item, hasFaceId, faceCount }, idx) => (
+                    displayedOrders.map(({ order, sale, item, hasFaceId, faceCount, hasExplained, explanationMessages }, idx) => (
                       <tr key={`${order.docCode}-${idx}`} className="hover:bg-gray-50 transition-colors">
                         <td className="px-6 py-4 text-sm text-gray-900 font-medium">
                           <div className="flex flex-col gap-1">
@@ -362,20 +364,59 @@ export default function GiaiTrinhFaceIdPage() {
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                           {faceCount} lần
                       </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          <span
+                            className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
+                              hasExplained
+                                ? 'bg-blue-50 text-blue-700 border border-blue-100'
+                                : 'bg-orange-50 text-orange-700 border border-orange-100'
+                            }`}
+                          >
+                            {hasExplained ? 'Đã giải trình' : 'Chưa giải trình'}
+                          </span>
+                      </td>
+                        <td className="px-6 py-4 text-sm text-gray-600 max-w-xs">
+                          {!hasExplained && explanationMessages && explanationMessages.length > 0 ? (
+                            <div className="space-y-1.5">
+                              {explanationMessages.map((msg: string, msgIdx: number) => (
+                                <div
+                                  key={msgIdx}
+                                  className="text-xs bg-orange-50 border-l-4 border-orange-400 rounded px-2.5 py-1.5 text-gray-700 break-words"
+                                  title={msg}
+                                >
+                                  {msg}
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
+                      </td>
                         <td className="px-6 py-4 text-sm text-gray-600">
                         {item.checkFaceIds && item.checkFaceIds.length > 0 ? (
-                          <div className="space-y-1 max-h-32 overflow-y-auto">
+                          <div className="space-y-2">
                               {item.checkFaceIds.map((cf, cfIdx) => (
-                                <div key={cfIdx} className="text-xs rounded-md border border-gray-200 bg-gray-50 px-3 py-2">
-                                <div>
-                                  {cf.startTime ? new Date(cf.startTime).toLocaleString('vi-VN') : '-'}
+                                <div key={cfIdx} className="text-xs rounded border border-gray-200 bg-white px-2.5 py-2 hover:bg-gray-50">
+                                <div className="flex items-center gap-2 flex-wrap mb-1">
+                                  <span className="font-medium text-gray-800">{cf.startTime ? new Date(cf.startTime).toLocaleString('vi-VN') : '-'}</span>
                                   {cf.isFirstInDay && (
-                                    <span className="ml-1 px-1 py-0.5 bg-blue-100 text-blue-800 rounded text-xs">Lần đầu</span>
+                                    <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-medium">Lần đầu</span>
+                                  )}
+                                  {cf.isExplained && (
+                                    <span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-xs font-medium">Đã giải trình</span>
                                   )}
                                 </div>
-                                  <div className="text-gray-500">
+                                  <div className="text-gray-600 text-xs">
                                   {cf.shopName || cf.shopCode || '-'}
                                 </div>
+                                  {!cf.isExplained && cf.explanationMessage && (
+                                    <div className="mt-1.5 pt-1.5 border-t border-gray-200">
+                                      <div className="text-xs font-medium text-gray-700 mb-1">Giải trình:</div>
+                                      <div className="text-xs text-gray-600 bg-orange-50 rounded px-2 py-1 border-l-2 border-orange-400">
+                                        {cf.explanationMessage}
+                                      </div>
+                                    </div>
+                                  )}
                               </div>
                             ))}
                           </div>
@@ -387,7 +428,7 @@ export default function GiaiTrinhFaceIdPage() {
                     ))
                   ) : (
                     <tr>
-                      <td className="px-6 py-4 text-center text-sm text-gray-400" colSpan={5}>
+                      <td className="px-6 py-4 text-center text-sm text-gray-400" colSpan={7}>
                         Không có đơn hàng để hiển thị
                       </td>
                     </tr>
