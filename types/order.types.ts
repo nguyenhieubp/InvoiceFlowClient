@@ -167,6 +167,23 @@ export interface SaleItem {
   maThe?: string;
   soSerial?: string;
   revenue?: number;
+  // Các field display từ backend
+  isTangHang?: boolean;
+  isDichVu?: boolean;
+  promCodeDisplay?: string | null;
+  muaHangGiamGiaDisplay?: string | null;
+  thanhToanCouponDisplay?: string | null;
+  chietKhauThanhToanCouponDisplay?: number | null;
+  thanhToanVoucherDisplay?: string | null;
+  chietKhauThanhToanVoucherDisplay?: number | null;
+  voucherDp1Display?: string | null;
+  chietKhauVoucherDp1Display?: number | null;
+  thanhToanTkTienAoDisplay?: string | null;
+  chietKhauThanhToanTkTienAoDisplay?: number | null;
+  soSerialDisplay?: string | null;
+  cucThueDisplay?: string | null;
+  tkDoanhThuDisplay?: string | null;
+  tkGiaVonDisplay?: string | null;
   // Các trường bổ sung từ API
   cat1?: string;
   cat2?: string;
