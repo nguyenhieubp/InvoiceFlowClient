@@ -88,6 +88,15 @@ export default function Sidebar({ isOpen, onToggle, collapsed, onToggleCollapse 
           ),
         },
         {
+          href: '/stock-transfer',
+          label: 'Dữ liệu xuất kho',
+          icon: (
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+            </svg>
+          ),
+        },
+        {
           href: '/fast-api-invoices',
           label: 'Bảng kê hóa đơn',
           icon: (
@@ -114,7 +123,7 @@ export default function Sidebar({ isOpen, onToggle, collapsed, onToggleCollapse 
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
             </svg>
           ),
-        },
+        }
       ],
     },
     {

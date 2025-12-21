@@ -132,6 +132,30 @@ export const syncApi = {
   syncFaceId: (date: string, shopCodes?: string[]) => {
     return api.post('/sync/faceid', { date, shopCodes });
   },
+  // Sync stock transfer cho một brand một ngày
+  syncStockTransfer: (brandName: string, date: string) => {
+    return api.post(`/sync/stock-transfer/${brandName}`, { date });
+  },
+  // Sync stock transfer từ ngày đến ngày
+  syncStockTransferRange: (dateFrom: string, dateTo: string, brand?: string) => {
+    return api.post('/sync/stock-transfer/range', { dateFrom, dateTo, brand });
+  },
+};
+
+// Stock Transfer API
+export const stockTransferApi = {
+  getAll: (params?: {
+    page?: number;
+    limit?: number;
+    brand?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    branchCode?: string;
+    itemCode?: string;
+    soCode?: string;
+  }) => {
+    return api.get('/sync/stock-transfers', { params });
+  },
 };
 
 // Categories API
