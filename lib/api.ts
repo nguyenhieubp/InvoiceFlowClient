@@ -125,15 +125,8 @@ export const invoicesApi = {
 
 // Sync API
 export const syncApi = {
-  syncAll: (date: string) => {
-    return api.post('/sync/all', { date });
-  },
   syncBrand: (brandName: string, date: string) => {
     return api.post(`/sync/brand/${brandName}`, { date });
-  },
-  // Backfill toàn bộ đơn hàng 01/10/2025 - 30/11/2025 (không cần chọn ngày)
-  syncAllRangeOctNov2025: () => {
-    return api.post('/sync/all-range-oct-nov-2025');
   },
   // Sync FaceID data từ API inout-customer
   syncFaceId: (date: string, shopCodes?: string[]) => {
