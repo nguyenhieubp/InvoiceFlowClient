@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { syncApi } from '@/lib/api';
+import { syncApi, salesApi } from '@/lib/api';
 import Link from 'next/link';
 
 const brands = [
@@ -50,6 +50,12 @@ export default function SyncPage() {
     savedCount?: number;
     skippedCount?: number;
   } | null>(null);
+  const [syncingSalesRange, setSyncingSalesRange] = useState(false);
+  const [salesRangeResult, setSalesRangeResult] = useState<{
+    type: 'success' | 'error';
+    message: string;
+    data?: any;
+  } | null>(null);
 
   const handleSyncBrand = async (brandName: string) => {
     const syncDate = getSyncDate();
@@ -80,7 +86,29 @@ export default function SyncPage() {
   };
 
   const isSyncing = syncingBrand !== null;
-  const isAnySyncing = isSyncing || faceIdSyncing;
+  const isAnySyncing = isSyncing || faceIdSyncing || syncingSalesRange;
+
+  const handleSyncSalesOctDec2025 = async () => {
+    setSyncingSalesRange(true);
+    setSalesRangeResult(null);
+    setResult(null);
+    try {
+      const response = await salesApi.syncSalesOctDec2025();
+      const data = response.data;
+      setSalesRangeResult({
+        type: 'success',
+        message: data.message || 'Đồng bộ sale thành công',
+        data: data,
+      });
+    } catch (error: any) {
+      setSalesRangeResult({
+        type: 'error',
+        message: error.response?.data?.message || error.message || 'Lỗi khi đồng bộ sale',
+      });
+    } finally {
+      setSyncingSalesRange(false);
+    }
+  };
 
   const handleSyncFaceId = async () => {
     const syncDate = getSyncDate();
@@ -128,6 +156,8 @@ export default function SyncPage() {
                   ? `Đang đồng bộ ${syncingBrand.toUpperCase()}`
                   : faceIdSyncing
                   ? 'Đang đồng bộ FaceID'
+                  : syncingSalesRange
+                  ? 'Đang đồng bộ Sale (01/10/2025 - 01/12/2025)'
                   : 'Đang xử lý...'}
               </h3>
               <p className="text-sm text-gray-600 text-center">
@@ -207,6 +237,88 @@ export default function SyncPage() {
             </div>
           </div>
         )}
+
+        {/* Sync Sales Oct-Dec 2025 */}
+        <div className="bg-white rounded-lg border border-blue-200 p-4 mb-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-semibold text-gray-900 mb-1">Đồng bộ Sale (01/10/2025 - 01/12/2025)</h2>
+              <p className="text-sm text-gray-600">
+                Đồng bộ sale từ 01/10/2025 đến 01/12/2025 cho tất cả các nhãn hàng (f3, labhair, yaman, menard)
+              </p>
+              {salesRangeResult?.data && (
+                <div className="mt-2 text-xs text-gray-500 space-y-1">
+                  <p>
+                    Tổng đơn: <span className="font-semibold text-blue-600">{salesRangeResult.data.totalOrdersCount || 0}</span>, 
+                    Tổng sale: <span className="font-semibold text-blue-600">{salesRangeResult.data.totalSalesCount || 0}</span>, 
+                    Tổng khách: <span className="font-semibold text-blue-600">{salesRangeResult.data.totalCustomersCount || 0}</span>
+                  </p>
+                  {salesRangeResult.data.brandResults && salesRangeResult.data.brandResults.length > 0 && (
+                    <div className="mt-1">
+                      <p className="font-semibold mb-1">Chi tiết theo nhãn:</p>
+                      <ul className="space-y-0.5">
+                        {salesRangeResult.data.brandResults.map((brand: any, idx: number) => (
+                          <li key={idx} className="text-gray-600">
+                            {brand.brand}: {brand.ordersCount} đơn, {brand.salesCount} sale, {brand.customersCount} khách
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            <button
+              onClick={handleSyncSalesOctDec2025}
+              disabled={isAnySyncing}
+              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed inline-flex items-center gap-2"
+            >
+              {syncingSalesRange ? (
+                <>
+                  <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Đang đồng bộ...
+                </>
+              ) : (
+                'Đồng bộ Sale'
+              )}
+            </button>
+          </div>
+          {salesRangeResult && (
+            <div
+              className={`mt-3 p-3 rounded border text-sm ${
+                salesRangeResult.type === 'success'
+                  ? 'bg-green-50 text-green-800 border-green-200'
+                  : 'bg-red-50 text-red-800 border-red-200'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {salesRangeResult.type === 'success' ? (
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  ) : (
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  )}
+                  <span>{salesRangeResult.message}</span>
+                </div>
+                <button
+                  onClick={() => setSalesRangeResult(null)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Sync FaceID */}
         <div className="bg-white rounded-lg border border-purple-200 p-4 mb-4">

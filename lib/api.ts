@@ -99,6 +99,12 @@ export const salesApi = {
   syncErrorOrderByDocCode: (docCode: string) => {
     return api.post(`/sales/sync-error-order/${docCode}`);
   },
+  syncSalesByDateRange: (startDate: string, endDate: string) => {
+    return api.post('/sales/sync-sales-by-date-range', { startDate, endDate });
+  },
+  syncSalesOctDec2025: () => {
+    return api.post('/sales/sync-sales-oct-dec-2025');
+  },
 };
 
 // Invoices API
