@@ -13,6 +13,7 @@ interface StockTransfer {
   brandCode: string;
   itemCode: string;
   itemName: string;
+  materialCode?: string; // Mã hàng từ Loyalty API
   stockCode: string;
   relatedStockCode?: string;
   ioType: string;
@@ -485,7 +486,7 @@ export default function StockTransferPage() {
                               {st.brand || st.brandCode}
                             </td>
                             <td className="px-3 py-2.5 whitespace-nowrap text-xs text-gray-900 font-mono">
-                              {st.itemCode}
+                              {st.materialCode || st.itemCode}
                             </td>
                             <td className="px-3 py-2.5 text-xs text-gray-700 max-w-xs truncate" title={st.itemName}>
                               {st.itemName}
