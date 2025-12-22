@@ -55,17 +55,24 @@ export default function GiaiTrinhFaceIdPage() {
     () =>
       data.flatMap((item) =>
         (item.orders || []).map((order) => {
-          const explainedFaceIds = (item.checkFaceIds || []).filter((cf: any) => cf.isExplained === true);
-          const explanationMessages = explainedFaceIds
-            .map((cf: any) => cf.explanationMessage)
-            .filter((msg: string) => msg && msg.trim());
+          // Lấy thông tin giải trình từ order (sales) thay vì từ checkFaceIds
+          const isFaceIdExplained = (order as any).isFaceIdExplained || false;
+          const faceIdExplanationMessage = (order as any).faceIdExplanationMessage || null;
+          const faceIdExplanationDate = (order as any).faceIdExplanationDate || null;
+          
+          // Lấy explanation messages từ order
+          const explanationMessages = faceIdExplanationMessage 
+            ? [faceIdExplanationMessage].filter((msg: string) => msg && msg.trim())
+            : [];
+          
           return {
             order,
             item,
-            hasFaceId: (item.checkFaceIds?.length || 0) > 0,
+            hasFaceId: item.isCheckFaceId || false, // Dùng isCheckFaceId từ item (đã tính theo sales)
             faceCount: item.checkFaceIds?.length || 0,
-            hasExplained: explainedFaceIds.length > 0,
+            hasExplained: isFaceIdExplained, // Lấy từ order
             explanationMessages: explanationMessages,
+            explanationDate: faceIdExplanationDate, // Thêm ngày giải trình
           };
         }),
       ),
@@ -320,7 +327,7 @@ export default function GiaiTrinhFaceIdPage() {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-100">
                   {displayedOrders.length > 0 ? (
-                    displayedOrders.map(({ order, item, hasFaceId, faceCount, hasExplained, explanationMessages }, idx) => (
+                    displayedOrders.map(({ order, item, hasFaceId, faceCount, hasExplained, explanationMessages, explanationDate }, idx) => (
                       <tr key={`${order.docCode}-${idx}`} className="hover:bg-gray-50 transition-colors">
                         <td className="px-6 py-4 text-sm text-gray-900 font-medium">
                           <div className="flex flex-col gap-1">
@@ -363,15 +370,21 @@ export default function GiaiTrinhFaceIdPage() {
                           </span>
                       </td>
                         <td className="px-6 py-4 text-sm text-gray-600 max-w-xs">
-                          {!hasExplained && explanationMessages && explanationMessages.length > 0 ? (
+                          {hasExplained && explanationMessages && explanationMessages.length > 0 ? (
                             <div className="space-y-1.5">
                               {explanationMessages.map((msg: string, msgIdx: number) => (
-                                <div
-                                  key={msgIdx}
-                                  className="text-xs bg-orange-50 border-l-4 border-orange-400 rounded px-2.5 py-1.5 text-gray-700 break-words"
-                                  title={msg}
-                                >
-                                  {msg}
+                                <div key={msgIdx} className="space-y-1">
+                                  <div
+                                    className="text-xs bg-blue-50 border-l-4 border-blue-400 rounded px-2.5 py-1.5 text-gray-700 break-words"
+                                    title={msg}
+                                  >
+                                    {msg}
+                                  </div>
+                                  {explanationDate && (
+                                    <div className="text-xs text-gray-500 pl-2.5">
+                                      Ngày: {new Date(explanationDate).toLocaleDateString('vi-VN')}
+                                    </div>
+                                  )}
                                 </div>
                               ))}
                             </div>
