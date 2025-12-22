@@ -223,15 +223,20 @@ export const normalizeOrderData = (data: any): Order[] => {
       else if (item?.docCode) {
         // Preserve cashio fields từ backend
         // Preserve statusAsys trong sales array
+        // Preserve stockTransfers và stockTransferInfo từ backend
         const order: Order = {
           ...(item as Order),
           cashioFopSyscode: item.cashioFopSyscode || null,
           cashioData: item.cashioData || null,
           cashioTotalIn: item.cashioTotalIn || null,
-          // Preserve statusAsys trong sales array nếu có
+          // Preserve stockTransferInfo từ backend
+          stockTransferInfo: item.stockTransferInfo || undefined,
+          stockTransfers: item.stockTransfers || undefined,
+          // Preserve statusAsys và stockTransfers trong sales array nếu có
           sales: item.sales?.map((sale: any) => ({
             ...sale,
             statusAsys: sale.statusAsys !== undefined ? sale.statusAsys : undefined,
+            stockTransfers: sale.stockTransfers || undefined,
           })),
         };
         normalized.push(order);
@@ -250,15 +255,20 @@ export const normalizeOrderData = (data: any): Order[] => {
   if (data?.docCode) {
     // Preserve cashio fields từ backend
     // Preserve statusAsys trong sales array
+    // Preserve stockTransfers và stockTransferInfo từ backend
     const order: Order = {
       ...(data as Order),
       cashioFopSyscode: data.cashioFopSyscode || null,
       cashioData: data.cashioData || null,
       cashioTotalIn: data.cashioTotalIn || null,
-      // Preserve statusAsys trong sales array nếu có
+      // Preserve stockTransferInfo từ backend
+      stockTransferInfo: data.stockTransferInfo || undefined,
+      stockTransfers: data.stockTransfers || undefined,
+      // Preserve statusAsys và stockTransfers trong sales array nếu có
       sales: data.sales?.map((sale: any) => ({
         ...sale,
         statusAsys: sale.statusAsys !== undefined ? sale.statusAsys : undefined,
+        stockTransfers: sale.stockTransfers || undefined,
       })),
     };
     return [order];

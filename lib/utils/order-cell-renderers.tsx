@@ -306,6 +306,98 @@ export const renderCellValue = (order: Order, sale: SaleItem | null, field: Orde
     case 'maThe':
       return <div className="text-sm text-gray-900">{sale?.maThe ?? '-'}</div>;
     
+    // Stock Transfer columns - Sale item level (lấy từ stockTransfers của sale)
+    case 'stockTransferDoctype': {
+      const stockTransfers = sale?.stockTransfers || [];
+      if (stockTransfers.length > 0) {
+        // Lấy doctype từ stock transfer đầu tiên
+        return <div className="text-sm text-gray-900">{stockTransfers[0]?.doctype || '-'}</div>;
+      }
+      return <span className="text-gray-400 italic">-</span>;
+    }
+    
+    case 'stockTransferTransDate': {
+      const stockTransfers = sale?.stockTransfers || [];
+      if (stockTransfers.length > 0) {
+        const transDate = stockTransfers[0]?.transDate;
+        if (transDate) {
+          return (
+            <div className="text-sm text-gray-900">
+              {new Date(transDate).toLocaleDateString('vi-VN', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+              })}
+            </div>
+          );
+        }
+      }
+      return <span className="text-gray-400 italic">-</span>;
+    }
+    
+    case 'stockTransferDocDesc': {
+      const stockTransfers = sale?.stockTransfers || [];
+      if (stockTransfers.length > 0) {
+        return <div className="text-sm text-gray-900">{stockTransfers[0]?.docDesc || '-'}</div>;
+      }
+      return <span className="text-gray-400 italic">-</span>;
+    }
+    
+    case 'stockTransferStockCode': {
+      const stockTransfers = sale?.stockTransfers || [];
+      if (stockTransfers.length > 0) {
+        // Có thể có nhiều stock code, hiển thị tất cả
+        const stockCodes = Array.from(new Set(stockTransfers.map(st => st.stockCode).filter(Boolean)));
+        return <div className="text-sm text-gray-900">{stockCodes.join(', ') || '-'}</div>;
+      }
+      return <span className="text-gray-400 italic">-</span>;
+    }
+    
+    case 'stockTransferQty': {
+      const stockTransfers = sale?.stockTransfers || [];
+      if (stockTransfers.length > 0) {
+        // Tổng số lượng xuất (lấy giá trị tuyệt đối)
+        const totalQty = stockTransfers.reduce((sum, st) => sum + Math.abs(Number(st.qty || 0)), 0);
+        return formatNumber(totalQty);
+      }
+      return <span className="text-gray-400 italic">-</span>;
+    }
+    
+    case 'stockTransferIoType': {
+      const stockTransfers = sale?.stockTransfers || [];
+      if (stockTransfers.length > 0) {
+        return <div className="text-sm text-gray-900">{stockTransfers[0]?.ioType || '-'}</div>;
+      }
+      return <span className="text-gray-400 italic">-</span>;
+    }
+    
+    case 'stockTransferBatchSerial': {
+      const stockTransfers = sale?.stockTransfers || [];
+      if (stockTransfers.length > 0) {
+        // Có thể có nhiều batch/serial, hiển thị tất cả
+        const batchSerials = Array.from(new Set(stockTransfers.map(st => st.batchSerial).filter(Boolean)));
+        return <div className="text-sm text-gray-900">{batchSerials.join(', ') || '-'}</div>;
+      }
+      return <span className="text-gray-400 italic">-</span>;
+    }
+    
+    case 'stockTransferSoCode': {
+      const stockTransfers = sale?.stockTransfers || [];
+      if (stockTransfers.length > 0) {
+        return <div className="text-sm text-gray-900">{stockTransfers[0]?.soCode || '-'}</div>;
+      }
+      return <span className="text-gray-400 italic">-</span>;
+    }
+    
+    case 'stockTransferDocCode': {
+      const stockTransfers = sale?.stockTransfers || [];
+      if (stockTransfers.length > 0) {
+        // Hiển thị docCode của stock transfer (Mã CT)
+        return <div className="text-sm text-gray-900 font-mono">{stockTransfers[0]?.docCode || '-'}</div>;
+      }
+      return <span className="text-gray-400 italic">-</span>;
+    }
+    
     // Các field trả về "-"
     case 'tkVatTu':
     case 'suaTkVatTu':

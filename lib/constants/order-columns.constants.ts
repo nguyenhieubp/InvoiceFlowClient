@@ -117,7 +117,17 @@ export type OrderColumn =
   | 'tkChiPhiKhauHaoTSDC' // Tk chi phí khấu hao TSDC
   | 'tkDoanhThuHangNo' // Tk doanh thu hàng nợ
   | 'tkGiaVonHangNo'   // Tk giá vốn hàng nợ
-  | 'tkVatTuHangNo';   // Tk vật tư hàng nợ
+  | 'tkVatTuHangNo'    // Tk vật tư hàng nợ
+  // Stock Transfer columns
+  | 'stockTransferDoctype'    // Loại xuất kho
+  | 'stockTransferTransDate'  // Ngày xuất kho
+  | 'stockTransferDocDesc'    // Mô tả xuất kho
+  | 'stockTransferStockCode'  // Mã kho xuất
+  | 'stockTransferQty'        // Số lượng xuất kho
+  | 'stockTransferIoType'     // Loại nhập/xuất
+  | 'stockTransferBatchSerial' // Mã lô/serial xuất kho
+  | 'stockTransferSoCode'     // Mã đơn hàng xuất kho
+  | 'stockTransferDocCode'    // Mã CT (docCode của stock transfer);
 
 export const FIELD_LABELS: Record<OrderColumn, string> = {
   partnerCode: '* Mã khách',
@@ -234,6 +244,16 @@ export const FIELD_LABELS: Record<OrderColumn, string> = {
   tkDoanhThuHangNo: 'Tk doanh thu hàng nợ',
   tkGiaVonHangNo: 'Tk giá vốn hàng nợ',
   tkVatTuHangNo: 'Tk vật tư hàng nợ',
+  // Stock Transfer labels
+  stockTransferDoctype: 'Loại xuất kho',
+  stockTransferTransDate: 'Ngày xuất kho',
+  stockTransferDocDesc: 'Mô tả xuất kho',
+  stockTransferStockCode: 'Mã kho xuất',
+  stockTransferQty: 'Số lượng xuất kho',
+  stockTransferIoType: 'Loại nhập/xuất',
+  stockTransferBatchSerial: 'Mã lô/serial xuất kho',
+  stockTransferSoCode: 'Mã đơn hàng xuất kho',
+  stockTransferDocCode: 'Mã CT',
 };
 
 // Các cột mặc định theo thứ tự
@@ -279,5 +299,10 @@ export const MAIN_COLUMNS: OrderColumn[] = [
   'maCtkmTangHang',           // Mã CTKM tặng hàng
   'maThe',                    // Mã thẻ
   'soSerial',                 // Số serial
+  // Stock Transfer columns
+  'stockTransferStockCode',   // Mã kho xuất
+  'stockTransferQty',         // Số lượng xuất kho
+  'stockTransferTransDate',  // Ngày xuất kho
+  'stockTransferDocCode',    // Mã CT
 ];
 

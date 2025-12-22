@@ -218,6 +218,32 @@ export interface SaleItem {
   promotion?: OrderPromotion | null;
   department?: OrderDepartment | null;
   statusAsys?: boolean; // Trạng thái đồng bộ: true = đồng bộ thành công, false = sản phẩm không tồn tại trong Loyalty API (404)
+  stockTransfers?: StockTransfer[]; // Danh sách stock transfers cho sale item này
+}
+
+export interface StockTransfer {
+  id?: string;
+  doctype?: string; // SALE_STOCKOUT
+  docCode?: string; // ST37.00131367_1
+  transDate?: Date | string; // 01/11/2025 19:00
+  docDesc?: string; // Đơn hàng bán lẻ
+  branchCode?: string; // FS07
+  brandCode?: string; // NH_FB
+  itemCode?: string; // F00011
+  itemName?: string; // Joukin_Liệu trình...
+  stockCode?: string; // BFS07
+  relatedStockCode?: string; // null
+  ioType?: string; // O
+  qty?: number; // -5
+  batchSerial?: string; // null
+  lineInfo1?: string; // null
+  lineInfo2?: string; // null
+  soCode?: string; // SO37.00131367
+  syncDate?: string; // Ngày sync (DDMMMYYYY format)
+  brand?: string; // Brand name (f3, labhair, yaman, menard)
+  compositeKey?: string; // Composite key
+  createdAt?: Date | string;
+  updatedAt?: Date | string;
 }
 
 export interface Order {
@@ -235,6 +261,14 @@ export interface Order {
   cashioData?: any[] | null;
   cashioTotalIn?: number | null;
   brand?: string; // Brand name (f3, menard, labhair, yaman, etc.)
+  stockTransfers?: StockTransfer[]; // Danh sách stock transfers của đơn hàng
+  stockTransferInfo?: {
+    totalItems: number; // Số dòng xuất kho
+    totalQty: number; // Tổng số lượng xuất
+    uniqueItems: number; // Số sản phẩm khác nhau
+    stockCodes: string[]; // Danh sách mã kho
+    hasStockTransfer: boolean; // Có xuất kho hay không
+  };
 }
 
 export type OrderRow = {
