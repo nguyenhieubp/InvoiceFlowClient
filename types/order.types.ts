@@ -79,6 +79,7 @@ export interface SaleItem {
   description?: string;
   partnerCode?: string;
   ordertype?: string;
+  ordertypeName?: string; // Tên loại đơn hàng (01.Thường, etc.)
   branchCode?: string;
   serial?: string;
   kyHieu?: string;

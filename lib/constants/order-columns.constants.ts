@@ -21,6 +21,7 @@ export type OrderColumn =
   | 'itemName'         // Tên mặt hàng
   | 'dvt'              // Đvt
   | 'loai'             // Loại
+  | 'ordertypeName'    // Loại đơn hàng (từ ordertypeName)
   | 'promCode'         // Mã khuyến mãi
   | 'maKho'            // * Mã kho
   | 'maLo'             // Mã lô
@@ -147,6 +148,7 @@ export const FIELD_LABELS: Record<OrderColumn, string> = {
   itemName: 'Tên mặt hàng',
   dvt: 'Đvt',
   loai: 'Loại',
+  ordertypeName: 'Loại đơn hàng',
   promCode: 'Khuyến mãi',
   maKho: '* Mã kho',
   maLo: '* Mã lô',
