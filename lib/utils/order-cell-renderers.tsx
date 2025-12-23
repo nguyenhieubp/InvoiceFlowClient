@@ -136,6 +136,11 @@ export const renderCellValue = (order: Order, sale: SaleItem | null, field: Orde
     case 'ordertypeName':
       return <div className="text-sm text-gray-900">{sale?.ordertypeName || '-'}</div>;
     
+    case 'productType':
+      // Hiển thị productType từ sale hoặc product
+      const productType = sale?.productType || sale?.product?.productType || sale?.product?.producttype || null;
+      return <div className="text-sm text-gray-900">{productType || '-'}</div>;
+    
     case 'promCode': {
       // Sử dụng giá trị từ backend
       if (sale?.promCodeDisplay) {
