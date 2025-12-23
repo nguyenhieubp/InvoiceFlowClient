@@ -56,6 +56,20 @@ export default function SyncPage() {
     message: string;
     data?: any;
   } | null>(null);
+  const [salesStartDate, setSalesStartDate] = useState<string>(() => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = (now.getMonth() + 1).toString().padStart(2, '0');
+    const day = now.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  });
+  const [salesEndDate, setSalesEndDate] = useState<string>(() => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = (now.getMonth() + 1).toString().padStart(2, '0');
+    const day = now.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  });
 
   const handleSyncBrand = async (brandName: string) => {
     const syncDate = getSyncDate();
@@ -88,12 +102,23 @@ export default function SyncPage() {
   const isSyncing = syncingBrand !== null;
   const isAnySyncing = isSyncing || faceIdSyncing || syncingSalesRange;
 
-  const handleSyncSalesOctDec2025 = async () => {
+  const handleSyncSalesByDateRange = async () => {
+    const startDate = convertDateToDDMMMYYYY(salesStartDate);
+    const endDate = convertDateToDDMMMYYYY(salesEndDate);
+    
+    if (!startDate || !endDate) {
+      setSalesRangeResult({
+        type: 'error',
+        message: 'Vui lòng chọn đầy đủ từ ngày và đến ngày',
+      });
+      return;
+    }
+
     setSyncingSalesRange(true);
     setSalesRangeResult(null);
     setResult(null);
     try {
-      const response = await salesApi.syncSalesOctDec2025();
+      const response = await salesApi.syncSalesByDateRange(startDate, endDate);
       const data = response.data;
       setSalesRangeResult({
         type: 'success',
@@ -157,7 +182,7 @@ export default function SyncPage() {
                   : faceIdSyncing
                   ? 'Đang đồng bộ FaceID'
                   : syncingSalesRange
-                  ? 'Đang đồng bộ Sale (01/10/2025 - 01/12/2025)'
+                  ? `Đang đồng bộ Sale (${convertDateToDDMMMYYYY(salesStartDate)} - ${convertDateToDDMMMYYYY(salesEndDate)})`
                   : 'Đang xử lý...'}
               </h3>
               <p className="text-sm text-gray-600 text-center">
@@ -238,14 +263,50 @@ export default function SyncPage() {
           </div>
         )}
 
-        {/* Sync Sales Oct-Dec 2025 */}
+        {/* Sync Sales By Date Range */}
         <div className="bg-white rounded-lg border border-blue-200 p-4 mb-4">
+          <div className="mb-4">
+            <h2 className="text-base font-semibold text-gray-900 mb-3">Đồng bộ Sale theo khoảng thời gian</h2>
+            <p className="text-sm text-gray-600 mb-3">
+              Đồng bộ sale cho tất cả các nhãn hàng (f3, labhair, yaman, menard) trong khoảng thời gian được chọn
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Từ ngày
+                </label>
+                <input
+                  type="date"
+                  value={salesStartDate}
+                  onChange={(e) => setSalesStartDate(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                {salesStartDate && (
+                  <p className="mt-1 text-xs text-gray-500">
+                    Format: <span className="font-mono font-semibold">{convertDateToDDMMMYYYY(salesStartDate)}</span>
+                  </p>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Đến ngày
+                </label>
+                <input
+                  type="date"
+                  value={salesEndDate}
+                  onChange={(e) => setSalesEndDate(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                {salesEndDate && (
+                  <p className="mt-1 text-xs text-gray-500">
+                    Format: <span className="font-mono font-semibold">{convertDateToDDMMMYYYY(salesEndDate)}</span>
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
           <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-base font-semibold text-gray-900 mb-1">Đồng bộ Sale (01/10/2025 - 01/12/2025)</h2>
-              <p className="text-sm text-gray-600">
-                Đồng bộ sale từ 01/10/2025 đến 01/12/2025 cho tất cả các nhãn hàng (f3, labhair, yaman, menard)
-              </p>
+            <div className="flex-1">
               {salesRangeResult?.data && (
                 <div className="mt-2 text-xs text-gray-500 space-y-1">
                   <p>
@@ -269,8 +330,8 @@ export default function SyncPage() {
               )}
             </div>
             <button
-              onClick={handleSyncSalesOctDec2025}
-              disabled={isAnySyncing}
+              onClick={handleSyncSalesByDateRange}
+              disabled={isAnySyncing || !salesStartDate || !salesEndDate}
               className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed inline-flex items-center gap-2"
             >
               {syncingSalesRange ? (
