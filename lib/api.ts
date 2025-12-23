@@ -146,6 +146,77 @@ export const syncApi = {
   syncStockTransferRange: (dateFrom: string, dateTo: string, brand?: string) => {
     return api.post('/sync/stock-transfer/range', { dateFrom, dateTo, brand });
   },
+  // Sync báo cáo nộp quỹ cuối ca
+  syncShiftEndCash: (date: string, brand?: string) => {
+    return api.post('/sync/shift-end-cash', { date, brand });
+  },
+  // Sync FaceID theo khoảng thời gian
+  syncFaceIdByDateRange: (startDate: string, endDate: string, shopCodes?: string[]) => {
+    return api.post('/sync/faceid/range', { startDate, endDate, shopCodes });
+  },
+  // Sync báo cáo nộp quỹ cuối ca theo khoảng thời gian
+  syncShiftEndCashByDateRange: (startDate: string, endDate: string, brand?: string) => {
+    return api.post('/sync/shift-end-cash/range', { startDate, endDate, brand });
+  },
+  // Sync tách gộp BOM theo khoảng thời gian
+  syncRepackFormulaByDateRange: (startDate: string, endDate: string, brand?: string) => {
+    return api.post('/sync/repack-formula/range', { startDate, endDate, brand });
+  },
+  // Sync danh sách CTKM theo khoảng thời gian
+  syncPromotionByDateRange: (startDate: string, endDate: string, brand?: string) => {
+    return api.post('/sync/promotion/range', { startDate, endDate, brand });
+  },
+  // Sync danh sách Voucher Issue theo khoảng thời gian
+  syncVoucherIssueByDateRange: (startDate: string, endDate: string, brand?: string) => {
+    return api.post('/sync/voucher-issue/range', { startDate, endDate, brand });
+  },
+};
+
+// Voucher Issue API
+export const voucherIssueApi = {
+  getAll: (params?: {
+    page?: number;
+    limit?: number;
+    brand?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    status?: string;
+    code?: string;
+    materialType?: string;
+  }) => {
+    return api.get('/sync/voucher-issue', { params });
+  },
+};
+
+// Promotion API
+export const promotionApi = {
+  getAll: (params?: {
+    page?: number;
+    limit?: number;
+    brand?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    ptype?: string;
+    status?: string;
+    code?: string;
+  }) => {
+    return api.get('/sync/promotion', { params });
+  },
+};
+
+// Repack Formula API
+export const repackFormulaApi = {
+  getAll: (params?: {
+    page?: number;
+    limit?: number;
+    brand?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    repackCatName?: string;
+    itemcode?: string;
+  }) => {
+    return api.get('/sync/repack-formula', { params });
+  },
 };
 
 // Stock Transfer API
@@ -161,6 +232,21 @@ export const stockTransferApi = {
     soCode?: string;
   }) => {
     return api.get('/sync/stock-transfers', { params });
+  },
+};
+
+// Shift End Cash API
+export const shiftEndCashApi = {
+  getAll: (params?: {
+    page?: number;
+    limit?: number;
+    brand?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    branchCode?: string;
+    drawCode?: string;
+  }) => {
+    return api.get('/sync/shift-end-cash', { params });
   },
 };
 
