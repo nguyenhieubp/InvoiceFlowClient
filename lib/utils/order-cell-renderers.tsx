@@ -360,8 +360,33 @@ export const renderCellValue = (order: Order, sale: SaleItem | null, field: Orde
     case 'stockTransferQty': {
       const stockTransfers = sale?.stockTransfers || [];
       if (stockTransfers.length > 0) {
-        // Tổng số lượng xuất (lấy giá trị tuyệt đối)
-        const totalQty = stockTransfers.reduce((sum, st) => sum + Math.abs(Number(st.qty || 0)), 0);
+        // Chỉ lấy stock transfer XUẤT KHO (SALE_STOCKOUT hoặc qty < 0)
+        // Bỏ qua các stock transfer nhập lại (RETURN) với qty > 0
+        const stockOutTransfers = stockTransfers.filter((st: any) => {
+          const isStockOut = st.doctype === 'SALE_STOCKOUT' || Number(st.qty || 0) < 0;
+          return isStockOut;
+        });
+        
+        if (stockOutTransfers.length === 0) {
+          return <span className="text-gray-400 italic">-</span>;
+        }
+        
+        // Deduplicate stock transfers theo docCode để tránh tính trùng
+        // (vì nhiều sale items cùng materialCode có thể share cùng stock transfers)
+        const uniqueStockTransfers = new Map<string, any>();
+        stockOutTransfers.forEach((st: any) => {
+          // Sử dụng docCode làm key để deduplicate (mỗi chứng từ chỉ tính một lần)
+          const key = st.docCode || st.id || `${st.soCode}_${st.itemCode}_${st.stockCode}_${st.qty}`;
+          if (!uniqueStockTransfers.has(key)) {
+            uniqueStockTransfers.set(key, st);
+          }
+        });
+        
+        // Tổng số lượng xuất (lấy giá trị tuyệt đối) từ các stock transfers unique XUẤT KHO
+        const totalQty = Array.from(uniqueStockTransfers.values()).reduce(
+          (sum, st) => sum + Math.abs(Number(st.qty || 0)), 
+          0
+        );
         return formatNumber(totalQty);
       }
       return <span className="text-gray-400 italic">-</span>;
