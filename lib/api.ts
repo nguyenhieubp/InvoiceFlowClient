@@ -327,6 +327,34 @@ export const categoriesApi = {
       },
     });
   },
+  // Warehouse Code Mappings
+  getWarehouseCodeMappings: (params?: { page?: number; limit?: number; search?: string }) => {
+    return api.get('/categories/warehouse-code-mappings', { params });
+  },
+  getWarehouseCodeMappingById: (id: string) => {
+    return api.get(`/categories/warehouse-code-mappings/${id}`);
+  },
+  getWarehouseCodeMappingByMaCu: (maCu: string) => {
+    return api.get(`/categories/warehouse-code-mappings/ma-cu/${encodeURIComponent(maCu)}`);
+  },
+  createWarehouseCodeMapping: (data: any) => {
+    return api.post('/categories/warehouse-code-mappings', data);
+  },
+  updateWarehouseCodeMapping: (id: string, data: any) => {
+    return api.put(`/categories/warehouse-code-mappings/${id}`, data);
+  },
+  deleteWarehouseCodeMapping: (id: string) => {
+    return api.delete(`/categories/warehouse-code-mappings/${id}`);
+  },
+  importWarehouseCodeMappingsExcel: (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post('/categories/warehouse-code-mappings/import', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
   // Customers
   getCustomers: (params?: { page?: number; limit?: number; search?: string }) => {
     return api.get('/categories/customers', { params });
