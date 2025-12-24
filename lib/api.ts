@@ -170,6 +170,14 @@ export const syncApi = {
   syncVoucherIssueByDateRange: (startDate: string, endDate: string, brand?: string) => {
     return api.post('/sync/voucher-issue/range', { startDate, endDate, brand });
   },
+  // Sync cashio theo ngày
+  syncCashio: (date: string, brand?: string) => {
+    return api.post('/sync/cashio', { date, brand });
+  },
+  // Sync cashio theo khoảng thời gian
+  syncCashioByDateRange: (startDate: string, endDate: string, brand?: string) => {
+    return api.post('/sync/cashio/range', { startDate, endDate, brand });
+  },
 };
 
 // Voucher Issue API
@@ -232,6 +240,22 @@ export const stockTransferApi = {
     soCode?: string;
   }) => {
     return api.get('/sync/stock-transfers', { params });
+  },
+};
+
+// Cashio API
+export const cashioApi = {
+  getAll: (params?: {
+    page?: number;
+    limit?: number;
+    brand?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    branchCode?: string;
+    soCode?: string;
+    partnerCode?: string;
+  }) => {
+    return api.get('/sync/cashio', { params });
   },
 };
 
@@ -360,6 +384,34 @@ export const categoriesApi = {
   },
   mapWarehouseCodeGet: (maCu: string) => {
     return api.get('/categories/warehouse-code-mappings/map', { params: { maCu } });
+  },
+  // Payment Methods
+  getPaymentMethods: (params?: { page?: number; limit?: number; search?: string }) => {
+    return api.get('/categories/payment-methods', { params });
+  },
+  getPaymentMethodById: (id: string) => {
+    return api.get(`/categories/payment-methods/${id}`);
+  },
+  getPaymentMethodByCode: (code: string) => {
+    return api.get(`/categories/payment-methods/code/${encodeURIComponent(code)}`);
+  },
+  createPaymentMethod: (data: any) => {
+    return api.post('/categories/payment-methods', data);
+  },
+  updatePaymentMethod: (id: string, data: any) => {
+    return api.put(`/categories/payment-methods/${id}`, data);
+  },
+  deletePaymentMethod: (id: string) => {
+    return api.delete(`/categories/payment-methods/${id}`);
+  },
+  importPaymentMethodsExcel: (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post('/categories/payment-methods/import', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
   },
   // Customers
   getCustomers: (params?: { page?: number; limit?: number; search?: string }) => {
