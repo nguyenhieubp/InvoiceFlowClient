@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { fastApiInvoicesApi, salesApi } from '@/lib/api';
 import { Toast } from '@/components/Toast';
 
@@ -59,7 +59,7 @@ export default function FastApiInvoicesPage() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  const loadInvoices = async () => {
+  const loadInvoices = useCallback(async () => {
     try {
       setLoading(true);
       const params: any = {
@@ -80,22 +80,22 @@ export default function FastApiInvoicesPage() {
 
       const invoiceList = data.items || [];
       setInvoices(invoiceList);
-      setPagination({
-        ...pagination,
+      setPagination((prev) => ({
+        ...prev,
         total: data.pagination?.total || 0,
         totalPages: data.pagination?.totalPages || 0,
         hasNext: data.pagination?.hasNext || false,
         hasPrev: data.pagination?.hasPrev || false,
-      });
+      }));
     } catch (error: any) {
       console.error('Error loading invoices:', error);
       showToast('error', error?.response?.data?.message || 'Lỗi khi tải danh sách hóa đơn');
     } finally {
       setLoading(false);
     }
-  };
+  }, [pagination.page, pagination.limit, filters, showToast]);
 
-  const loadStatistics = async () => {
+  const loadStatistics = useCallback(async () => {
     try {
       const params: any = {};
       if (filters.startDate) params.startDate = filters.startDate;
@@ -107,7 +107,7 @@ export default function FastApiInvoicesPage() {
     } catch (error: any) {
       console.error('Error loading statistics:', error);
     }
-  };
+  }, [filters]);
 
   const handleRetry = async (docCode: string) => {
     try {
@@ -179,7 +179,7 @@ export default function FastApiInvoicesPage() {
   useEffect(() => {
     loadInvoices();
     loadStatistics();
-  }, [pagination.page, pagination.limit]);
+  }, [loadInvoices, loadStatistics]);
 
   const handleFilterChange = (key: string, value: string) => {
     setFilters({ ...filters, [key]: value });

@@ -702,7 +702,7 @@ export default function PaymentMethodsPage() {
                 <div>
                   <h3 className="text-lg font-bold text-gray-900">Xác nhận xóa</h3>
                   <p className="text-sm text-gray-600 mt-1">
-                    Bạn có chắc chắn muốn xóa phương thức thanh toán "{deletingPaymentMethod?.code}"?
+                    Bạn có chắc chắn muốn xóa phương thức thanh toán &quot;{deletingPaymentMethod?.code}&quot;?
                   </p>
                 </div>
               </div>

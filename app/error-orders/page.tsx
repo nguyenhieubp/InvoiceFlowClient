@@ -753,7 +753,7 @@ export default function OrdersPage() {
       prevFilterRef.current = { ...filter };
       setPagination((prev) => ({ ...prev, page: 1 }));
     }
-  }, [searchQuery, filter.brand, filter.dateFrom, filter.dateTo, filter.statusAsys]);
+  }, [searchQuery, filter, filter.brand, filter.dateFrom, filter.dateTo, filter.statusAsys]);
 
   // Load orders khi pagination hoặc filter thay đổi
   useEffect(() => {
