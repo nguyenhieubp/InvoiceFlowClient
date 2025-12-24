@@ -355,6 +355,12 @@ export const categoriesApi = {
       },
     });
   },
+  mapWarehouseCode: (maCu: string) => {
+    return api.post('/categories/warehouse-code-mappings/map', { maCu });
+  },
+  mapWarehouseCodeGet: (maCu: string) => {
+    return api.get('/categories/warehouse-code-mappings/map', { params: { maCu } });
+  },
   // Customers
   getCustomers: (params?: { page?: number; limit?: number; search?: string }) => {
     return api.get('/categories/customers', { params });
