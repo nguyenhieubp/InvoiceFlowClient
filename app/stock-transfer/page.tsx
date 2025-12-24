@@ -40,6 +40,7 @@ export default function StockTransferPage() {
     branchCode?: string;
     itemCode?: string;
     soCode?: string;
+    docCode?: string;
   }>({});
   const [filter, setFilter] = useState<{
     brand?: string;
@@ -48,6 +49,7 @@ export default function StockTransferPage() {
     branchCode?: string;
     itemCode?: string;
     soCode?: string;
+    docCode?: string;
   }>({});
   const [pagination, setPagination] = useState({
     page: 1,
@@ -127,6 +129,7 @@ export default function StockTransferPage() {
       if (filter.branchCode) params.branchCode = filter.branchCode;
       if (filter.itemCode) params.itemCode = filter.itemCode;
       if (filter.soCode) params.soCode = filter.soCode;
+      if (filter.docCode) params.docCode = filter.docCode;
 
       const response = await stockTransferApi.getAll(params);
       setStockTransfers(response.data.data || []);
@@ -393,6 +396,13 @@ export default function StockTransferPage() {
                   value={filterInput.soCode || ''}
                   onChange={(e) => setFilterInput({ ...filterInput, soCode: e.target.value || undefined })}
                   placeholder="Mã đơn hàng (VD: SO37.00131367)"
+                  className="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                />
+                <input
+                  type="text"
+                  value={filterInput.docCode || ''}
+                  onChange={(e) => setFilterInput({ ...filterInput, docCode: e.target.value || undefined })}
+                  placeholder="Mã xuất kho (VD: ST01.00134507)"
                   className="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                 />
                 <button
