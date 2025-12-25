@@ -247,25 +247,6 @@ export interface StockTransfer {
   updatedAt?: Date | string;
 }
 
-export interface DailyCashio {
-  code?: string; // CI03.01478607_2
-  fop_syscode?: string; // CASH, VOUCHER, ECOIN, BANK375, VNPAY, etc.
-  fop_description?: string; // Mô tả
-  so_code?: string; // SO03.01478607 - Mã đơn hàng để join với sales.docCode
-  master_code?: string; // SI03.01478607_1 hoặc SO03.01478607
-  total_in?: number; // Tổng tiền vào
-  total_out?: number; // Tổng tiền ra
-  refno?: string; // Số tham chiếu
-  refno_idate?: Date | string; // Ngày tham chiếu
-  allCashioRecords?: Array<{
-    code?: string;
-    fop_syscode?: string;
-    fop_description?: string;
-    total_in?: number;
-    total_out?: number;
-  }>;
-}
-
 export interface Order {
   docCode: string;
   docDate: string;
@@ -277,15 +258,9 @@ export interface Order {
   totalItems: number;
   isProcessed: boolean;
   sales?: SaleItem[];
-  dailyCashio?: DailyCashio | null; // Dữ liệu daily_cashio (join với daily_cashio.so_code = sale.docCode)
-  // Backward compatibility - giữ lại các field cũ
   cashioFopSyscode?: string | null;
   cashioData?: any[] | null;
   cashioTotalIn?: number | null;
-  cashioTotalOut?: number | null;
-  cashioFopDescription?: string | null;
-  cashioCode?: string | null;
-  cashioMasterCode?: string | null;
   brand?: string; // Brand name (f3, menard, labhair, yaman, etc.)
   stockTransfers?: StockTransfer[]; // Danh sách stock transfers của đơn hàng
   stockTransferInfo?: {
