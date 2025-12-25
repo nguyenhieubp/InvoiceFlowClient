@@ -58,6 +58,7 @@ export default function StockTransferPage() {
     totalPages: 0,
   });
   const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
+  const [processingWarehouse, setProcessingWarehouse] = useState<string | null>(null);
 
   // Hàm convert từ Date object hoặc YYYY-MM-DD sang DDMMMYYYY
   const convertDateToDDMMMYYYY = (date: Date | string): string => {
@@ -214,6 +215,32 @@ export default function StockTransferPage() {
       showToast('error', error.response?.data?.message || error.message || 'Lỗi khi đồng bộ');
     } finally {
       setSyncingRange(false);
+    }
+  };
+
+  const handleDoubleClick = async (stockTransfer: StockTransfer) => {
+    // Kiểm tra soCode phải là "null" (string) hoặc null
+    if (stockTransfer.soCode !== 'null' && stockTransfer.soCode !== null) {
+      showToast('error', `Không thể xử lý stock transfer có soCode = "${stockTransfer.soCode}". Chỉ chấp nhận soCode = "null" hoặc null.`);
+      return;
+    }
+
+    // Kiểm tra ioType phải là "I" hoặc "O"
+    if (stockTransfer.ioType !== 'I' && stockTransfer.ioType !== 'O') {
+      showToast('error', `ioType không hợp lệ: "${stockTransfer.ioType}". Chỉ chấp nhận "I" (nhập) hoặc "O" (xuất).`);
+      return;
+    }
+
+    setProcessingWarehouse(stockTransfer.id);
+    try {
+      const response = await stockTransferApi.processWarehouse(stockTransfer.id);
+      const ioTypeName = stockTransfer.ioType === 'I' ? 'nhập' : 'xuất';
+      showToast('success', `Tạo phiếu ${ioTypeName} kho thành công cho ${stockTransfer.docCode}`);
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || error.message || 'Lỗi khi tạo phiếu nhập/xuất kho';
+      showToast('error', errorMessage);
+    } finally {
+      setProcessingWarehouse(null);
     }
   };
 
@@ -464,6 +491,7 @@ export default function StockTransferPage() {
                         <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Mã SP</th>
                         <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Tên SP</th>
                         <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Kho</th>
+                        <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Mã nhập xuất</th>
                         <th className="px-3 py-2.5 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">SL</th>
                         <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Mã ĐH</th>
                       </tr>
@@ -471,7 +499,7 @@ export default function StockTransferPage() {
                     <tbody className="bg-white divide-y divide-gray-200">
                       {stockTransfers.length === 0 ? (
                         <tr>
-                          <td colSpan={9} className="px-4 py-12 text-center">
+                          <td colSpan={10} className="px-4 py-12 text-center">
                             <div className="flex flex-col items-center">
                               <svg className="w-12 h-12 text-gray-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
@@ -482,7 +510,14 @@ export default function StockTransferPage() {
                         </tr>
                       ) : (
                         stockTransfers.map((st) => (
-                          <tr key={st.id} className="hover:bg-gray-50 transition-colors">
+                          <tr 
+                            key={st.id} 
+                            className={`hover:bg-gray-50 transition-colors ${
+                              processingWarehouse === st.id ? 'opacity-50 cursor-wait' : 'cursor-pointer'
+                            }`}
+                            onDoubleClick={() => handleDoubleClick(st)}
+                            title="Double-click để tạo phiếu nhập/xuất kho"
+                          >
                             <td className="px-3 py-2.5 whitespace-nowrap text-xs text-gray-900">
                               {new Date(st.transDate).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                             </td>
@@ -503,6 +538,9 @@ export default function StockTransferPage() {
                             </td>
                             <td className="px-3 py-2.5 whitespace-nowrap text-xs text-gray-700">
                               {st.stockCode}
+                            </td>
+                            <td className="px-3 py-2.5 whitespace-nowrap text-xs text-gray-700 font-mono">
+                              {st.lineInfo1 || '-'}
                             </td>
                             <td className="px-3 py-2.5 whitespace-nowrap text-xs text-gray-900 text-right font-medium">
                               {st.qty}

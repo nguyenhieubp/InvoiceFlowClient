@@ -54,10 +54,10 @@ export default function FastApiInvoicesPage() {
     endDate: '',
   });
 
-  const showToast = (type: 'success' | 'error' | 'info', message: string) => {
+  const showToast = useCallback((type: 'success' | 'error' | 'info', message: string) => {
     setToast({ type, message });
     setTimeout(() => setToast(null), 3000);
-  };
+  }, []);
 
   const loadInvoices = useCallback(async () => {
     try {
@@ -89,11 +89,12 @@ export default function FastApiInvoicesPage() {
       }));
     } catch (error: any) {
       console.error('Error loading invoices:', error);
-      showToast('error', error?.response?.data?.message || 'Lỗi khi tải danh sách hóa đơn');
+      setToast({ type: 'error', message: error?.response?.data?.message || 'Lỗi khi tải danh sách hóa đơn' });
+      setTimeout(() => setToast(null), 3000);
     } finally {
       setLoading(false);
     }
-  }, [pagination.page, pagination.limit, filters, showToast]);
+  }, [pagination.page, pagination.limit, filters.status, filters.docCode, filters.maKh, filters.tenKh, filters.maDvcs, filters.startDate, filters.endDate]);
 
   const loadStatistics = useCallback(async () => {
     try {
@@ -107,7 +108,7 @@ export default function FastApiInvoicesPage() {
     } catch (error: any) {
       console.error('Error loading statistics:', error);
     }
-  }, [filters]);
+  }, [filters.startDate, filters.endDate, filters.maDvcs]);
 
   const handleRetry = async (docCode: string) => {
     try {
@@ -178,8 +179,11 @@ export default function FastApiInvoicesPage() {
 
   useEffect(() => {
     loadInvoices();
+  }, [loadInvoices]);
+
+  useEffect(() => {
     loadStatistics();
-  }, [loadInvoices, loadStatistics]);
+  }, [loadStatistics]);
 
   const handleFilterChange = (key: string, value: string) => {
     setFilters({ ...filters, [key]: value });

@@ -241,6 +241,9 @@ export const stockTransferApi = {
   }) => {
     return api.get('/sync/stock-transfers', { params });
   },
+  processWarehouse: (id: string) => {
+    return api.post(`/sales/stock-transfer/${id}/warehouse`);
+  },
 };
 
 // Cashio API
@@ -256,6 +259,20 @@ export const cashioApi = {
     partnerCode?: string;
   }) => {
     return api.get('/sync/cashio', { params });
+  },
+};
+
+// Warehouse Processed API
+export const warehouseProcessedApi = {
+  getAll: (params?: {
+    page?: number;
+    limit?: number;
+    dateFrom?: string;
+    dateTo?: string;
+    ioType?: string;
+    success?: boolean;
+  }) => {
+    return api.get('/sync/warehouse-processed', { params });
   },
 };
 
