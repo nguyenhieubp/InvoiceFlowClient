@@ -17,13 +17,14 @@ interface StockTransfer {
   stockCode: string;
   relatedStockCode?: string;
   ioType: string;
-  qty: number;
+  qty: number | string;
   batchSerial?: string;
   lineInfo1?: string;
   lineInfo2?: string;
   soCode?: string;
   syncDate?: string;
   brand?: string;
+  compositeKey?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -114,6 +115,37 @@ export default function StockTransferPage() {
   const showToast = (type: 'success' | 'error' | 'info', message: string) => {
     setToast({ type, message });
     setTimeout(() => setToast(null), 5000);
+  };
+
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return '-';
+    const date = new Date(dateStr);
+    return date.toLocaleString('vi-VN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const formatDateOnly = (dateStr: string | null | undefined) => {
+    if (!dateStr) return '-';
+    try {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('vi-VN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      });
+    } catch {
+      return dateStr;
+    }
+  };
+
+  const formatQty = (qty: number | string) => {
+    const numValue = typeof qty === 'string' ? parseFloat(qty) : qty;
+    return numValue?.toLocaleString('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00';
   };
 
   const loadStockTransfers = async () => {
@@ -484,22 +516,32 @@ export default function StockTransferPage() {
                   <table className="w-full">
                     <thead className="bg-gray-50 border-b border-gray-200">
                       <tr>
-                        <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Ngày</th>
-                        <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Mã CT</th>
-                        <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">CN</th>
-                        <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Nhãn</th>
-                        <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Mã SP</th>
-                        <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Tên SP</th>
-                        <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Kho</th>
-                        <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Mã nhập xuất</th>
-                        <th className="px-3 py-2.5 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">SL</th>
-                        <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Mã ĐH</th>
+                        <th className="px-2 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Loại CT</th>
+                        <th className="px-2 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Ngày</th>
+                        <th className="px-2 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Mã CT</th>
+                        <th className="px-2 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Mô tả</th>
+                        <th className="px-2 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">CN</th>
+                        <th className="px-2 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Nhãn</th>
+                        <th className="px-2 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Mã SP</th>
+                        <th className="px-2 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Material Code</th>
+                        <th className="px-2 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Tên SP</th>
+                        <th className="px-2 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Kho</th>
+                        <th className="px-2 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Kho liên quan</th>
+                        <th className="px-2 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Loại I/O</th>
+                        <th className="px-2 py-2.5 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">SL</th>
+                        <th className="px-2 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Batch/Serial</th>
+                        <th className="px-2 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Mã nhập xuất</th>
+                        <th className="px-2 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Line Info 2</th>
+                        <th className="px-2 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Mã ĐH</th>
+                        <th className="px-2 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Sync Date</th>
+                        <th className="px-2 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Ngày tạo</th>
+                        <th className="px-2 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Ngày cập nhật</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {stockTransfers.length === 0 ? (
                         <tr>
-                          <td colSpan={10} className="px-4 py-12 text-center">
+                          <td colSpan={20} className="px-4 py-12 text-center">
                             <div className="flex flex-col items-center">
                               <svg className="w-12 h-12 text-gray-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
@@ -518,35 +560,73 @@ export default function StockTransferPage() {
                             onDoubleClick={() => handleDoubleClick(st)}
                             title="Double-click để tạo phiếu nhập/xuất kho"
                           >
-                            <td className="px-3 py-2.5 whitespace-nowrap text-xs text-gray-900">
-                              {new Date(st.transDate).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                            <td className="px-2 py-2.5 whitespace-nowrap text-xs text-gray-700">
+                              {st.doctype}
                             </td>
-                            <td className="px-3 py-2.5 whitespace-nowrap text-xs text-gray-900 font-mono">
+                            <td className="px-2 py-2.5 whitespace-nowrap text-xs text-gray-900">
+                              {formatDateOnly(st.transDate)}
+                            </td>
+                            <td className="px-2 py-2.5 whitespace-nowrap text-xs text-gray-900 font-mono">
                               {st.docCode}
                             </td>
-                            <td className="px-3 py-2.5 whitespace-nowrap text-xs text-gray-700">
+                            <td className="px-2 py-2.5 text-xs text-gray-700 max-w-xs truncate" title={st.docDesc}>
+                              {st.docDesc || '-'}
+                            </td>
+                            <td className="px-2 py-2.5 whitespace-nowrap text-xs text-gray-700">
                               {st.branchCode}
                             </td>
-                            <td className="px-3 py-2.5 whitespace-nowrap text-xs text-gray-700">
+                            <td className="px-2 py-2.5 whitespace-nowrap text-xs text-gray-700">
                               {st.brand || st.brandCode}
                             </td>
-                            <td className="px-3 py-2.5 whitespace-nowrap text-xs text-gray-900 font-mono">
-                              {st.materialCode || st.itemCode}
+                            <td className="px-2 py-2.5 whitespace-nowrap text-xs text-gray-900 font-mono">
+                              {st.itemCode}
                             </td>
-                            <td className="px-3 py-2.5 text-xs text-gray-700 max-w-xs truncate" title={st.itemName}>
+                            <td className="px-2 py-2.5 whitespace-nowrap text-xs text-gray-900 font-mono">
+                              {st.materialCode || '-'}
+                            </td>
+                            <td className="px-2 py-2.5 text-xs text-gray-700 max-w-xs truncate" title={st.itemName}>
                               {st.itemName}
                             </td>
-                            <td className="px-3 py-2.5 whitespace-nowrap text-xs text-gray-700">
+                            <td className="px-2 py-2.5 whitespace-nowrap text-xs text-gray-700 font-mono">
                               {st.stockCode}
                             </td>
-                            <td className="px-3 py-2.5 whitespace-nowrap text-xs text-gray-700 font-mono">
+                            <td className="px-2 py-2.5 whitespace-nowrap text-xs text-gray-700 font-mono">
+                              {st.relatedStockCode || '-'}
+                            </td>
+                            <td className="px-2 py-2.5 whitespace-nowrap text-xs">
+                              <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                                st.ioType === 'I' 
+                                  ? 'bg-green-100 text-green-800' 
+                                  : st.ioType === 'O'
+                                  ? 'bg-red-100 text-red-800'
+                                  : 'bg-gray-100 text-gray-800'
+                              }`}>
+                                {st.ioType}
+                              </span>
+                            </td>
+                            <td className="px-2 py-2.5 whitespace-nowrap text-xs text-gray-900 text-right font-medium">
+                              {formatQty(st.qty)}
+                            </td>
+                            <td className="px-2 py-2.5 whitespace-nowrap text-xs text-gray-700 font-mono">
+                              {st.batchSerial || '-'}
+                            </td>
+                            <td className="px-2 py-2.5 whitespace-nowrap text-xs text-gray-700 font-mono">
                               {st.lineInfo1 || '-'}
                             </td>
-                            <td className="px-3 py-2.5 whitespace-nowrap text-xs text-gray-900 text-right font-medium">
-                              {st.qty}
+                            <td className="px-2 py-2.5 whitespace-nowrap text-xs text-gray-700 font-mono">
+                              {st.lineInfo2 || '-'}
                             </td>
-                            <td className="px-3 py-2.5 whitespace-nowrap text-xs text-gray-700 font-mono">
+                            <td className="px-2 py-2.5 whitespace-nowrap text-xs text-gray-700 font-mono">
                               {st.soCode || '-'}
+                            </td>
+                            <td className="px-2 py-2.5 whitespace-nowrap text-xs text-gray-700 font-mono">
+                              {st.syncDate || '-'}
+                            </td>
+                            <td className="px-2 py-2.5 whitespace-nowrap text-xs text-gray-500">
+                              {formatDate(st.createdAt)}
+                            </td>
+                            <td className="px-2 py-2.5 whitespace-nowrap text-xs text-gray-500">
+                              {formatDate(st.updatedAt)}
                             </td>
                           </tr>
                         ))
