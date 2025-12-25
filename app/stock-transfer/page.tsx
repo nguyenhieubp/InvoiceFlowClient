@@ -251,6 +251,12 @@ export default function StockTransferPage() {
   };
 
   const handleDoubleClick = async (stockTransfer: StockTransfer) => {
+    // Kiểm tra doctype phải là "STOCK_IO" (kiểm tra đầu tiên để tránh check các điều kiện khác)
+    if (stockTransfer.doctype !== 'STOCK_IO') {
+      showToast('error', `Không thể xử lý stock transfer có doctype = "${stockTransfer.doctype}". Chỉ chấp nhận doctype = "STOCK_IO".`);
+      return;
+    }
+
     // Kiểm tra soCode phải là "null" (string) hoặc null
     if (stockTransfer.soCode !== 'null' && stockTransfer.soCode !== null) {
       showToast('error', `Không thể xử lý stock transfer có soCode = "${stockTransfer.soCode}". Chỉ chấp nhận soCode = "null" hoặc null.`);
