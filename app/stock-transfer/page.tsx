@@ -251,29 +251,46 @@ export default function StockTransferPage() {
   };
 
   const handleDoubleClick = async (stockTransfer: StockTransfer) => {
-    // Kiểm tra doctype phải là "STOCK_IO" (kiểm tra đầu tiên để tránh check các điều kiện khác)
-    if (stockTransfer.doctype !== 'STOCK_IO') {
-      showToast('error', `Không thể xử lý stock transfer có doctype = "${stockTransfer.doctype}". Chỉ chấp nhận doctype = "STOCK_IO".`);
+    // Kiểm tra doctype
+    if (stockTransfer.doctype === 'STOCK_TRANSFER') {
+      // Kiểm tra relatedStockCode phải có
+      if (!stockTransfer.relatedStockCode || stockTransfer.relatedStockCode.trim() === '') {
+        showToast('error', `Không thể xử lý stock transfer điều chuyển kho. relatedStockCode không được để trống.`);
+        return;
+      }
+      // Cho phép xử lý STOCK_TRANSFER với relatedStockCode
+    } else if (stockTransfer.doctype !== 'STOCK_IO') {
+      showToast('error', `Không thể xử lý stock transfer có doctype = "${stockTransfer.doctype}". Chỉ chấp nhận doctype = "STOCK_IO" hoặc "STOCK_TRANSFER".`);
       return;
     }
 
-    // Kiểm tra soCode phải là "null" (string) hoặc null
-    if (stockTransfer.soCode !== 'null' && stockTransfer.soCode !== null) {
-      showToast('error', `Không thể xử lý stock transfer có soCode = "${stockTransfer.soCode}". Chỉ chấp nhận soCode = "null" hoặc null.`);
-      return;
-    }
+    // Kiểm tra điều kiện cho STOCK_IO
+    if (stockTransfer.doctype === 'STOCK_IO') {
 
-    // Kiểm tra ioType phải là "I" hoặc "O"
-    if (stockTransfer.ioType !== 'I' && stockTransfer.ioType !== 'O') {
-      showToast('error', `ioType không hợp lệ: "${stockTransfer.ioType}". Chỉ chấp nhận "I" (nhập) hoặc "O" (xuất).`);
-      return;
+      // Kiểm tra soCode phải là "null" (string) hoặc null
+      if (stockTransfer.soCode !== 'null' && stockTransfer.soCode !== null) {
+        showToast('error', `Không thể xử lý stock transfer có soCode = "${stockTransfer.soCode}". Chỉ chấp nhận soCode = "null" hoặc null.`);
+        return;
+      }
+
+      // Kiểm tra ioType phải là "I" hoặc "O"
+      if (stockTransfer.ioType !== 'I' && stockTransfer.ioType !== 'O') {
+        showToast('error', `ioType không hợp lệ: "${stockTransfer.ioType}". Chỉ chấp nhận "I" (nhập) hoặc "O" (xuất).`);
+        return;
+      }
     }
 
     setProcessingWarehouse(stockTransfer.id);
     try {
       const response = await stockTransferApi.processWarehouse(stockTransfer.id);
-      const ioTypeName = stockTransfer.ioType === 'I' ? 'nhập' : 'xuất';
-      showToast('success', `Tạo phiếu ${ioTypeName} kho thành công cho ${stockTransfer.docCode}`);
+      let message = '';
+      if (stockTransfer.doctype === 'STOCK_TRANSFER') {
+        message = `Tạo phiếu điều chuyển kho thành công cho ${stockTransfer.docCode}`;
+      } else {
+        const ioTypeName = stockTransfer.ioType === 'I' ? 'nhập' : 'xuất';
+        message = `Tạo phiếu ${ioTypeName} kho thành công cho ${stockTransfer.docCode}`;
+      }
+      showToast('success', message);
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || error.message || 'Lỗi khi tạo phiếu nhập/xuất kho';
       showToast('error', errorMessage);
