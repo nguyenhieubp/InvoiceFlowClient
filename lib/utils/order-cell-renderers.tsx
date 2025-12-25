@@ -432,6 +432,66 @@ export const renderCellValue = (order: Order, sale: SaleItem | null, field: Orde
       return <span className="text-gray-400 italic">-</span>;
     }
     
+    // Daily Cashio fields - lấy từ order.dailyCashio
+    case 'cashioFopSyscode': {
+      const cashio = order?.dailyCashio || order?.cashioFopSyscode ? {
+        fop_syscode: order.cashioFopSyscode || order.dailyCashio?.fop_syscode,
+      } : null;
+      if (cashio?.fop_syscode) {
+        return <div className="text-sm text-gray-900 font-medium">{cashio.fop_syscode}</div>;
+      }
+      return <span className="text-gray-400 italic">-</span>;
+    }
+    
+    case 'cashioFopDescription': {
+      const cashio = order?.dailyCashio || order?.cashioFopDescription ? {
+        fop_description: order.cashioFopDescription || order.dailyCashio?.fop_description,
+      } : null;
+      if (cashio?.fop_description) {
+        return <div className="text-sm text-gray-900">{cashio.fop_description}</div>;
+      }
+      return <span className="text-gray-400 italic">-</span>;
+    }
+    
+    case 'cashioTotalIn': {
+      const cashio = order?.dailyCashio || order?.cashioTotalIn !== undefined ? {
+        total_in: order.cashioTotalIn ?? order.dailyCashio?.total_in,
+      } : null;
+      if (cashio?.total_in !== undefined && cashio.total_in !== null) {
+        return <div className="text-sm text-gray-900 text-right">{formatNumber(cashio.total_in)}</div>;
+      }
+      return <span className="text-gray-400 italic">-</span>;
+    }
+    
+    case 'cashioTotalOut': {
+      const cashio = order?.dailyCashio || order?.cashioTotalOut !== undefined ? {
+        total_out: order.cashioTotalOut ?? order.dailyCashio?.total_out,
+      } : null;
+      if (cashio?.total_out !== undefined && cashio.total_out !== null) {
+        return <div className="text-sm text-gray-900 text-right">{formatNumber(cashio.total_out)}</div>;
+      }
+      return <span className="text-gray-400 italic">-</span>;
+    }
+    
+    case 'cashioRefno': {
+      const cashio = order?.dailyCashio;
+      if (cashio?.refno) {
+        return <div className="text-sm text-gray-900">{cashio.refno}</div>;
+      }
+      return <span className="text-gray-400 italic">-</span>;
+    }
+    
+    case 'cashioRefnoIdate': {
+      const cashio = order?.dailyCashio;
+      if (cashio?.refno_idate) {
+        const date = typeof cashio.refno_idate === 'string' ? new Date(cashio.refno_idate) : cashio.refno_idate;
+        if (!isNaN(date.getTime())) {
+          return <div className="text-sm text-gray-900">{date.toLocaleDateString('vi-VN')}</div>;
+        }
+      }
+      return <span className="text-gray-400 italic">-</span>;
+    }
+    
     // Các field trả về "-"
     case 'tkVatTu':
     case 'suaTkVatTu':

@@ -129,7 +129,14 @@ export type OrderColumn =
   | 'stockTransferIoType'     // Loại nhập/xuất
   | 'stockTransferBatchSerial' // Mã lô/serial xuất kho
   | 'stockTransferSoCode'     // Mã đơn hàng xuất kho
-  | 'stockTransferDocCode'    // Mã CT (docCode của stock transfer);
+  | 'stockTransferDocCode'    // Mã CT (docCode của stock transfer)
+  // Daily Cashio columns
+  | 'cashioFopSyscode'        // Phương thức thanh toán (CASH, VOUCHER, ECOIN, etc.)
+  | 'cashioFopDescription'     // Mô tả phương thức thanh toán
+  | 'cashioTotalIn'           // Tổng tiền vào
+  | 'cashioTotalOut'          // Tổng tiền ra
+  | 'cashioRefno'             // Số tham chiếu
+  | 'cashioRefnoIdate';       // Ngày tham chiếu
 
 export const FIELD_LABELS: Record<OrderColumn, string> = {
   partnerCode: '* Mã khách',
@@ -258,6 +265,13 @@ export const FIELD_LABELS: Record<OrderColumn, string> = {
   stockTransferBatchSerial: 'Mã lô/serial xuất kho',
   stockTransferSoCode: 'Mã đơn hàng xuất kho',
   stockTransferDocCode: 'Mã CT',
+  // Daily Cashio labels
+  cashioFopSyscode: 'Phương thức thanh toán',
+  cashioFopDescription: 'Mô tả phương thức thanh toán',
+  cashioTotalIn: 'Tổng tiền vào',
+  cashioTotalOut: 'Tổng tiền ra',
+  cashioRefno: 'Số tham chiếu',
+  cashioRefnoIdate: 'Ngày tham chiếu',
 };
 
 // Các cột mặc định theo thứ tự
