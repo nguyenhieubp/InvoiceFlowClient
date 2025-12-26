@@ -12,6 +12,8 @@ interface PromotionLine {
   buy_qty: number;
   buy_type: string | null;
   buy_combined_qty: number | null;
+  buy_fromtotal: number | null;
+  buy_tototal: number | null;
   prom_group: string | null;
   card_pattern: string | null;
   get_items: string | null;
@@ -20,6 +22,8 @@ interface PromotionLine {
   get_discamt: number | null;
   get_max_discamt: number;
   get_discpct: number | null;
+  get_value_range: number | null;
+  get_vouchertype: string | null;
   get_item_option: string | null;
   svc_card_months: number | null;
   guideline: string | null;
@@ -340,53 +344,128 @@ export default function PromotionPage() {
                             {isExpanded && (
                               <tr>
                                 <td colSpan={9} className="px-4 py-4 bg-gray-50">
-                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                      <h4 className="font-semibold text-sm text-gray-700 mb-2">I Lines (Mua):</h4>
-                                      <div className="space-y-2">
-                                        {iLines.length === 0 ? (
-                                          <p className="text-sm text-gray-500">Không có</p>
-                                        ) : (
-                                          iLines.map((line, idx) => (
-                                            <div key={idx} className="bg-white p-3 rounded border border-gray-200">
-                                              <div className="text-sm">
-                                                <span className="font-medium">Mua:</span> {line.buy_items || '-'} x {line.buy_qty}
-                                              </div>
-                                              <div className="text-sm mt-1">
-                                                <span className="font-medium">Tặng:</span> {line.get_items || '-'} x {line.get_qty}
-                                                {line.get_discpct && ` (${line.get_discpct}%)`}
-                                              </div>
-                                              {line.guideline && (
-                                                <div className="text-xs text-gray-600 mt-1 italic">{line.guideline}</div>
-                                              )}
-                                            </div>
-                                          ))
-                                        )}
-                                      </div>
+                                  <div className="mb-4 pb-4 border-b border-gray-300">
+                                    <div className="text-sm text-gray-700">
+                                      <strong>Mã gốc:</strong> <span className="font-semibold text-gray-900 ml-2">{promotion.code || `ID: ${promotion.api_id}`}</span>
+                                      {promotion.lines && promotion.lines.length > 0 && (
+                                        <span className="ml-4 text-gray-600">
+                                          ({promotion.lines.length} chi tiết)
+                                        </span>
+                                      )}
                                     </div>
-                                    <div>
-                                      <h4 className="font-semibold text-sm text-gray-700 mb-2">V Lines (Voucher):</h4>
-                                      <div className="space-y-2">
-                                        {vLines.length === 0 ? (
-                                          <p className="text-sm text-gray-500">Không có</p>
-                                        ) : (
-                                          vLines.map((line, idx) => (
-                                            <div key={idx} className="bg-white p-3 rounded border border-gray-200">
-                                              <div className="text-sm">
-                                                <span className="font-medium">Mua:</span> {line.buy_items || '-'} x {line.buy_qty}
-                                              </div>
-                                              <div className="text-sm mt-1">
-                                                <span className="font-medium">Tặng:</span> {line.get_items || '-'} x {line.get_qty}
-                                                {line.get_discpct && ` (${line.get_discpct}%)`}
-                                              </div>
-                                              {line.guideline && (
-                                                <div className="text-xs text-gray-600 mt-1 italic">{line.guideline}</div>
-                                              )}
-                                            </div>
-                                          ))
-                                        )}
+                                  </div>
+                                  <div className="w-full">
+                                    {promotion.lines && promotion.lines.length > 0 ? (
+                                      <div className="overflow-x-auto">
+                                        <table className="min-w-full divide-y divide-gray-200 border border-gray-200">
+                                          <thead className="bg-gray-50">
+                                            <tr>
+                                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mã chi tiết</th>
+                                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Loại</th>
+                                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Seq</th>
+                                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Buy Items</th>
+                                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Buy Qty</th>
+                                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Buy From Total</th>
+                                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Buy To Total</th>
+                                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Buy Type</th>
+                                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Buy Combined Qty</th>
+                                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prom Group</th>
+                                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Card Pattern</th>
+                                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Get Items</th>
+                                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Get Item Price</th>
+                                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Get Qty</th>
+                                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Get Disc Amt</th>
+                                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Get Max Disc Amt</th>
+                                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Get Disc Pct</th>
+                                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Get Value Range</th>
+                                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Get Voucher Type</th>
+                                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Get Item Option</th>
+                                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Svc Card Months</th>
+                                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Guideline</th>
+                                            </tr>
+                                          </thead>
+                                          <tbody className="bg-white divide-y divide-gray-200">
+                                            {promotion.lines.map((line, idx) => {
+                                              const detailCode = line.seq !== null && promotion.code
+                                                ? `${promotion.code}.${String(line.seq).padStart(2, '0')}`
+                                                : null;
+                                              return (
+                                                <tr key={idx} className="hover:bg-gray-50">
+                                                  <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                                                    {detailCode || '-'}
+                                                  </td>
+                                                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                                                    {line.line_type === 'i_lines' ? 'I Lines' : 'V Lines'}
+                                                  </td>
+                                                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                                                    {line.seq !== null ? line.seq : '-'}
+                                                  </td>
+                                                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                                                    {line.buy_items || '-'}
+                                                  </td>
+                                                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                                                    {line.buy_qty !== undefined && line.buy_qty !== null ? line.buy_qty : '-'}
+                                                  </td>
+                                                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                                                    {line.buy_fromtotal !== undefined && line.buy_fromtotal !== null ? line.buy_fromtotal.toLocaleString() : '-'}
+                                                  </td>
+                                                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                                                    {line.buy_tototal !== undefined && line.buy_tototal !== null ? line.buy_tototal.toLocaleString() : '-'}
+                                                  </td>
+                                                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                                                    {line.buy_type || '-'}
+                                                  </td>
+                                                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                                                    {line.buy_combined_qty !== undefined && line.buy_combined_qty !== null ? line.buy_combined_qty : '-'}
+                                                  </td>
+                                                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                                                    {line.prom_group || '-'}
+                                                  </td>
+                                                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                                                    {line.card_pattern || '-'}
+                                                  </td>
+                                                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                                                    {line.get_items || '-'}
+                                                  </td>
+                                                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                                                    {line.get_item_price !== undefined && line.get_item_price !== null ? line.get_item_price.toLocaleString() : '-'}
+                                                  </td>
+                                                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                                                    {line.get_qty !== undefined && line.get_qty !== null ? line.get_qty : '-'}
+                                                  </td>
+                                                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                                                    {line.get_discamt !== undefined && line.get_discamt !== null ? line.get_discamt.toLocaleString() : '-'}
+                                                  </td>
+                                                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                                                    {line.get_max_discamt !== undefined && line.get_max_discamt !== null ? line.get_max_discamt.toLocaleString() : '-'}
+                                                  </td>
+                                                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                                                    {line.get_discpct !== undefined && line.get_discpct !== null ? `${line.get_discpct}%` : '-'}
+                                                  </td>
+                                                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                                                    {line.get_value_range !== undefined && line.get_value_range !== null && line.get_value_range > 0 ? line.get_value_range.toLocaleString() : '-'}
+                                                  </td>
+                                                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                                                    {line.get_vouchertype || '-'}
+                                                  </td>
+                                                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                                                    {line.get_item_option || '-'}
+                                                  </td>
+                                                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                                                    {line.svc_card_months !== undefined && line.svc_card_months !== null && line.svc_card_months > 0 ? line.svc_card_months : '-'}
+                                                  </td>
+                                                  <td className="px-4 py-3 text-sm text-gray-500 max-w-xs">
+                                                    {line.guideline || '-'}
+                                                  </td>
+                                                </tr>
+                                              );
+                                            })}
+                                          </tbody>
+                                        </table>
                                       </div>
-                                    </div>
+                                    ) : (
+                                      <p className="text-sm text-gray-500">Không có chi tiết</p>
+                                    )}
                                   </div>
                                   <div className="mt-4 pt-4 border-t border-gray-200">
                                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
