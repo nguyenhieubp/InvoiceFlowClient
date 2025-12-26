@@ -412,6 +412,7 @@ export default function FastApiInvoicesPage() {
     { key: 'status', label: 'Trạng thái', width: 'w-24' },
     { key: 'action', label: 'Thao tác', width: 'w-40' },
     { key: 'message', label: 'Thông báo', width: 'w-96' },
+    { key: 'result', label: 'Kết quả', width: 'w-48' },
   ];
 
 
@@ -741,6 +742,26 @@ export default function FastApiInvoicesPage() {
                           <div className="break-words whitespace-normal" title={invoice.message}>
                             {invoice.message}
                           </div>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-500">
+                        {invoice.fastApiResponse ? (
+                          <details className="cursor-pointer">
+                            <summary className="text-blue-600 hover:text-blue-800">
+                              Xem kết quả
+                            </summary>
+                            <pre className="mt-2 p-2 bg-gray-100 rounded text-xs overflow-auto max-h-40">
+                              {(() => {
+                                try {
+                                  return JSON.stringify(JSON.parse(invoice.fastApiResponse || ''), null, 2);
+                                } catch (e) {
+                                  return invoice.fastApiResponse || '-';
+                                }
+                              })()}
+                            </pre>
+                          </details>
                         ) : (
                           <span className="text-gray-400">-</span>
                         )}
