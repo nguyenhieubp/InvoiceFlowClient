@@ -271,8 +271,12 @@ export const warehouseProcessedApi = {
     dateTo?: string;
     ioType?: string;
     success?: boolean;
+    docCode?: string;
   }) => {
     return api.get('/sync/warehouse-processed', { params });
+  },
+  retryByDocCode: (docCode: string) => {
+    return api.post(`/sales/stock-transfer/doc-code/${docCode}/warehouse-retry`);
   },
 };
 

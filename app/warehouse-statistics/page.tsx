@@ -39,13 +39,16 @@ export default function WarehouseStatisticsPage() {
     dateTo?: string;
     ioType?: string;
     success?: string;
+    docCode?: string;
   }>({});
   const [filter, setFilter] = useState<{
     dateFrom?: string;
     dateTo?: string;
     ioType?: string;
     success?: boolean;
+    docCode?: string;
   }>({});
+  const [retryingDocCode, setRetryingDocCode] = useState<string | null>(null);
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
@@ -104,6 +107,7 @@ export default function WarehouseStatisticsPage() {
       if (filter.dateTo) params.dateTo = convertDateToDDMMMYYYY(filter.dateTo);
       if (filter.ioType) params.ioType = filter.ioType;
       if (filter.success !== undefined) params.success = filter.success;
+      if (filter.docCode) params.docCode = filter.docCode;
 
       const response = await warehouseProcessedApi.getAll(params);
       setWarehouseProcessed(response.data.data || []);
@@ -135,6 +139,7 @@ export default function WarehouseStatisticsPage() {
       dateTo: filterInput.dateTo,
       ioType: filterInput.ioType,
       success: filterInput.success ? filterInput.success === 'true' : undefined,
+      docCode: filterInput.docCode,
     });
     setPagination((prev) => ({ ...prev, page: 1 }));
   };
@@ -143,6 +148,25 @@ export default function WarehouseStatisticsPage() {
     setFilterInput({});
     setFilter({});
     setPagination((prev) => ({ ...prev, page: 1 }));
+  };
+
+  const handleRetry = async (docCode: string) => {
+    if (!window.confirm(`Bạn có chắc chắn muốn xử lý lại warehouse cho mã chứng từ "${docCode}"?`)) {
+      return;
+    }
+
+    try {
+      setRetryingDocCode(docCode);
+      await warehouseProcessedApi.retryByDocCode(docCode);
+      showToast('success', `Xử lý lại thành công cho mã chứng từ ${docCode}`);
+      // Reload data after retry
+      await loadWarehouseProcessed();
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.message || error?.message || 'Lỗi khi xử lý lại warehouse';
+      showToast('error', errorMessage);
+    } finally {
+      setRetryingDocCode(null);
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -192,7 +216,19 @@ export default function WarehouseStatisticsPage() {
 
       {/* Filters */}
       <div className="bg-white p-4 rounded-lg shadow mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Mã chứng từ
+            </label>
+            <input
+              type="text"
+              value={filterInput.docCode || ''}
+              onChange={(e) => setFilterInput({ ...filterInput, docCode: e.target.value || undefined })}
+              placeholder="Nhập mã chứng từ..."
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Từ ngày
@@ -284,12 +320,15 @@ export default function WarehouseStatisticsPage() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Kết quả
                 </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Thao tác
+                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-4 text-center">
+                  <td colSpan={7} className="px-6 py-4 text-center">
                     <div className="flex justify-center items-center">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                     </div>
@@ -297,7 +336,7 @@ export default function WarehouseStatisticsPage() {
                 </tr>
               ) : warehouseProcessed.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
+                  <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
                     Không có dữ liệu
                   </td>
                 </tr>
@@ -351,6 +390,21 @@ export default function WarehouseStatisticsPage() {
                         </details>
                       ) : (
                         <span className="text-gray-400">-</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      {!item.success && (
+                        <button
+                          onClick={() => handleRetry(item.docCode)}
+                          disabled={retryingDocCode === item.docCode}
+                          className={`px-3 py-1 rounded-md text-xs font-medium ${
+                            retryingDocCode === item.docCode
+                              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                              : 'bg-red-600 text-white hover:bg-red-700'
+                          }`}
+                        >
+                          {retryingDocCode === item.docCode ? 'Đang xử lý...' : 'Xử lý lại'}
+                        </button>
                       )}
                     </td>
                   </tr>
