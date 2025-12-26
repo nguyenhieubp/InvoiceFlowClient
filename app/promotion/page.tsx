@@ -164,6 +164,42 @@ export default function PromotionPage() {
     setPagination((prev) => ({ ...prev, page: 1 }));
   };
 
+  const handleExportExcel = async () => {
+    try {
+      setLoading(true);
+      const response = await promotionApi.exportExcel(filter);
+      
+      // Create blob URL and download
+      const blob = new Blob([response.data], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      
+      // Generate filename
+      const now = new Date();
+      const dateStr = now.toISOString().split('T')[0].replace(/-/g, '');
+      const brandSuffix = filter.brand ? `_${filter.brand.toUpperCase()}` : '';
+      link.download = `CTKM_ChiTiet_${dateStr}${brandSuffix}.xlsx`;
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      setToast({ type: 'success', message: 'Xuất Excel thành công!' });
+    } catch (error: any) {
+      console.error('Export error:', error);
+      setToast({
+        type: 'error',
+        message: error?.response?.data?.message || 'Lỗi khi xuất Excel',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const toggleRow = (id: string) => {
     const newExpanded = new Set(expandedRows);
     if (newExpanded.has(id)) {
@@ -256,12 +292,18 @@ export default function PromotionPage() {
               />
             </div>
           </div>
-          <div className="mt-4">
+          <div className="mt-4 flex gap-3">
             <button
               onClick={handleSearch}
               className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
             >
               Tìm kiếm
+            </button>
+            <button
+              onClick={handleExportExcel}
+              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+            >
+              Xuất Excel
             </button>
           </div>
         </div>

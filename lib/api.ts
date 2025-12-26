@@ -183,6 +183,26 @@ export const promotionApi = {
   }) => {
     return api.get('/sync/promotion', { params });
   },
+  exportExcel: (params?: {
+    brand?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    ptype?: string;
+    status?: string;
+    code?: string;
+  }) => {
+    const queryString = new URLSearchParams();
+    if (params?.brand) queryString.append('brand', params.brand);
+    if (params?.dateFrom) queryString.append('dateFrom', params.dateFrom);
+    if (params?.dateTo) queryString.append('dateTo', params.dateTo);
+    if (params?.ptype) queryString.append('ptype', params.ptype);
+    if (params?.status) queryString.append('status', params.status);
+    if (params?.code) queryString.append('code', params.code);
+    
+    return api.get(`/sync/promotion/export?${queryString.toString()}`, {
+      responseType: 'blob',
+    });
+  },
 };
 
 // Repack Formula API
