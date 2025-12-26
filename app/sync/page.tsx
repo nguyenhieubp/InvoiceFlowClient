@@ -45,11 +45,6 @@ export default function SyncPage() {
     type: 'success' | 'error';
     message: string;
   } | null>(null);
-  const [faceIdSyncing, setFaceIdSyncing] = useState(false);
-  const [faceIdResult, setFaceIdResult] = useState<{
-    savedCount?: number;
-    skippedCount?: number;
-  } | null>(null);
   const [syncingSalesRange, setSyncingSalesRange] = useState(false);
   const [salesRangeResult, setSalesRangeResult] = useState<{
     type: 'success' | 'error';
@@ -58,12 +53,6 @@ export default function SyncPage() {
   } | null>(null);
   const [syncingShiftEndCash, setSyncingShiftEndCash] = useState(false);
   const [shiftEndCashResult, setShiftEndCashResult] = useState<{
-    type: 'success' | 'error';
-    message: string;
-    data?: any;
-  } | null>(null);
-  const [syncingFaceIdRange, setSyncingFaceIdRange] = useState(false);
-  const [faceIdRangeResult, setFaceIdRangeResult] = useState<{
     type: 'success' | 'error';
     message: string;
     data?: any;
@@ -82,20 +71,6 @@ export default function SyncPage() {
     return `${year}-${month}-${day}`;
   });
   const [salesEndDate, setSalesEndDate] = useState<string>(() => {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = (now.getMonth() + 1).toString().padStart(2, '0');
-    const day = now.getDate().toString().padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  });
-  const [faceIdStartDate, setFaceIdStartDate] = useState<string>(() => {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = (now.getMonth() + 1).toString().padStart(2, '0');
-    const day = now.getDate().toString().padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  });
-  const [faceIdEndDate, setFaceIdEndDate] = useState<string>(() => {
     const now = new Date();
     const year = now.getFullYear();
     const month = (now.getMonth() + 1).toString().padStart(2, '0');
@@ -206,7 +181,7 @@ export default function SyncPage() {
   };
 
   const isSyncing = syncingBrand !== null;
-  const isAnySyncing = isSyncing || faceIdSyncing || syncingSalesRange || syncingShiftEndCash || syncingFaceIdRange || syncingShiftEndCashRange || syncingRepackFormulaRange || syncingPromotionRange || syncingVoucherIssueRange;
+  const isAnySyncing = isSyncing || syncingSalesRange || syncingShiftEndCash || syncingShiftEndCashRange || syncingRepackFormulaRange || syncingPromotionRange || syncingVoucherIssueRange;
 
   const handleSyncSalesByDateRange = async () => {
     const startDate = convertDateToDDMMMYYYY(salesStartDate);
@@ -238,72 +213,6 @@ export default function SyncPage() {
       });
     } finally {
       setSyncingSalesRange(false);
-    }
-  };
-
-  const handleSyncFaceId = async () => {
-    const syncDate = getSyncDate();
-    if (!syncDate) {
-      setResult({
-        type: 'error',
-        message: 'Vui lòng chọn ngày cần đồng bộ',
-      });
-      return;
-    }
-
-    setFaceIdSyncing(true);
-    setResult(null);
-    setFaceIdResult(null);
-    try {
-      const response = await syncApi.syncFaceId(syncDate);
-      setResult({
-        type: 'success',
-        message: response.data.message || 'Đồng bộ FaceID thành công',
-      });
-      setFaceIdResult({
-        savedCount: response.data.savedCount,
-        skippedCount: response.data.skippedCount,
-      });
-    } catch (error: any) {
-      setResult({
-        type: 'error',
-        message: error.response?.data?.message || error.message || 'Lỗi khi đồng bộ FaceID',
-      });
-    } finally {
-      setFaceIdSyncing(false);
-    }
-  };
-
-  const handleSyncFaceIdByDateRange = async () => {
-    const startDate = convertDateToDDMMMYYYY(faceIdStartDate);
-    const endDate = convertDateToDDMMMYYYY(faceIdEndDate);
-    
-    if (!startDate || !endDate) {
-      setFaceIdRangeResult({
-        type: 'error',
-        message: 'Vui lòng chọn đầy đủ từ ngày và đến ngày',
-      });
-      return;
-    }
-
-    setSyncingFaceIdRange(true);
-    setFaceIdRangeResult(null);
-    setResult(null);
-    try {
-      const response = await syncApi.syncFaceIdByDateRange(startDate, endDate);
-      const data = response.data;
-      setFaceIdRangeResult({
-        type: 'success',
-        message: data.message || 'Đồng bộ FaceID thành công',
-        data: data,
-      });
-    } catch (error: any) {
-      setFaceIdRangeResult({
-        type: 'error',
-        message: error.response?.data?.message || error.message || 'Lỗi khi đồng bộ FaceID',
-      });
-    } finally {
-      setSyncingFaceIdRange(false);
     }
   };
 
@@ -480,14 +389,10 @@ export default function SyncPage() {
               <h3 className="text-xl font-bold text-gray-900 mb-2">
                 {syncingBrand
                   ? `Đang đồng bộ ${syncingBrand.toUpperCase()}`
-                  : faceIdSyncing
-                  ? 'Đang đồng bộ FaceID'
                   : syncingSalesRange
                   ? `Đang đồng bộ Sale (${convertDateToDDMMMYYYY(salesStartDate)} - ${convertDateToDDMMMYYYY(salesEndDate)})`
                   : syncingShiftEndCash
                   ? `Đang đồng bộ Báo cáo nộp quỹ cuối ca (${getSyncDate()})`
-                  : syncingFaceIdRange
-                  ? `Đang đồng bộ FaceID (${convertDateToDDMMMYYYY(faceIdStartDate)} - ${convertDateToDDMMMYYYY(faceIdEndDate)})`
                   : syncingShiftEndCashRange
                   ? `Đang đồng bộ Báo cáo nộp quỹ cuối ca (${convertDateToDDMMMYYYY(shiftEndCashStartDate)} - ${convertDateToDDMMMYYYY(shiftEndCashEndDate)})`
                   : syncingRepackFormulaRange
@@ -527,7 +432,7 @@ export default function SyncPage() {
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Đồng bộ dữ liệu</h1>
               <p className="text-sm text-gray-600 mt-1">
-                Đồng bộ dữ liệu từ Zappy API và FaceID API
+                Đồng bộ dữ liệu từ Zappy API
               </p>
             </div>
           </div>
@@ -739,143 +644,6 @@ export default function SyncPage() {
                 </div>
                 <button
                   onClick={() => setSalesRangeResult(null)}
-                  className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded hover:bg-white/50"
-                >
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Sync FaceID By Date Range */}
-        <div className="bg-white rounded-xl shadow-md border-2 border-purple-200 p-6 mb-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <svg className="w-6 h-6 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-              </svg>
-            </div>
-            <div>
-              <h2 className="text-lg font-bold text-gray-900">Đồng bộ FaceID theo khoảng thời gian</h2>
-              <p className="text-sm text-gray-600 mt-1">
-                Đồng bộ FaceID cho khoảng thời gian được chọn
-              </p>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                <span className="flex items-center gap-2">
-                  <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  Từ ngày
-                </span>
-              </label>
-              <input
-                type="date"
-                value={faceIdStartDate}
-                onChange={(e) => setFaceIdStartDate(e.target.value)}
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
-              />
-              {faceIdStartDate && (
-                <p className="mt-2 text-xs text-gray-500">
-                  <span className="font-mono font-semibold text-purple-600 bg-purple-50 px-2 py-1 rounded">{convertDateToDDMMMYYYY(faceIdStartDate)}</span>
-                </p>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                <span className="flex items-center gap-2">
-                  <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  Đến ngày
-                </span>
-              </label>
-              <input
-                type="date"
-                value={faceIdEndDate}
-                onChange={(e) => setFaceIdEndDate(e.target.value)}
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
-              />
-              {faceIdEndDate && (
-                <p className="mt-2 text-xs text-gray-500">
-                  <span className="font-mono font-semibold text-purple-600 bg-purple-50 px-2 py-1 rounded">{convertDateToDDMMMYYYY(faceIdEndDate)}</span>
-                </p>
-              )}
-            </div>
-          </div>
-
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            {faceIdRangeResult?.data && (
-              <div className="flex-1 bg-purple-50 rounded-lg p-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-purple-600">{faceIdRangeResult.data.totalSavedCount || 0}</div>
-                    <div className="text-xs text-gray-600 mt-1">Đã lưu mới</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-purple-600">{faceIdRangeResult.data.totalUpdatedCount || 0}</div>
-                    <div className="text-xs text-gray-600 mt-1">Đã cập nhật</div>
-                  </div>
-                </div>
-              </div>
-            )}
-            <button
-              onClick={handleSyncFaceIdByDateRange}
-              disabled={isAnySyncing || !faceIdStartDate || !faceIdEndDate}
-              className="px-6 py-3 text-sm font-semibold text-white bg-purple-600 rounded-lg hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all min-w-[140px]"
-            >
-              {syncingFaceIdRange ? (
-                <>
-                  <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Đang đồng bộ...
-                </>
-              ) : (
-                <>
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                  Đồng bộ FaceID
-                </>
-              )}
-            </button>
-          </div>
-          {faceIdRangeResult && (
-            <div
-              className={`mt-4 p-4 rounded-xl border-2 shadow-sm ${
-                faceIdRangeResult.type === 'success'
-                  ? 'bg-green-50 text-green-800 border-green-300'
-                  : 'bg-red-50 text-red-800 border-red-300'
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  {faceIdRangeResult.type === 'success' ? (
-                    <div className="p-2 bg-green-100 rounded-lg">
-                      <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    </div>
-                  ) : (
-                    <div className="p-2 bg-red-100 rounded-lg">
-                      <svg className="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    </div>
-                  )}
-                  <span className="font-medium">{faceIdRangeResult.message}</span>
-                </div>
-                <button
-                  onClick={() => setFaceIdRangeResult(null)}
                   className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded hover:bg-white/50"
                 >
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1499,65 +1267,6 @@ export default function SyncPage() {
           )}
         </div>
 
-        {/* Sync FaceID */}
-        <div className="bg-white rounded-xl shadow-md border-2 border-purple-200 p-6 mb-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="p-2 bg-purple-100 rounded-lg">
-                  <svg className="w-6 h-6 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                </div>
-                <div>
-                  <h2 className="text-lg font-bold text-gray-900">Đồng bộ FaceID</h2>
-                  <p className="text-sm text-gray-600 mt-1">
-                    Đồng bộ dữ liệu FaceID từ API inout-customer cho ngày <span className="font-mono font-semibold text-purple-600">{getSyncDate()}</span>
-                  </p>
-                </div>
-              </div>
-              {faceIdResult && (
-                <div className="mt-3 bg-purple-50 rounded-lg p-3 border border-purple-200">
-                  <div className="flex items-center gap-4 text-sm">
-                    <div>
-                      <span className="text-gray-600">Đã lưu:</span>
-                      <span className="ml-2 font-bold text-green-600">{faceIdResult.savedCount || 0}</span>
-                      <span className="text-gray-500 ml-1">records mới</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">Bỏ qua:</span>
-                      <span className="ml-2 font-bold text-gray-600">{faceIdResult.skippedCount || 0}</span>
-                      <span className="text-gray-500 ml-1">records đã tồn tại</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-            <button
-              onClick={handleSyncFaceId}
-              disabled={isAnySyncing}
-              className="px-6 py-3 text-sm font-semibold text-white bg-purple-600 rounded-lg hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all min-w-[140px]"
-            >
-              {faceIdSyncing ? (
-                <>
-                  <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Đang đồng bộ...
-                </>
-              ) : (
-                <>
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                  Đồng bộ FaceID
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-
         {/* Sync Shift End Cash */}
         <div className="bg-white rounded-xl shadow-md border-2 border-green-200 p-6 mb-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -1741,12 +1450,6 @@ export default function SyncPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <span><strong>Đồng bộ dữ liệu từ Zappy API:</strong> Tương tự như trang Đơn hàng, lấy dữ liệu sales, customers, orders</span>
-            </li>
-            <li className="flex items-start gap-3">
-              <svg className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span><strong>Đồng bộ FaceID:</strong> Từ API inout-customer (https://vmt.ipchello.com/api/inout-customer/)</span>
             </li>
             <li className="flex items-start gap-3">
               <svg className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -49,25 +49,6 @@ export const salesApi = {
   createStockTransfer: (data: { data: any[] }) => {
     return api.post('/sales/stock-transfer', data);
   },
-  getCheckFaceIdByPartnerCode: (partnerCode: string, date?: string) => {
-    return api.get(`/sales/check-face-id/${partnerCode}`, { params: { date } });
-  },
-  getOrdersWithCheckFaceId: (partnerCode: string, date?: string) => {
-    return api.get(`/sales/orders-with-check-face-id/${partnerCode}`, { params: { date } });
-  },
-  getAllGiaiTrinhFaceId: (params?: {
-    page?: number;
-    limit?: number;
-    date?: string;
-    dateFrom?: string;
-    dateTo?: string;
-    orderCode?: string;
-    partnerCode?: string;
-    faceStatus?: 'yes' | 'no';
-    brandCode?: string;
-  }) => {
-    return api.get('/sales/giai-trinh-faceid', { params });
-  },
   exportOrders: (params?: {
     brand?: string;
     processed?: boolean;
@@ -134,10 +115,6 @@ export const syncApi = {
   syncBrand: (brandName: string, date: string) => {
     return api.post(`/sync/brand/${brandName}`, { date });
   },
-  // Sync FaceID data từ API inout-customer
-  syncFaceId: (date: string, shopCodes?: string[]) => {
-    return api.post('/sync/faceid', { date, shopCodes });
-  },
   // Sync stock transfer cho một brand một ngày
   syncStockTransfer: (brandName: string, date: string) => {
     return api.post(`/sync/stock-transfer/${brandName}`, { date });
@@ -149,10 +126,6 @@ export const syncApi = {
   // Sync báo cáo nộp quỹ cuối ca
   syncShiftEndCash: (date: string, brand?: string) => {
     return api.post('/sync/shift-end-cash', { date, brand });
-  },
-  // Sync FaceID theo khoảng thời gian
-  syncFaceIdByDateRange: (startDate: string, endDate: string, shopCodes?: string[]) => {
-    return api.post('/sync/faceid/range', { startDate, endDate, shopCodes });
   },
   // Sync báo cáo nộp quỹ cuối ca theo khoảng thời gian
   syncShiftEndCashByDateRange: (startDate: string, endDate: string, brand?: string) => {
