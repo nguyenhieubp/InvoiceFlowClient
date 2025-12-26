@@ -51,12 +51,6 @@ export default function SyncPage() {
     message: string;
     data?: any;
   } | null>(null);
-  const [syncingShiftEndCash, setSyncingShiftEndCash] = useState(false);
-  const [shiftEndCashResult, setShiftEndCashResult] = useState<{
-    type: 'success' | 'error';
-    message: string;
-    data?: any;
-  } | null>(null);
   const [syncingShiftEndCashRange, setSyncingShiftEndCashRange] = useState(false);
   const [shiftEndCashRangeResult, setShiftEndCashRangeResult] = useState<{
     type: 'success' | 'error';
@@ -151,6 +145,26 @@ export default function SyncPage() {
     const day = now.getDate().toString().padStart(2, '0');
     return `${year}-${month}-${day}`;
   });
+  const [syncingCashioRange, setSyncingCashioRange] = useState(false);
+  const [cashioRangeResult, setCashioRangeResult] = useState<{
+    type: 'success' | 'error';
+    message: string;
+    data?: any;
+  } | null>(null);
+  const [cashioStartDate, setCashioStartDate] = useState<string>(() => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = (now.getMonth() + 1).toString().padStart(2, '0');
+    const day = now.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  });
+  const [cashioEndDate, setCashioEndDate] = useState<string>(() => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = (now.getMonth() + 1).toString().padStart(2, '0');
+    const day = now.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  });
 
   const handleSyncBrand = async (brandName: string) => {
     const syncDate = getSyncDate();
@@ -181,7 +195,7 @@ export default function SyncPage() {
   };
 
   const isSyncing = syncingBrand !== null;
-  const isAnySyncing = isSyncing || syncingSalesRange || syncingShiftEndCash || syncingShiftEndCashRange || syncingRepackFormulaRange || syncingPromotionRange || syncingVoucherIssueRange;
+  const isAnySyncing = isSyncing || syncingSalesRange || syncingShiftEndCashRange || syncingRepackFormulaRange || syncingPromotionRange || syncingVoucherIssueRange || syncingCashioRange;
 
   const handleSyncSalesByDateRange = async () => {
     const startDate = convertDateToDDMMMYYYY(salesStartDate);
@@ -348,33 +362,36 @@ export default function SyncPage() {
     }
   };
 
-  const handleSyncShiftEndCash = async () => {
-    const syncDate = getSyncDate();
-    if (!syncDate) {
-      setShiftEndCashResult({
+  const handleSyncCashioByDateRange = async () => {
+    const startDate = convertDateToDDMMMYYYY(cashioStartDate);
+    const endDate = convertDateToDDMMMYYYY(cashioEndDate);
+    
+    if (!startDate || !endDate) {
+      setCashioRangeResult({
         type: 'error',
-        message: 'Vui lòng chọn ngày cần đồng bộ',
+        message: 'Vui lòng chọn đầy đủ từ ngày và đến ngày',
       });
       return;
     }
 
-    setSyncingShiftEndCash(true);
-    setShiftEndCashResult(null);
+    setSyncingCashioRange(true);
+    setCashioRangeResult(null);
     setResult(null);
     try {
-      const response = await syncApi.syncShiftEndCash(syncDate);
-      setShiftEndCashResult({
+      const response = await syncApi.syncCashioByDateRange(startDate, endDate);
+      const data = response.data;
+      setCashioRangeResult({
         type: 'success',
-        message: response.data.message || 'Đồng bộ báo cáo nộp quỹ cuối ca thành công',
-        data: response.data,
+        message: data.message || 'Đồng bộ Cashio thành công',
+        data: data,
       });
     } catch (error: any) {
-      setShiftEndCashResult({
+      setCashioRangeResult({
         type: 'error',
-        message: error.response?.data?.message || error.message || 'Lỗi khi đồng bộ báo cáo nộp quỹ cuối ca',
+        message: error.response?.data?.message || error.message || 'Lỗi khi đồng bộ Cashio',
       });
     } finally {
-      setSyncingShiftEndCash(false);
+      setSyncingCashioRange(false);
     }
   };
 
@@ -391,8 +408,6 @@ export default function SyncPage() {
                   ? `Đang đồng bộ ${syncingBrand.toUpperCase()}`
                   : syncingSalesRange
                   ? `Đang đồng bộ Sale (${convertDateToDDMMMYYYY(salesStartDate)} - ${convertDateToDDMMMYYYY(salesEndDate)})`
-                  : syncingShiftEndCash
-                  ? `Đang đồng bộ Báo cáo nộp quỹ cuối ca (${getSyncDate()})`
                   : syncingShiftEndCashRange
                   ? `Đang đồng bộ Báo cáo nộp quỹ cuối ca (${convertDateToDDMMMYYYY(shiftEndCashStartDate)} - ${convertDateToDDMMMYYYY(shiftEndCashEndDate)})`
                   : syncingRepackFormulaRange
@@ -416,7 +431,7 @@ export default function SyncPage() {
         <div className="mb-8">
           <Link 
             href="/" 
-            className="inline-flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-blue-600 mb-6 transition-colors"
+            className="inline-flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-600 mb-6 transition-colors"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -424,8 +439,8 @@ export default function SyncPage() {
             Về trang chủ
           </Link>
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-3 bg-blue-100 rounded-lg">
-              <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="p-3 bg-gray-100 rounded-lg">
+              <svg className="w-6 h-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
             </div>
@@ -453,12 +468,12 @@ export default function SyncPage() {
               type="date"
               value={syncDateInput}
               onChange={(e) => setSyncDateInput(e.target.value)}
-              className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400 transition-all"
             />
             {syncDateInput && (
               <p className="mt-3 text-xs text-gray-500 flex items-center gap-2">
                 <span className="font-medium">Format API:</span>
-                <span className="font-mono font-semibold text-blue-600 bg-blue-50 px-2 py-1 rounded">{getSyncDate()}</span>
+                <span className="font-mono font-semibold text-gray-600 bg-gray-50 px-2 py-1 rounded">{getSyncDate()}</span>
               </p>
             )}
           </div>
@@ -469,15 +484,15 @@ export default function SyncPage() {
           <div
             className={`mb-6 p-4 rounded-xl border-2 shadow-sm ${
               result.type === 'success'
-                ? 'bg-green-50 text-green-800 border-green-300'
+                ? 'bg-gray-50 text-green-800 border-green-300'
                 : 'bg-red-50 text-red-800 border-red-300'
             }`}
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 {result.type === 'success' ? (
-                  <div className="p-2 bg-green-100 rounded-lg">
-                    <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <div className="p-2 bg-gray-100 rounded-lg">
+                    <svg className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   </div>
@@ -503,10 +518,10 @@ export default function SyncPage() {
         )}
 
         {/* Sync Sales By Date Range */}
-        <div className="bg-white rounded-xl shadow-md border-2 border-blue-200 p-6 mb-6">
+        <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6 mb-6">
           <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="p-2 bg-gray-100 rounded-lg">
+              <svg className="w-6 h-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
             </div>
@@ -532,11 +547,11 @@ export default function SyncPage() {
                 type="date"
                 value={salesStartDate}
                 onChange={(e) => setSalesStartDate(e.target.value)}
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400 transition-all"
               />
               {salesStartDate && (
                 <p className="mt-2 text-xs text-gray-500">
-                  <span className="font-mono font-semibold text-blue-600 bg-blue-50 px-2 py-1 rounded">{convertDateToDDMMMYYYY(salesStartDate)}</span>
+                  <span className="font-mono font-semibold text-gray-700 bg-gray-50 px-2 py-1 rounded">{convertDateToDDMMMYYYY(salesStartDate)}</span>
                 </p>
               )}
             </div>
@@ -553,11 +568,11 @@ export default function SyncPage() {
                 type="date"
                 value={salesEndDate}
                 onChange={(e) => setSalesEndDate(e.target.value)}
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400 transition-all"
               />
               {salesEndDate && (
                 <p className="mt-2 text-xs text-gray-500">
-                  <span className="font-mono font-semibold text-blue-600 bg-blue-50 px-2 py-1 rounded">{convertDateToDDMMMYYYY(salesEndDate)}</span>
+                  <span className="font-mono font-semibold text-gray-700 bg-gray-50 px-2 py-1 rounded">{convertDateToDDMMMYYYY(salesEndDate)}</span>
                 </p>
               )}
             </div>
@@ -568,15 +583,15 @@ export default function SyncPage() {
               <div className="flex-1 bg-gray-50 rounded-lg p-4">
                 <div className="grid grid-cols-3 gap-4 mb-3">
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-blue-600">{salesRangeResult.data.totalOrdersCount || 0}</div>
+                    <div className="text-2xl font-bold text-gray-700">{salesRangeResult.data.totalOrdersCount || 0}</div>
                     <div className="text-xs text-gray-600 mt-1">Tổng đơn</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-blue-600">{salesRangeResult.data.totalSalesCount || 0}</div>
+                    <div className="text-2xl font-bold text-gray-700">{salesRangeResult.data.totalSalesCount || 0}</div>
                     <div className="text-xs text-gray-600 mt-1">Tổng sale</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-blue-600">{salesRangeResult.data.totalCustomersCount || 0}</div>
+                    <div className="text-2xl font-bold text-gray-700">{salesRangeResult.data.totalCustomersCount || 0}</div>
                     <div className="text-xs text-gray-600 mt-1">Tổng khách</div>
                   </div>
                 </div>
@@ -597,7 +612,7 @@ export default function SyncPage() {
             <button
               onClick={handleSyncSalesByDateRange}
               disabled={isAnySyncing || !salesStartDate || !salesEndDate}
-              className="px-6 py-3 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all min-w-[140px]"
+              className="px-6 py-3 text-sm font-semibold text-white bg-gray-700 rounded-lg hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all min-w-[140px]"
             >
               {syncingSalesRange ? (
                 <>
@@ -621,15 +636,15 @@ export default function SyncPage() {
             <div
               className={`mt-4 p-4 rounded-xl border-2 shadow-sm ${
                 salesRangeResult.type === 'success'
-                  ? 'bg-green-50 text-green-800 border-green-300'
+                  ? 'bg-gray-50 text-green-800 border-green-300'
                   : 'bg-red-50 text-red-800 border-red-300'
               }`}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   {salesRangeResult.type === 'success' ? (
-                    <div className="p-2 bg-green-100 rounded-lg">
-                      <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <div className="p-2 bg-gray-100 rounded-lg">
+                      <svg className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                     </div>
@@ -656,10 +671,10 @@ export default function SyncPage() {
         </div>
 
         {/* Sync Shift End Cash By Date Range */}
-        <div className="bg-white rounded-xl shadow-md border-2 border-green-200 p-6 mb-6">
+        <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6 mb-6">
           <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <svg className="w-6 h-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="p-2 bg-gray-100 rounded-lg">
+              <svg className="w-6 h-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
             </div>
@@ -685,11 +700,11 @@ export default function SyncPage() {
                 type="date"
                 value={shiftEndCashStartDate}
                 onChange={(e) => setShiftEndCashStartDate(e.target.value)}
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400 transition-all"
               />
               {shiftEndCashStartDate && (
                 <p className="mt-2 text-xs text-gray-500">
-                  <span className="font-mono font-semibold text-green-600 bg-green-50 px-2 py-1 rounded">{convertDateToDDMMMYYYY(shiftEndCashStartDate)}</span>
+                  <span className="font-mono font-semibold text-gray-600 bg-gray-50 px-2 py-1 rounded">{convertDateToDDMMMYYYY(shiftEndCashStartDate)}</span>
                 </p>
               )}
             </div>
@@ -706,11 +721,11 @@ export default function SyncPage() {
                 type="date"
                 value={shiftEndCashEndDate}
                 onChange={(e) => setShiftEndCashEndDate(e.target.value)}
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400 transition-all"
               />
               {shiftEndCashEndDate && (
                 <p className="mt-2 text-xs text-gray-500">
-                  <span className="font-mono font-semibold text-green-600 bg-green-50 px-2 py-1 rounded">{convertDateToDDMMMYYYY(shiftEndCashEndDate)}</span>
+                  <span className="font-mono font-semibold text-gray-600 bg-gray-50 px-2 py-1 rounded">{convertDateToDDMMMYYYY(shiftEndCashEndDate)}</span>
                 </p>
               )}
             </div>
@@ -718,18 +733,18 @@ export default function SyncPage() {
 
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             {shiftEndCashRangeResult?.data && (
-              <div className="flex-1 bg-green-50 rounded-lg p-4">
+              <div className="flex-1 bg-gray-50 rounded-lg p-4">
                 <div className="grid grid-cols-3 gap-4 mb-3">
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-green-600">{shiftEndCashRangeResult.data.totalRecordsCount || 0}</div>
+                    <div className="text-2xl font-bold text-gray-700">{shiftEndCashRangeResult.data.totalRecordsCount || 0}</div>
                     <div className="text-xs text-gray-600 mt-1">Tổng báo cáo</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-blue-600">{shiftEndCashRangeResult.data.totalSavedCount || 0}</div>
+                    <div className="text-2xl font-bold text-gray-700">{shiftEndCashRangeResult.data.totalSavedCount || 0}</div>
                     <div className="text-xs text-gray-600 mt-1">Mới</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-orange-600">{shiftEndCashRangeResult.data.totalUpdatedCount || 0}</div>
+                    <div className="text-2xl font-bold text-gray-700">{shiftEndCashRangeResult.data.totalUpdatedCount || 0}</div>
                     <div className="text-xs text-gray-600 mt-1">Cập nhật</div>
                   </div>
                 </div>
@@ -750,7 +765,7 @@ export default function SyncPage() {
             <button
               onClick={handleSyncShiftEndCashByDateRange}
               disabled={isAnySyncing || !shiftEndCashStartDate || !shiftEndCashEndDate}
-              className="px-6 py-3 text-sm font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all min-w-[140px]"
+              className="px-6 py-3 text-sm font-semibold text-white bg-gray-700 rounded-lg hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all min-w-[140px]"
             >
               {syncingShiftEndCashRange ? (
                 <>
@@ -774,15 +789,15 @@ export default function SyncPage() {
             <div
               className={`mt-4 p-4 rounded-xl border-2 shadow-sm ${
                 shiftEndCashRangeResult.type === 'success'
-                  ? 'bg-green-50 text-green-800 border-green-300'
+                  ? 'bg-gray-50 text-green-800 border-green-300'
                   : 'bg-red-50 text-red-800 border-red-300'
               }`}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   {shiftEndCashRangeResult.type === 'success' ? (
-                    <div className="p-2 bg-green-100 rounded-lg">
-                      <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <div className="p-2 bg-gray-100 rounded-lg">
+                      <svg className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                     </div>
@@ -809,10 +824,10 @@ export default function SyncPage() {
         </div>
 
         {/* Sync Repack Formula By Date Range */}
-        <div className="bg-white rounded-xl shadow-md border-2 border-orange-200 p-6 mb-6">
+        <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6 mb-6">
           <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 bg-orange-100 rounded-lg">
-              <svg className="w-6 h-6 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="p-2 bg-gray-100 rounded-lg">
+              <svg className="w-6 h-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
             </div>
@@ -838,11 +853,11 @@ export default function SyncPage() {
                 type="date"
                 value={repackFormulaStartDate}
                 onChange={(e) => setRepackFormulaStartDate(e.target.value)}
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400 transition-all"
               />
               {repackFormulaStartDate && (
                 <p className="mt-2 text-xs text-gray-500">
-                  <span className="font-mono font-semibold text-orange-600 bg-orange-50 px-2 py-1 rounded">{convertDateToDDMMMYYYY(repackFormulaStartDate)}</span>
+                  <span className="font-mono font-semibold text-gray-600 bg-gray-50 px-2 py-1 rounded">{convertDateToDDMMMYYYY(repackFormulaStartDate)}</span>
                 </p>
               )}
             </div>
@@ -859,11 +874,11 @@ export default function SyncPage() {
                 type="date"
                 value={repackFormulaEndDate}
                 onChange={(e) => setRepackFormulaEndDate(e.target.value)}
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400 transition-all"
               />
               {repackFormulaEndDate && (
                 <p className="mt-2 text-xs text-gray-500">
-                  <span className="font-mono font-semibold text-orange-600 bg-orange-50 px-2 py-1 rounded">{convertDateToDDMMMYYYY(repackFormulaEndDate)}</span>
+                  <span className="font-mono font-semibold text-gray-600 bg-gray-50 px-2 py-1 rounded">{convertDateToDDMMMYYYY(repackFormulaEndDate)}</span>
                 </p>
               )}
             </div>
@@ -871,18 +886,18 @@ export default function SyncPage() {
 
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             {repackFormulaRangeResult?.data && (
-              <div className="flex-1 bg-orange-50 rounded-lg p-4">
+              <div className="flex-1 bg-gray-50 rounded-lg p-4">
                 <div className="grid grid-cols-3 gap-4 mb-3">
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-orange-600">{repackFormulaRangeResult.data.totalRecordsCount || 0}</div>
+                    <div className="text-2xl font-bold text-gray-700">{repackFormulaRangeResult.data.totalRecordsCount || 0}</div>
                     <div className="text-xs text-gray-600 mt-1">Tổng công thức</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-blue-600">{repackFormulaRangeResult.data.totalSavedCount || 0}</div>
+                    <div className="text-2xl font-bold text-gray-700">{repackFormulaRangeResult.data.totalSavedCount || 0}</div>
                     <div className="text-xs text-gray-600 mt-1">Mới</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-green-600">{repackFormulaRangeResult.data.totalUpdatedCount || 0}</div>
+                    <div className="text-2xl font-bold text-gray-700">{repackFormulaRangeResult.data.totalUpdatedCount || 0}</div>
                     <div className="text-xs text-gray-600 mt-1">Cập nhật</div>
                   </div>
                 </div>
@@ -903,7 +918,7 @@ export default function SyncPage() {
             <button
               onClick={handleSyncRepackFormulaByDateRange}
               disabled={isAnySyncing || !repackFormulaStartDate || !repackFormulaEndDate}
-              className="px-6 py-3 text-sm font-semibold text-white bg-orange-600 rounded-lg hover:bg-orange-700 disabled:bg-gray-300 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all min-w-[140px]"
+              className="px-6 py-3 text-sm font-semibold text-white bg-gray-700 rounded-lg hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all min-w-[140px]"
             >
               {syncingRepackFormulaRange ? (
                 <>
@@ -927,15 +942,15 @@ export default function SyncPage() {
             <div
               className={`mt-4 p-4 rounded-xl border-2 shadow-sm ${
                 repackFormulaRangeResult.type === 'success'
-                  ? 'bg-green-50 text-green-800 border-green-300'
+                  ? 'bg-gray-50 text-green-800 border-green-300'
                   : 'bg-red-50 text-red-800 border-red-300'
               }`}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   {repackFormulaRangeResult.type === 'success' ? (
-                    <div className="p-2 bg-green-100 rounded-lg">
-                      <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <div className="p-2 bg-gray-100 rounded-lg">
+                      <svg className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                     </div>
@@ -962,10 +977,10 @@ export default function SyncPage() {
         </div>
 
         {/* Sync Promotion By Date Range */}
-        <div className="bg-white rounded-xl shadow-md border-2 border-indigo-200 p-6 mb-6">
+        <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6 mb-6">
           <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 bg-indigo-100 rounded-lg">
-              <svg className="w-6 h-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="p-2 bg-gray-100 rounded-lg">
+              <svg className="w-6 h-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
             </div>
@@ -991,11 +1006,11 @@ export default function SyncPage() {
                 type="date"
                 value={promotionStartDate}
                 onChange={(e) => setPromotionStartDate(e.target.value)}
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400 transition-all"
               />
               {promotionStartDate && (
                 <p className="mt-2 text-xs text-gray-500">
-                  <span className="font-mono font-semibold text-indigo-600 bg-indigo-50 px-2 py-1 rounded">{convertDateToDDMMMYYYY(promotionStartDate)}</span>
+                  <span className="font-mono font-semibold text-gray-600 bg-gray-50 px-2 py-1 rounded">{convertDateToDDMMMYYYY(promotionStartDate)}</span>
                 </p>
               )}
             </div>
@@ -1012,11 +1027,11 @@ export default function SyncPage() {
                 type="date"
                 value={promotionEndDate}
                 onChange={(e) => setPromotionEndDate(e.target.value)}
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400 transition-all"
               />
               {promotionEndDate && (
                 <p className="mt-2 text-xs text-gray-500">
-                  <span className="font-mono font-semibold text-indigo-600 bg-indigo-50 px-2 py-1 rounded">{convertDateToDDMMMYYYY(promotionEndDate)}</span>
+                  <span className="font-mono font-semibold text-gray-600 bg-gray-50 px-2 py-1 rounded">{convertDateToDDMMMYYYY(promotionEndDate)}</span>
                 </p>
               )}
             </div>
@@ -1024,18 +1039,18 @@ export default function SyncPage() {
 
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             {promotionRangeResult?.data && (
-              <div className="flex-1 bg-indigo-50 rounded-lg p-4">
+              <div className="flex-1 bg-gray-50 rounded-lg p-4">
                 <div className="grid grid-cols-3 gap-4 mb-3">
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-indigo-600">{promotionRangeResult.data.totalRecordsCount || 0}</div>
+                    <div className="text-2xl font-bold text-gray-700">{promotionRangeResult.data.totalRecordsCount || 0}</div>
                     <div className="text-xs text-gray-600 mt-1">Tổng CTKM</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-blue-600">{promotionRangeResult.data.totalSavedCount || 0}</div>
+                    <div className="text-2xl font-bold text-gray-700">{promotionRangeResult.data.totalSavedCount || 0}</div>
                     <div className="text-xs text-gray-600 mt-1">Mới</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-green-600">{promotionRangeResult.data.totalUpdatedCount || 0}</div>
+                    <div className="text-2xl font-bold text-gray-700">{promotionRangeResult.data.totalUpdatedCount || 0}</div>
                     <div className="text-xs text-gray-600 mt-1">Cập nhật</div>
                   </div>
                 </div>
@@ -1056,7 +1071,7 @@ export default function SyncPage() {
             <button
               onClick={handleSyncPromotionByDateRange}
               disabled={isAnySyncing || !promotionStartDate || !promotionEndDate}
-              className="px-6 py-3 text-sm font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all min-w-[140px]"
+              className="px-6 py-3 text-sm font-semibold text-white bg-gray-700 rounded-lg hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all min-w-[140px]"
             >
               {syncingPromotionRange ? (
                 <>
@@ -1080,15 +1095,15 @@ export default function SyncPage() {
             <div
               className={`mt-4 p-4 rounded-xl border-2 shadow-sm ${
                 promotionRangeResult.type === 'success'
-                  ? 'bg-green-50 text-green-800 border-green-300'
+                  ? 'bg-gray-50 text-green-800 border-green-300'
                   : 'bg-red-50 text-red-800 border-red-300'
               }`}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   {promotionRangeResult.type === 'success' ? (
-                    <div className="p-2 bg-green-100 rounded-lg">
-                      <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <div className="p-2 bg-gray-100 rounded-lg">
+                      <svg className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                     </div>
@@ -1115,10 +1130,10 @@ export default function SyncPage() {
         </div>
 
         {/* Sync Voucher Issue By Date Range */}
-        <div className="bg-white rounded-xl shadow-md border-2 border-teal-200 p-6 mb-6">
+        <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6 mb-6">
           <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 bg-teal-100 rounded-lg">
-              <svg className="w-6 h-6 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="p-2 bg-gray-100 rounded-lg">
+              <svg className="w-6 h-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
             </div>
@@ -1144,11 +1159,11 @@ export default function SyncPage() {
                 type="date"
                 value={voucherIssueStartDate}
                 onChange={(e) => setVoucherIssueStartDate(e.target.value)}
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400 transition-all"
               />
               {voucherIssueStartDate && (
                 <p className="mt-2 text-xs text-gray-500">
-                  <span className="font-mono font-semibold text-teal-600 bg-teal-50 px-2 py-1 rounded">{convertDateToDDMMMYYYY(voucherIssueStartDate)}</span>
+                  <span className="font-mono font-semibold text-gray-600 bg-gray-50 px-2 py-1 rounded">{convertDateToDDMMMYYYY(voucherIssueStartDate)}</span>
                 </p>
               )}
             </div>
@@ -1165,11 +1180,11 @@ export default function SyncPage() {
                 type="date"
                 value={voucherIssueEndDate}
                 onChange={(e) => setVoucherIssueEndDate(e.target.value)}
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400 transition-all"
               />
               {voucherIssueEndDate && (
                 <p className="mt-2 text-xs text-gray-500">
-                  <span className="font-mono font-semibold text-teal-600 bg-teal-50 px-2 py-1 rounded">{convertDateToDDMMMYYYY(voucherIssueEndDate)}</span>
+                  <span className="font-mono font-semibold text-gray-600 bg-gray-50 px-2 py-1 rounded">{convertDateToDDMMMYYYY(voucherIssueEndDate)}</span>
                 </p>
               )}
             </div>
@@ -1177,18 +1192,18 @@ export default function SyncPage() {
 
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             {voucherIssueRangeResult?.data && (
-              <div className="flex-1 bg-teal-50 rounded-lg p-4">
+              <div className="flex-1 bg-gray-50 rounded-lg p-4">
                 <div className="grid grid-cols-3 gap-4 mb-3">
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-teal-600">{voucherIssueRangeResult.data.totalRecordsCount || 0}</div>
+                    <div className="text-2xl font-bold text-gray-700">{voucherIssueRangeResult.data.totalRecordsCount || 0}</div>
                     <div className="text-xs text-gray-600 mt-1">Tổng voucher</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-blue-600">{voucherIssueRangeResult.data.totalSavedCount || 0}</div>
+                    <div className="text-2xl font-bold text-gray-700">{voucherIssueRangeResult.data.totalSavedCount || 0}</div>
                     <div className="text-xs text-gray-600 mt-1">Mới</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-green-600">{voucherIssueRangeResult.data.totalUpdatedCount || 0}</div>
+                    <div className="text-2xl font-bold text-gray-700">{voucherIssueRangeResult.data.totalUpdatedCount || 0}</div>
                     <div className="text-xs text-gray-600 mt-1">Cập nhật</div>
                   </div>
                 </div>
@@ -1209,7 +1224,7 @@ export default function SyncPage() {
             <button
               onClick={handleSyncVoucherIssueByDateRange}
               disabled={isAnySyncing || !voucherIssueStartDate || !voucherIssueEndDate}
-              className="px-6 py-3 text-sm font-semibold text-white bg-teal-600 rounded-lg hover:bg-teal-700 disabled:bg-gray-300 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all min-w-[140px]"
+              className="px-6 py-3 text-sm font-semibold text-white bg-gray-700 rounded-lg hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all min-w-[140px]"
             >
               {syncingVoucherIssueRange ? (
                 <>
@@ -1233,15 +1248,15 @@ export default function SyncPage() {
             <div
               className={`mt-4 p-4 rounded-xl border-2 shadow-sm ${
                 voucherIssueRangeResult.type === 'success'
-                  ? 'bg-green-50 text-green-800 border-green-300'
+                  ? 'bg-gray-50 text-green-800 border-green-300'
                   : 'bg-red-50 text-red-800 border-red-300'
               }`}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   {voucherIssueRangeResult.type === 'success' ? (
-                    <div className="p-2 bg-green-100 rounded-lg">
-                      <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <div className="p-2 bg-gray-100 rounded-lg">
+                      <svg className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                     </div>
@@ -1267,48 +1282,104 @@ export default function SyncPage() {
           )}
         </div>
 
-        {/* Sync Shift End Cash */}
-        <div className="bg-white rounded-xl shadow-md border-2 border-green-200 p-6 mb-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <svg className="w-6 h-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        {/* Sync Cashio By Date Range */}
+        <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6 mb-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 bg-gray-100 rounded-lg">
+              <svg className="w-6 h-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-gray-900">Đồng bộ Cashio theo khoảng thời gian</h2>
+              <p className="text-sm text-gray-600 mt-1">
+                Đồng bộ cashio cho tất cả các nhãn hàng (f3, labhair, yaman, menard)
+              </p>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <span className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
-                </div>
-                <div>
-                  <h2 className="text-lg font-bold text-gray-900">Đồng bộ Báo cáo nộp quỹ cuối ca</h2>
-                  <p className="text-sm text-gray-600 mt-1">
-                    Đồng bộ báo cáo nộp quỹ cuối ca cho tất cả các nhãn hàng (f3, labhair, yaman, menard) cho ngày <span className="font-mono font-semibold text-green-600">{getSyncDate()}</span>
-                  </p>
-                </div>
-              </div>
-              {shiftEndCashResult?.data && (
-                <div className="mt-3 bg-green-50 rounded-lg p-3 border border-green-200">
-                  <div className="grid grid-cols-3 gap-4 text-sm">
-                    <div>
-                      <span className="text-gray-600">Tổng báo cáo:</span>
-                      <span className="ml-2 font-bold text-green-600">{shiftEndCashResult.data.recordsCount || 0}</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">Mới:</span>
-                      <span className="ml-2 font-bold text-blue-600">{shiftEndCashResult.data.savedCount || 0}</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">Cập nhật:</span>
-                      <span className="ml-2 font-bold text-orange-600">{shiftEndCashResult.data.updatedCount || 0}</span>
-                    </div>
-                  </div>
-                </div>
+                  Từ ngày
+                </span>
+              </label>
+              <input
+                type="date"
+                value={cashioStartDate}
+                onChange={(e) => setCashioStartDate(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400 transition-all"
+              />
+              {cashioStartDate && (
+                <p className="mt-2 text-xs text-gray-500">
+                  <span className="font-mono font-semibold text-gray-700 bg-gray-50 px-2 py-1 rounded">{convertDateToDDMMMYYYY(cashioStartDate)}</span>
+                </p>
               )}
             </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <span className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  Đến ngày
+                </span>
+              </label>
+              <input
+                type="date"
+                value={cashioEndDate}
+                onChange={(e) => setCashioEndDate(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400 transition-all"
+              />
+              {cashioEndDate && (
+                <p className="mt-2 text-xs text-gray-500">
+                  <span className="font-mono font-semibold text-gray-700 bg-gray-50 px-2 py-1 rounded">{convertDateToDDMMMYYYY(cashioEndDate)}</span>
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            {cashioRangeResult?.data && (
+              <div className="flex-1 bg-gray-50 rounded-lg p-4">
+                <div className="grid grid-cols-3 gap-4 mb-3">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-gray-700">{cashioRangeResult.data.totalRecordsCount || 0}</div>
+                    <div className="text-xs text-gray-600 mt-1">Tổng records</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-gray-700">{cashioRangeResult.data.totalSavedCount || 0}</div>
+                    <div className="text-xs text-gray-600 mt-1">Mới</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-gray-700">{cashioRangeResult.data.totalSkippedCount || 0}</div>
+                    <div className="text-xs text-gray-600 mt-1">Đã tồn tại</div>
+                  </div>
+                </div>
+                {cashioRangeResult.data.brandResults && cashioRangeResult.data.brandResults.length > 0 && (
+                  <div className="pt-3 border-t border-gray-200">
+                    <p className="text-xs font-semibold text-gray-700 mb-2">Chi tiết theo nhãn:</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {cashioRangeResult.data.brandResults.map((brand: any, idx: number) => (
+                        <div key={idx} className="text-xs text-gray-600 bg-white p-2 rounded">
+                          <span className="font-semibold">{brand.brand}:</span> {brand.recordsCount} records, {brand.savedCount} mới, {brand.skippedCount} đã tồn tại
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
             <button
-              onClick={handleSyncShiftEndCash}
-              disabled={isAnySyncing}
-              className="px-6 py-3 text-sm font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all min-w-[140px]"
+              onClick={handleSyncCashioByDateRange}
+              disabled={isAnySyncing || !cashioStartDate || !cashioEndDate}
+              className="px-6 py-3 text-sm font-semibold text-white bg-gray-700 rounded-lg hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all min-w-[140px]"
             >
-              {syncingShiftEndCash ? (
+              {syncingCashioRange ? (
                 <>
                   <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -1319,24 +1390,24 @@ export default function SyncPage() {
               ) : (
                 <>
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
                   Đồng bộ
                 </>
               )}
             </button>
           </div>
-          {shiftEndCashResult && (
+          {cashioRangeResult && (
             <div
               className={`mt-4 p-4 rounded-xl border-2 shadow-sm ${
-                shiftEndCashResult.type === 'success'
+                cashioRangeResult.type === 'success'
                   ? 'bg-green-50 text-green-800 border-green-300'
                   : 'bg-red-50 text-red-800 border-red-300'
               }`}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  {shiftEndCashResult.type === 'success' ? (
+                  {cashioRangeResult.type === 'success' ? (
                     <div className="p-2 bg-green-100 rounded-lg">
                       <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -1349,10 +1420,10 @@ export default function SyncPage() {
                       </svg>
                     </div>
                   )}
-                  <span className="font-medium">{shiftEndCashResult.message}</span>
+                  <span className="font-medium">{cashioRangeResult.message}</span>
                 </div>
                 <button
-                  onClick={() => setShiftEndCashResult(null)}
+                  onClick={() => setCashioRangeResult(null)}
                   className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded hover:bg-white/50"
                 >
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1396,7 +1467,7 @@ export default function SyncPage() {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {brands.map((brand) => (
-                  <tr key={brand.name} className="hover:bg-blue-50 transition-colors">
+                  <tr key={brand.name} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-semibold text-gray-900">{brand.displayName}</div>
                     </td>
@@ -1407,7 +1478,7 @@ export default function SyncPage() {
                       <button
                         onClick={() => handleSyncBrand(brand.name)}
                         disabled={isSyncing}
-                        className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg disabled:bg-gray-300 disabled:cursor-not-allowed shadow-sm hover:shadow-md transition-all"
+                        className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-gray-700 hover:bg-gray-800 rounded-lg disabled:bg-gray-300 disabled:cursor-not-allowed shadow-sm hover:shadow-md transition-all"
                       >
                         {syncingBrand === brand.name ? (
                           <>
@@ -1435,10 +1506,10 @@ export default function SyncPage() {
         </div>
 
         {/* Info */}
-        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl shadow-md border-2 border-blue-200 p-6">
+        <div className="bg-gray-50 rounded-xl shadow-md border border-gray-200 p-6">
           <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="p-2 bg-gray-100 rounded-lg">
+              <svg className="w-6 h-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
@@ -1446,25 +1517,25 @@ export default function SyncPage() {
           </div>
           <ul className="space-y-3 text-sm text-gray-700">
             <li className="flex items-start gap-3">
-              <svg className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-5 h-5 text-gray-600 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <span><strong>Đồng bộ dữ liệu từ Zappy API:</strong> Tương tự như trang Đơn hàng, lấy dữ liệu sales, customers, orders</span>
             </li>
             <li className="flex items-start gap-3">
-              <svg className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-5 h-5 text-gray-600 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <span><strong>Format ngày:</strong> Chọn ngày từ lịch, hệ thống tự động convert sang DDMMMYYYY (ví dụ: 02NOV2025)</span>
             </li>
             <li className="flex items-start gap-3">
-              <svg className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-5 h-5 text-gray-600 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <span><strong>Thời gian:</strong> Đồng bộ thủ công có thể mất vài phút tùy vào lượng dữ liệu, vui lòng đợi</span>
             </li>
             <li className="flex items-start gap-3">
-              <svg className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-5 h-5 text-gray-600 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <span><strong>Trùng lặp:</strong> Dữ liệu trùng lặp sẽ được bỏ qua tự động (kiểm tra theo apiId và compositeKey)</span>
