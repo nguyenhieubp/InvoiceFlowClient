@@ -286,6 +286,9 @@ export const shiftEndCashApi = {
   }) => {
     return api.get('/sync/shift-end-cash', { params });
   },
+  createPayment: (id: string) => {
+    return api.post(`/sync/shift-end-cash/${id}/create-payment`);
+  },
 };
 
 // Categories API

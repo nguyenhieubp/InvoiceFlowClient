@@ -65,6 +65,7 @@ export default function ShiftEndCashPage() {
   });
   const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [processingPayment, setProcessingPayment] = useState<string | null>(null);
 
   // Hàm convert từ Date object hoặc YYYY-MM-DD sang DDMMMYYYY
   const convertDateToDDMMMYYYY = (date: Date | string): string => {
@@ -193,6 +194,24 @@ export default function ShiftEndCashPage() {
       }
       return newSet;
     });
+  };
+
+  const handleDoubleClick = async (item: ShiftEndCash) => {
+    // Ngăn double-click khi đang xử lý
+    if (processingPayment === item.id) {
+      return;
+    }
+
+    setProcessingPayment(item.id);
+    try {
+      const response = await shiftEndCashApi.createPayment(item.id);
+      showToast('success', response.data.message || 'Tạo phiếu chi tiền mặt thành công');
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || error.response?.data?.error || error.message || 'Lỗi khi tạo phiếu chi tiền mặt';
+      showToast('error', errorMessage);
+    } finally {
+      setProcessingPayment(null);
+    }
   };
 
   const formatCurrency = (amount: number) => {
@@ -339,7 +358,11 @@ export default function ShiftEndCashPage() {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {shiftEndCashList.map((item) => (
                     <React.Fragment key={item.id}>
-                      <tr className="hover:bg-gray-50">
+                      <tr 
+                        className={`hover:bg-gray-50 ${processingPayment === item.id ? 'opacity-50 cursor-wait' : 'cursor-pointer'}`}
+                        onDoubleClick={() => handleDoubleClick(item)}
+                        title="Double-click để tạo phiếu chi tiền mặt"
+                      >
                         <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{item.draw_code}</td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{formatDate(item.docdate)}</td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{item.brand || '-'}</td>

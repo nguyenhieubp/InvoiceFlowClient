@@ -133,11 +133,20 @@ export default function PromotionPage() {
   const loadPromotion = async () => {
     setLoading(true);
     try {
-      const response = await promotionApi.getAll({
+      // Convert date từ YYYY-MM-DD sang DDMMMYYYY khi gọi API
+      const apiParams: any = {
         page: pagination.page,
         limit: pagination.limit,
         ...filter,
-      });
+      };
+      if (filter.dateFrom) {
+        apiParams.dateFrom = convertDateToDDMMMYYYY(filter.dateFrom);
+      }
+      if (filter.dateTo) {
+        apiParams.dateTo = convertDateToDDMMMYYYY(filter.dateTo);
+      }
+      
+      const response = await promotionApi.getAll(apiParams);
       if (response.data.success) {
         setPromotionList(response.data.data);
         setPagination((prev) => ({
@@ -246,7 +255,7 @@ export default function PromotionPage() {
               <input
                 type="date"
                 value={filterInput.dateFrom || ''}
-                onChange={(e) => setFilterInput({ ...filterInput, dateFrom: e.target.value ? convertDateToDDMMMYYYY(e.target.value) : undefined })}
+                onChange={(e) => setFilterInput({ ...filterInput, dateFrom: e.target.value || undefined })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -255,7 +264,7 @@ export default function PromotionPage() {
               <input
                 type="date"
                 value={filterInput.dateTo || ''}
-                onChange={(e) => setFilterInput({ ...filterInput, dateTo: e.target.value ? convertDateToDDMMMYYYY(e.target.value) : undefined })}
+                onChange={(e) => setFilterInput({ ...filterInput, dateTo: e.target.value || undefined })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
