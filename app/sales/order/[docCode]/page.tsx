@@ -111,6 +111,9 @@ interface Sale {
   maCtkmTangHang?: string;
   maThe?: string;
   soSerial?: string;
+  ordertype?: string;
+  ordertypeName?: string; // Tên loại đơn hàng (01.Thường, etc.)
+  issuePartnerCode?: string; // Mã khách hàng từ API get_card (cho đơn "08. Tách thẻ")
 }
 
 // Định nghĩa labels cho tất cả các trường
@@ -208,6 +211,9 @@ const FIELD_LABELS: Record<keyof Sale, string> = {
   maCtkmTangHang: 'Mã CTKM tặng hàng',
   maThe: 'Mã thẻ',
   soSerial: 'Số serial',
+  ordertype: 'Loại đơn hàng',
+  ordertypeName: 'Tên loại đơn hàng',
+  issuePartnerCode: 'Mã khách hàng phát hành',
 };
 
 // Các cột mặc định (các trường bắt buộc)
