@@ -49,6 +49,17 @@ export default function WarehouseStatisticsPage() {
     docCode?: string;
   }>({});
   const [retryingDocCode, setRetryingDocCode] = useState<string | null>(null);
+  const [batchRetryDateFrom, setBatchRetryDateFrom] = useState<string>('');
+  const [batchRetryDateTo, setBatchRetryDateTo] = useState<string>('');
+  const [batchRetrying, setBatchRetrying] = useState(false);
+  const [batchRetryResult, setBatchRetryResult] = useState<{
+    success: boolean;
+    message: string;
+    totalProcessed: number;
+    successCount: number;
+    failedCount: number;
+    errors: string[];
+  } | null>(null);
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
@@ -166,6 +177,48 @@ export default function WarehouseStatisticsPage() {
       showToast('error', errorMessage);
     } finally {
       setRetryingDocCode(null);
+    }
+  };
+
+  const handleBatchRetry = async () => {
+    if (!batchRetryDateFrom || !batchRetryDateTo) {
+      showToast('error', 'Vui lòng chọn đầy đủ từ ngày và đến ngày');
+      return;
+    }
+
+    const dateFrom = convertDateToDDMMMYYYY(batchRetryDateFrom);
+    const dateTo = convertDateToDDMMMYYYY(batchRetryDateTo);
+
+    if (!dateFrom || !dateTo) {
+      showToast('error', 'Ngày không hợp lệ. Vui lòng chọn lại ngày');
+      return;
+    }
+
+    if (!window.confirm(`Bạn có chắc chắn muốn xử lý lại TẤT CẢ các lỗi warehouse từ ${dateFrom} đến ${dateTo}?`)) {
+      return;
+    }
+
+    try {
+      setBatchRetrying(true);
+      setBatchRetryResult(null);
+      const response = await warehouseProcessedApi.retryFailedByDateRange(dateFrom, dateTo);
+      setBatchRetryResult(response.data);
+      showToast('success', response.data.message || 'Xử lý lại batch thành công');
+      // Reload data after retry
+      await loadWarehouseProcessed();
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.message || error?.message || 'Lỗi khi xử lý lại warehouse batch';
+      showToast('error', errorMessage);
+      setBatchRetryResult({
+        success: false,
+        message: errorMessage,
+        totalProcessed: 0,
+        successCount: 0,
+        failedCount: 0,
+        errors: [],
+      });
+    } finally {
+      setBatchRetrying(false);
     }
   };
 
@@ -294,6 +347,123 @@ export default function WarehouseStatisticsPage() {
             Đặt lại
           </button>
         </div>
+      </div>
+
+      {/* Batch Retry Section */}
+      <div className="bg-orange-50 border border-orange-200 p-4 rounded-lg shadow mb-6">
+        <div className="flex items-center gap-2 mb-4">
+          <svg className="w-5 h-5 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          <h2 className="text-lg font-semibold text-gray-900">Xử lý lại các lỗi theo khoảng thời gian</h2>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Từ ngày
+            </label>
+            <input
+              type="date"
+              value={batchRetryDateFrom}
+              onChange={(e) => setBatchRetryDateFrom(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Đến ngày
+            </label>
+            <input
+              type="date"
+              value={batchRetryDateTo}
+              onChange={(e) => setBatchRetryDateTo(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+            />
+          </div>
+          <div className="flex items-end">
+            <button
+              onClick={handleBatchRetry}
+              disabled={batchRetrying || !batchRetryDateFrom || !batchRetryDateTo}
+              className="w-full px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+            >
+              {batchRetrying ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                  <span>Đang xử lý...</span>
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  <span>Xử lý lại tất cả lỗi</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+        {batchRetryResult && (
+          <div className={`mt-4 p-4 rounded-lg border-2 ${
+            batchRetryResult.success
+              ? 'bg-green-50 border-green-300'
+              : 'bg-red-50 border-red-300'
+          }`}>
+            <div className="flex items-start gap-3">
+              <div className={`p-2 rounded-lg ${
+                batchRetryResult.success ? 'bg-green-100' : 'bg-red-100'
+              }`}>
+                {batchRetryResult.success ? (
+                  <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                )}
+              </div>
+              <div className="flex-1">
+                <p className={`font-semibold ${
+                  batchRetryResult.success ? 'text-green-800' : 'text-red-800'
+                }`}>
+                  {batchRetryResult.message}
+                </p>
+                <div className="mt-2 grid grid-cols-3 gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-600">Tổng xử lý:</span>
+                    <span className="ml-2 font-semibold text-gray-900">{batchRetryResult.totalProcessed}</span>
+                  </div>
+                  <div>
+                    <span className="text-green-600">Thành công:</span>
+                    <span className="ml-2 font-semibold text-green-700">{batchRetryResult.successCount}</span>
+                  </div>
+                  <div>
+                    <span className="text-red-600">Thất bại:</span>
+                    <span className="ml-2 font-semibold text-red-700">{batchRetryResult.failedCount}</span>
+                  </div>
+                </div>
+                {batchRetryResult.errors && batchRetryResult.errors.length > 0 && (
+                  <div className="mt-3 pt-3 border-t border-gray-300">
+                    <p className="text-xs font-semibold text-gray-700 mb-2">Chi tiết lỗi:</p>
+                    <ul className="text-xs text-red-700 space-y-1 max-h-32 overflow-y-auto">
+                      {batchRetryResult.errors.map((error, idx) => (
+                        <li key={idx} className="font-mono">• {error}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={() => setBatchRetryResult(null)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Table */}

@@ -271,6 +271,12 @@ export const warehouseProcessedApi = {
   retryByDocCode: (docCode: string) => {
     return api.post(`/sales/stock-transfer/doc-code/${docCode}/warehouse-retry`);
   },
+  retryFailedByDateRange: (dateFrom: string, dateTo: string) => {
+    return api.post('/sales/stock-transfer/warehouse-retry-failed-by-date-range', {
+      dateFrom,
+      dateTo,
+    });
+  },
 };
 
 // Shift End Cash API
