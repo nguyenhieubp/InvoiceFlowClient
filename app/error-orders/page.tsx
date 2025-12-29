@@ -146,8 +146,19 @@ export default function OrdersPage() {
         return order.docDate ? new Date(order.docDate).toLocaleDateString('vi-VN') : '';
       case 'customerName':
         return order.customer?.name || '';
-      case 'partnerCode':
-        return sale?.partnerCode || order.customer?.code || '';
+      case 'partnerCode': {
+        // Với đơn "08. Tách thẻ": ưu tiên issuePartnerCode (từ API get_card)
+        const ordertypeName = sale?.ordertypeName || sale?.ordertype || '';
+        const isTachThe = ordertypeName.includes('08. Tách thẻ') ||
+          ordertypeName.includes('08.Tách thẻ') ||
+          ordertypeName.includes('08.  Tách thẻ');
+        
+        const partnerCode = isTachThe && sale?.issuePartnerCode
+          ? sale.issuePartnerCode
+          : sale?.partnerCode || order.customer?.code || '';
+        
+        return partnerCode;
+      }
       case 'itemCode':
         return sale?.itemCode || '';
       case 'itemName':
@@ -965,8 +976,19 @@ export default function OrdersPage() {
             })}
           </div>
         );
-      case 'partnerCode':
-        return <div className="text-sm text-gray-900">{sale?.partnerCode || '-'}</div>;
+      case 'partnerCode': {
+        // Với đơn "08. Tách thẻ": ưu tiên issuePartnerCode (từ API get_card)
+        const ordertypeName = sale?.ordertypeName || sale?.ordertype || '';
+        const isTachThe = ordertypeName.includes('08. Tách thẻ') ||
+          ordertypeName.includes('08.Tách thẻ') ||
+          ordertypeName.includes('08.  Tách thẻ');
+        
+        const partnerCode = isTachThe && sale?.issuePartnerCode
+          ? sale.issuePartnerCode
+          : sale?.partnerCode;
+        
+        return <div className="text-sm text-gray-900">{partnerCode || '-'}</div>;
+      }
       case 'customerName':
         return (
           <div>

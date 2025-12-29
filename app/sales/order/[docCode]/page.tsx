@@ -380,7 +380,17 @@ export default function OrderDetailPage() {
   const renderCellValue = (sale: Sale, field: keyof Sale, order: OrderDetail): React.ReactNode => {
     // Xử lý các trường đặc biệt từ order
     if (field === 'partnerCode') {
-      return sale.partnerCode || order.customer.code || '-';
+      // Với đơn "08. Tách thẻ": ưu tiên issuePartnerCode (từ API get_card)
+      const ordertypeName = sale.ordertypeName || sale.ordertype || '';
+      const isTachThe = ordertypeName.includes('08. Tách thẻ') ||
+        ordertypeName.includes('08.Tách thẻ') ||
+        ordertypeName.includes('08.  Tách thẻ');
+      
+      const partnerCode = isTachThe && sale.issuePartnerCode
+        ? sale.issuePartnerCode
+        : sale.partnerCode || order.customer.code || '-';
+      
+      return partnerCode;
     }
     
     if (field === 'itemName') {

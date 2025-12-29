@@ -74,8 +74,19 @@ export const renderCellValue = (order: Order, sale: SaleItem | null, field: Orde
         </div>
       );
     
-    case 'partnerCode':
-      return <div className="text-sm text-gray-900">{sale?.partnerCode || '-'}</div>;
+    case 'partnerCode': {
+      // Với đơn "08. Tách thẻ": ưu tiên issuePartnerCode (từ API get_card)
+      const ordertypeName = sale?.ordertypeName || sale?.ordertype || '';
+      const isTachThe = ordertypeName.includes('08. Tách thẻ') ||
+        ordertypeName.includes('08.Tách thẻ') ||
+        ordertypeName.includes('08.  Tách thẻ');
+      
+      const partnerCode = isTachThe && sale?.issuePartnerCode
+        ? sale.issuePartnerCode
+        : sale?.partnerCode;
+      
+      return <div className="text-sm text-gray-900">{partnerCode || '-'}</div>;
+    }
     
     case 'customerName':
       return <div className="text-sm font-medium text-gray-900">{order.customer?.name || '-'}</div>;

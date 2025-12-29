@@ -78,6 +78,7 @@ export interface SaleItem {
   itemName?: string;
   description?: string;
   partnerCode?: string;
+  issuePartnerCode?: string; // Mã khách hàng từ API get_card (cho đơn "08. Tách thẻ")
   ordertype?: string;
   ordertypeName?: string; // Tên loại đơn hàng (01.Thường, etc.)
   branchCode?: string;
