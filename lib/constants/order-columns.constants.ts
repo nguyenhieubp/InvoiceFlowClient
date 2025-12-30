@@ -120,7 +120,6 @@ export type OrderColumn =
   | 'tkDoanhThuHangNo' // Tk doanh thu hàng nợ
   | 'tkGiaVonHangNo'   // Tk giá vốn hàng nợ
   | 'tkVatTuHangNo'    // Tk vật tư hàng nợ
-  | 'tkChietKhau'      // Tk chiết khấu
   | 'tkChiPhi'         // Tk chi phí
   | 'maPhi'            // Mã phí
   // Stock Transfer columns
@@ -242,7 +241,6 @@ export const FIELD_LABELS: Record<OrderColumn, string> = {
   tkDaiLy: 'Tk đại lý',
   tkSanPhamDoDang: 'Tk sản phẩm dở dang',
   tkChenhLechGiaVon: 'Tk chênh lệch giá vốn',
-  tkChietKhau: 'Tk chiết khấu',
   tkChiPhiKhuyenMaiProduct: 'Tk chi phí khuyến mãi',
   tkGiaVonBanLe: 'Tk giá vốn bán lẻ',
   tkDoanhThuBanLe: 'Tk doanh thu bán lẻ',
