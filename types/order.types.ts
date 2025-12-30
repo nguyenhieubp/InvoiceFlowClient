@@ -169,6 +169,9 @@ export interface SaleItem {
   maThe?: string;
   soSerial?: string;
   revenue?: number;
+  tkChietKhau?: string; // Tk chiết khấu
+  tkChiPhi?: string; // Tk chi phí (từ creditAdvice)
+  maPhi?: string; // Mã phí (từ creditAdvice)
   // Các field display từ backend
   isTangHang?: boolean;
   isDichVu?: boolean;

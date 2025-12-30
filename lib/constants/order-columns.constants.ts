@@ -120,6 +120,9 @@ export type OrderColumn =
   | 'tkDoanhThuHangNo' // Tk doanh thu hàng nợ
   | 'tkGiaVonHangNo'   // Tk giá vốn hàng nợ
   | 'tkVatTuHangNo'    // Tk vật tư hàng nợ
+  | 'tkChietKhau'      // Tk chiết khấu
+  | 'tkChiPhi'         // Tk chi phí
+  | 'maPhi'            // Mã phí
   // Stock Transfer columns
   | 'stockTransferDoctype'    // Loại xuất kho
   | 'stockTransferTransDate'  // Ngày xuất kho
@@ -248,6 +251,9 @@ export const FIELD_LABELS: Record<OrderColumn, string> = {
   tkDoanhThuHangNo: 'Tk doanh thu hàng nợ',
   tkGiaVonHangNo: 'Tk giá vốn hàng nợ',
   tkVatTuHangNo: 'Tk vật tư hàng nợ',
+  tkChietKhau: 'TK Chiết khấu',
+  tkChiPhi: 'TK Chi phí',
+  maPhi: 'Mã phí',
   // Stock Transfer labels
   stockTransferDoctype: 'Loại xuất kho',
   stockTransferTransDate: 'Ngày xuất kho',
@@ -283,6 +289,9 @@ export const MAIN_COLUMNS: OrderColumn[] = [
   'tkNo',                     // * Tk nợ
   'tkDoanhThu',               // * Tk doanh thu
   'tkGiaVon',                 // * Tk giá vốn
+  'tkChietKhau',              // TK Chiết khấu
+  'tkChiPhi',                 // TK Chi phí
+  'maPhi',                     // Mã phí
   'cucThue',                  // * Cục thuế
   'maThanhToan',              // Mã thanh toán
   'vuViec',                   // Vụ việc

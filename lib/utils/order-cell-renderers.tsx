@@ -453,7 +453,22 @@ export const renderCellValue = (order: Order, sale: SaleItem | null, field: Orde
     case 'tkDaiLy':
     case 'tkSanPhamDoDang':
     case 'tkChenhLechGiaVon':
-    case 'tkChietKhau':
+    case 'tkChietKhau': {
+      // Lấy từ product hoặc sale
+      const tkChietKhau = sale?.product?.tkChietKhau || sale?.tkChietKhau;
+      return <div className="text-sm text-gray-900">{tkChietKhau || '-'}</div>;
+    }
+    
+    case 'tkChiPhi': {
+      // Tk chi phí từ creditAdvice (ví dụ: "64191" cho đơn "Đổi vỏ")
+      return <div className="text-sm text-gray-900">{sale?.tkChiPhi || '-'}</div>;
+    }
+    
+    case 'maPhi': {
+      // Mã phí từ creditAdvice (ví dụ: "161010" cho đơn "Đổi vỏ")
+      return <div className="text-sm text-gray-900">{sale?.maPhi || '-'}</div>;
+    }
+    
     case 'tkChiPhiKhuyenMaiProduct':
     case 'tkGiaVonBanLe':
     case 'tkDoanhThuBanLe':
