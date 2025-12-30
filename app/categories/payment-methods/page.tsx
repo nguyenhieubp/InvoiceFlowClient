@@ -6,9 +6,13 @@ import { Toast } from '@/components/Toast';
 
 interface PaymentMethod {
   id?: string;
+  externalId?: string;
   code: string;
   description?: string;
+  systemCode?: string;
   documentType?: string;
+  erp?: string;
+  bankUnit?: string;
   trangThai?: string;
   ngayTao?: string;
   ngaySua?: string;
@@ -17,10 +21,14 @@ interface PaymentMethod {
 }
 
 const FIELD_LABELS: Record<keyof PaymentMethod, string> = {
-  id: 'ID',
+  id: 'Id',
+  externalId: 'Id (Hệ thống cũ)',
   code: 'Mã',
   description: 'Diễn giải',
+  systemCode: 'Mã hệ thống',
   documentType: 'Loại chứng từ',
+  erp: 'ERP',
+  bankUnit: 'Đơn vị ngân hàng',
   trangThai: 'Trạng thái',
   ngayTao: 'Ngày tạo',
   ngaySua: 'Ngày sửa',
@@ -28,12 +36,15 @@ const FIELD_LABELS: Record<keyof PaymentMethod, string> = {
   nguoiSua: 'Người sửa',
 };
 
-// Các fields chính để hiển thị trong bảng
+// Các fields chính để hiển thị trong bảng (ẩn id UUID)
 const MAIN_COLUMNS: (keyof PaymentMethod)[] = [
+  'externalId',
   'code',
   'description',
+  'systemCode',
   'documentType',
-  'trangThai',
+  'erp',
+  'bankUnit',
 ];
 
 export default function PaymentMethodsPage() {
@@ -57,6 +68,8 @@ export default function PaymentMethodsPage() {
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importResult, setImportResult] = useState<{
     total: number;
+    processed?: number;
+    emptyRows?: number;
     success: number;
     failed: number;
     errors: Array<{ row: number; error: string }>;
@@ -197,7 +210,7 @@ export default function PaymentMethodsPage() {
       setImportResult(result);
       
       if (result.success > 0) {
-        showToast('success', `Import thành công ${result.success}/${result.total} bản ghi`);
+        showToast('success', `Import thành công: ${result.success}/${result.total} bản ghi`);
         await loadPaymentMethods();
         setImportFile(null);
         setTimeout(() => {
@@ -275,7 +288,7 @@ export default function PaymentMethodsPage() {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const visibleColumns = selectedColumns.filter(col => col !== 'id');
+  const visibleColumns = selectedColumns;
 
   return (
     <div className="min-h-screen bg-white relative overflow-auto">
@@ -391,7 +404,7 @@ export default function PaymentMethodsPage() {
                 </svg>
                 <input
                   type="text"
-                  placeholder="Tìm kiếm theo mã, diễn giải, loại chứng từ..."
+                  placeholder="Tìm kiếm theo Id, mã, diễn giải, mã hệ thống, loại chứng từ, ERP, đơn vị ngân hàng..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -527,7 +540,7 @@ export default function PaymentMethodsPage() {
                   className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                 />
                 <p className="mt-2 text-xs text-gray-500">
-                  File Excel phải có các cột: <strong>Mã</strong>, <strong>Diễn giải</strong>, <strong>Loại chứng từ</strong>
+                  File Excel phải có các cột: <strong>Id</strong>, <strong>Mã</strong>, <strong>Diễn giải</strong>, <strong>Mã hệ thống</strong>, <strong>Loại chứng từ</strong>, <strong>ERP</strong>, <strong>Đơn vị ngân hàng</strong>
                 </p>
               </div>
 
@@ -545,12 +558,24 @@ export default function PaymentMethodsPage() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                     )}
-                    <span className={`font-semibold ${importResult.success > 0 ? 'text-green-800' : 'text-red-800'}`}>
-                      {importResult.success > 0 
-                        ? `Import thành công ${importResult.success}/${importResult.total} bản ghi`
-                        : `Import thất bại: ${importResult.failed}/${importResult.total} bản ghi`}
-                    </span>
+                    <div className="flex-1">
+                      <span className={`font-semibold text-lg ${importResult.success > 0 ? 'text-green-800' : 'text-red-800'}`}>
+                        {importResult.success > 0 
+                          ? `Import thành công: ${importResult.success}/${importResult.processed || importResult.total} bản ghi`
+                          : `Import thất bại: ${importResult.failed}/${importResult.processed || importResult.total} bản ghi`}
+                      </span>
+                      {importResult.processed && importResult.processed < importResult.total && (
+                        <div className="text-sm text-gray-600 mt-1">
+                          Tổng số dòng trong file: {importResult.total} | Đã xử lý: {importResult.processed} | Dòng trống bỏ qua: {importResult.emptyRows || (importResult.total - importResult.processed)}
+                        </div>
+                      )}
+                    </div>
                   </div>
+                  {importResult.failed > 0 && importResult.success > 0 && (
+                    <div className="text-sm text-gray-600 mt-1">
+                      Thất bại: {importResult.failed} bản ghi
+                    </div>
+                  )}
                   {importResult.errors && importResult.errors.length > 0 && (
                     <div className="mt-2 max-h-40 overflow-y-auto">
                       <p className="text-xs font-semibold text-gray-700 mb-1">Chi tiết lỗi:</p>
@@ -590,11 +615,11 @@ export default function PaymentMethodsPage() {
 
       {/* Form Modal */}
       {showFormModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
-            <div className="p-6">
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full my-4">
+            <div className="p-4 sm:p-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-gray-900">
+                <h2 className="text-lg sm:text-xl font-bold text-gray-900">
                   {editingPaymentMethod ? 'Sửa phương thức thanh toán' : 'Thêm phương thức thanh toán mới'}
                 </h2>
                 <button
@@ -611,7 +636,20 @@ export default function PaymentMethodsPage() {
                 </button>
               </div>
 
-              <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Id (Hệ thống cũ)
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.externalId || ''}
+                    onChange={(e) => updateFormField('externalId', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="VD: 108505"
+                  />
+                </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Mã <span className="text-red-500">*</span>
@@ -639,12 +677,48 @@ export default function PaymentMethodsPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Mã hệ thống
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.systemCode || ''}
+                    onChange={(e) => updateFormField('systemCode', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
                     Loại chứng từ
                   </label>
                   <input
                     type="text"
                     value={formData.documentType || ''}
                     onChange={(e) => updateFormField('documentType', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    ERP
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.erp || ''}
+                    onChange={(e) => updateFormField('erp', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Đơn vị ngân hàng
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.bankUnit || ''}
+                    onChange={(e) => updateFormField('bankUnit', e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
