@@ -50,7 +50,7 @@ export const formatValue = (value: any): React.ReactNode => {
 
 // Helper: Tính giá bán (sử dụng giá trị từ backend)
 const calculateGiaBan = (sale: SaleItem | null): number => {
-  return sale?.giaBan ?? 0;
+  return Number(sale?.giaBan) || 0 * Number(sale?.qty) || 0;
 };
 
 // Render cell value
@@ -194,7 +194,7 @@ export const renderCellValue = (order: Order, sale: SaleItem | null, field: Orde
       return formatNumber(calculateGiaBan(sale));
     
     case 'tienHang': {
-      const tienHangValue = sale?.linetotal ?? sale?.tienHang;
+      const tienHangValue =  sale?.tienHang;
       return formatNumber(tienHangValue ?? null);
     }
     
