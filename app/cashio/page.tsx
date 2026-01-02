@@ -22,6 +22,8 @@ interface CashioRecord {
   total_out: number | string;
   sync_date?: string;
   brand?: string;
+  bank_code?: string;
+  period_code?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -325,6 +327,9 @@ export default function CashioPage() {
                       <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">Tiền vào</th>
                       <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">Tiền ra</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Sync Date</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Bank Code</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Period Code</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Sync Date</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Ngày tạo</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Ngày cập nhật</th>
                     </tr>
@@ -379,6 +384,12 @@ export default function CashioPage() {
                         </td>
                         <td className="px-4 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-700 font-mono">{record.sync_date || '-'}</div>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">{record.bank_code || '-'}</div>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">{record.period_code || '-'}</div>
                         </td>
                         <td className="px-4 py-4 whitespace-nowrap">
                           <div className="text-xs text-gray-500">{formatDate(record.createdAt)}</div>
