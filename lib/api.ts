@@ -198,7 +198,7 @@ export const promotionApi = {
     if (params?.ptype) queryString.append('ptype', params.ptype);
     if (params?.status) queryString.append('status', params.status);
     if (params?.code) queryString.append('code', params.code);
-    
+
     return api.get(`/sync/promotion/export?${queryString.toString()}`, {
       responseType: 'blob',
     });
@@ -442,6 +442,34 @@ export const categoriesApi = {
   },
   getCustomerByCode: (code: string) => {
     return api.get(`/categories/customers/${code}`);
+  },
+  // Ecommerce Customers
+  getEcommerceCustomers: (params?: { page?: number; limit?: number; search?: string }) => {
+    return api.get('/categories/ecommerce-customers', { params });
+  },
+  getActiveEcommerceCustomers: () => {
+    return api.get('/categories/ecommerce-customers/active');
+  },
+  getEcommerceCustomerById: (id: string) => {
+    return api.get(`/categories/ecommerce-customers/${id}`);
+  },
+  createEcommerceCustomer: (data: any) => {
+    return api.post('/categories/ecommerce-customers', data);
+  },
+  updateEcommerceCustomer: (id: string, data: any) => {
+    return api.put(`/categories/ecommerce-customers/${id}`, data);
+  },
+  deleteEcommerceCustomer: (id: string) => {
+    return api.delete(`/categories/ecommerce-customers/${id}`);
+  },
+  importEcommerceCustomersExcel: (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post('/categories/ecommerce-customers/import', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
   },
   // Loyalty API Proxy
   getProductByCode: (itemCode: string) => {

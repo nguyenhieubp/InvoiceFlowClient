@@ -321,7 +321,7 @@ export default function OrderDetailPage() {
       } else {
         const allFields = Object.keys(FIELD_LABELS) as (keyof Sale)[];
         const fieldIndex = allFields.indexOf(field);
-        
+
         let insertIndex = prev.length;
         for (let i = 0; i < prev.length; i++) {
           const currentIndex = allFields.indexOf(prev[i]);
@@ -330,7 +330,7 @@ export default function OrderDetailPage() {
             break;
           }
         }
-        
+
         const newSelected = [...prev];
         newSelected.splice(insertIndex, 0, field);
         return newSelected;
@@ -342,24 +342,23 @@ export default function OrderDetailPage() {
     if (value === null || value === undefined || value === '') {
       return <span className="text-gray-400 italic">-</span>;
     }
-    
+
     if (typeof value === 'boolean') {
       return (
-        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-          value ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
-        }`}>
+        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${value ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+          }`}>
           {value ? 'Có' : 'Không'}
         </span>
       );
     }
-    
+
     if (typeof value === 'number') {
       if (value % 1 !== 0) {
         return value.toLocaleString('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
       }
       return value.toLocaleString('vi-VN');
     }
-    
+
     if (typeof value === 'string') {
       if (value.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/) || value.match(/^\d{4}-\d{2}-\d{2}$/)) {
         try {
@@ -375,11 +374,11 @@ export default function OrderDetailPage() {
         }
       }
     }
-    
+
     if (typeof value === 'object' && value !== null) {
       return <span className="text-xs text-gray-500">[Object]</span>;
     }
-    
+
     return String(value);
   };
 
@@ -391,34 +390,34 @@ export default function OrderDetailPage() {
       const isTachThe = ordertypeName.includes('08. Tách thẻ') ||
         ordertypeName.includes('08.Tách thẻ') ||
         ordertypeName.includes('08.  Tách thẻ');
-      
+
       const partnerCode = isTachThe && sale.issuePartnerCode
         ? sale.issuePartnerCode
         : sale.partnerCode || order.customer.code || '-';
-      
+
       return partnerCode;
     }
-    
+
     if (field === 'itemName') {
       return sale.product?.tenVatTu || sale.itemName || '-';
     }
-    
+
     // Lấy giá trị từ sale
     const value = sale[field];
-    
+
     // Nếu là số tiền hoặc số lượng, format đặc biệt
     if (field === 'qty' || field === 'revenue' || field === 'giaBan' || field === 'tienHang') {
       if (typeof value === 'number') {
         return value.toLocaleString('vi-VN');
       }
     }
-    
+
     if (field === 'revenue' || field === 'giaBan' || field === 'tienHang') {
       if (typeof value === 'number') {
         return `${value.toLocaleString('vi-VN')} đ`;
       }
     }
-    
+
     return formatValue(value, field);
   };
 
@@ -579,16 +578,16 @@ export default function OrderDetailPage() {
                 // Render conditions
                 const renderConditions = (conditions: any) => {
                   if (!conditions || !Array.isArray(conditions) || conditions.length === 0) return null;
-                  
+
                   const renderCondition = (condition: any, indent = 0): JSX.Element | null => {
                     if (!condition) return null;
-                    
+
                     if (condition.type === 'PRODUCT_SET') {
                       const value = condition.value || {};
                       const productCodes = Array.isArray(value.productCode) ? value.productCode : [];
                       const quantity = value.quantity || 0;
                       const operator = value.quantityOperator || '';
-                      
+
                       return (
                         <div className="text-sm flex items-start gap-2" style={{ marginLeft: `${indent * 16}px` }}>
                           <span className="font-semibold text-gray-700">Sản phẩm:</span>
@@ -603,11 +602,11 @@ export default function OrderDetailPage() {
                         </div>
                       );
                     }
-                    
+
                     if (condition.type === 'CUSTOMER_PHONE') {
                       const value = condition.value || {};
                       const phoneNumbers = Array.isArray(value.phoneNumber) ? value.phoneNumber : [];
-                      
+
                       return (
                         <div className="text-sm flex items-start gap-2" style={{ marginLeft: `${indent * 16}px` }}>
                           <span className="font-semibold text-gray-700">Số điện thoại:</span>
@@ -615,7 +614,7 @@ export default function OrderDetailPage() {
                         </div>
                       );
                     }
-                    
+
                     if (condition.children && condition.children.length > 0) {
                       return (
                         <div style={{ marginLeft: `${indent * 16}px` }} className="space-y-1">
@@ -630,10 +629,10 @@ export default function OrderDetailPage() {
                         </div>
                       );
                     }
-                    
+
                     return null;
                   };
-                  
+
                   return (
                     <div className="space-y-3">
                       {conditions.map((cond: any, idx: number) => (
@@ -648,10 +647,10 @@ export default function OrderDetailPage() {
                 // Render actions
                 const renderActions = (actions: any) => {
                   if (!actions || !Array.isArray(actions) || actions.length === 0) return null;
-                  
+
                   const renderAction = (action: any, indent = 0): JSX.Element | null => {
                     if (!action) return null;
-                    
+
                     if (action.type === 'PERCENT_TOTAL') {
                       const percent = action.value?.percent || 0;
                       return (
@@ -662,7 +661,7 @@ export default function OrderDetailPage() {
                         </div>
                       );
                     }
-                    
+
                     if (action.type === 'FIXED_AMOUNT') {
                       const amount = action.value?.amount || 0;
                       return (
@@ -672,7 +671,7 @@ export default function OrderDetailPage() {
                         </div>
                       );
                     }
-                    
+
                     if (action.type === 'FREE_PRODUCT') {
                       const products = action.value?.products || [];
                       return (
@@ -688,7 +687,7 @@ export default function OrderDetailPage() {
                         </div>
                       );
                     }
-                    
+
                     if (action.type === 'COUPON') {
                       const couponCode = action.value?.couponCode || '';
                       return (
@@ -698,7 +697,7 @@ export default function OrderDetailPage() {
                         </div>
                       );
                     }
-                    
+
                     if (action.type === 'POINT') {
                       const point = action.value?.point || 0;
                       return (
@@ -708,7 +707,7 @@ export default function OrderDetailPage() {
                         </div>
                       );
                     }
-                    
+
                     if (action.type === 'AMOUNT_ITEM') {
                       const productCodes = Array.isArray(action.value?.productCode) ? action.value.productCode : [];
                       return (
@@ -724,7 +723,7 @@ export default function OrderDetailPage() {
                         </div>
                       );
                     }
-                    
+
                     if (action.children && action.children.length > 0) {
                       return (
                         <div style={{ marginLeft: `${indent * 16}px` }} className="space-y-1">
@@ -739,10 +738,10 @@ export default function OrderDetailPage() {
                         </div>
                       );
                     }
-                    
+
                     return null;
                   };
-                  
+
                   return (
                     <div className="space-y-3">
                       {actions.map((act: any, idx: number) => (
@@ -894,7 +893,7 @@ export default function OrderDetailPage() {
                 Chọn cột hiển thị
               </button>
             </div>
-            
+
             {/* Column Selector */}
             {showColumnSelector && (
               <div className="mt-4 border border-gray-200 rounded-lg p-4 bg-gray-50">
@@ -955,8 +954,8 @@ export default function OrderDetailPage() {
               </thead>
               <tbody className="bg-white divide-y divide-gray-100">
                 {order.sales.map((sale, index) => (
-                  <tr 
-                    key={sale.id} 
+                  <tr
+                    key={sale.id}
                     className="hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-purple-50/30 transition-all duration-150 border-l-4 border-l-transparent hover:border-l-blue-400"
                   >
                     {selectedColumns.map((field) => (
