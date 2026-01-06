@@ -1960,64 +1960,6 @@ export default function OrdersPage() {
     }
   };
 
-  // Hàm retry invoice (giống như trong fast-api-invoices page)
-  const handleRetryInvoice = async (docCode: string) => {
-    try {
-      setRetrying((prev) => ({ ...prev, [docCode]: true }));
-      const response = await salesApi.createInvoiceViaFastApi(docCode, true);
-      const data = response.data;
-
-      if (data.alreadyExists) {
-        showToast('info', data.message || `Đơn hàng ${docCode} đã được tạo hóa đơn trước đó`);
-        return;
-      }
-
-      let hasError = false;
-      if (Array.isArray(data.result) && data.result.length > 0) {
-        hasError = data.result.some((item: any) => item.status === 0);
-      } else if (data.result && typeof data.result === 'object') {
-        hasError = data.result.status === 0;
-      }
-
-      if (data.success && !hasError) {
-        showToast('success', data.message || `Đồng bộ lại ${docCode} thành công`);
-      } else {
-        let errorMessage = data.message || `Đồng bộ lại ${docCode} thất bại`;
-        
-        if (Array.isArray(data.result) && data.result.length > 0) {
-          const firstError = data.result[0];
-          if (firstError.message) {
-            errorMessage = firstError.message;
-          }
-        } else if (data.result?.message) {
-          errorMessage = data.result.message;
-        }
-        
-        showToast('error', errorMessage);
-      }
-    } catch (error: any) {
-      console.error('Error retrying invoice:', error);
-      let errorMessage = `Lỗi khi đồng bộ lại ${docCode}`;
-      
-      if (error?.response?.data) {
-        const errorData = error.response.data;
-        if (errorData.message) {
-          errorMessage = errorData.message;
-        } else if (errorData.error) {
-          errorMessage = errorData.error;
-        } else if (typeof errorData === 'string') {
-          errorMessage = errorData;
-        }
-      } else if (error?.message) {
-        errorMessage = error.message;
-      }
-      
-      showToast('error', errorMessage);
-    } finally {
-      setRetrying((prev) => ({ ...prev, [docCode]: false }));
-    }
-  };
-
   // Flatten enrichedDisplayedOrders thành rows để hiển thị
   // Backend đã paginate theo rows rồi, nhưng sau khi fetch full data, số rows có thể thay đổi
   // Cần giới hạn lại để đảm bảo không vượt quá limit
