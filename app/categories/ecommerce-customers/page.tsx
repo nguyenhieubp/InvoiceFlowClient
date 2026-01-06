@@ -7,6 +7,7 @@ import { Toast } from '@/components/Toast';
 interface EcommerceCustomer {
     id?: string;
     brand: string;
+    ecomName: string;
     customerCode: string;
     trangThai?: string;
     ngayTao?: string;
@@ -16,6 +17,7 @@ interface EcommerceCustomer {
 const FIELD_LABELS: Record<keyof EcommerceCustomer, string> = {
     id: 'ID',
     brand: 'Brand',
+    ecomName: 'Tên sàn',
     customerCode: 'Customer Code',
     trangThai: 'Trạng thái',
     ngayTao: 'Ngày tạo',
@@ -25,6 +27,7 @@ const FIELD_LABELS: Record<keyof EcommerceCustomer, string> = {
 // Các fields chính để hiển thị trong bảng
 const MAIN_COLUMNS: (keyof EcommerceCustomer)[] = [
     'brand',
+    'ecomName',
     'customerCode',
     'trangThai',
 ];
@@ -641,9 +644,9 @@ export default function EcommerceCustomersPage() {
                                         <h3 className="text-sm font-semibold text-blue-900 mb-2">Lưu ý:</h3>
                                         <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
                                             <li>File Excel phải có header ở dòng đầu tiên</li>
-                                            <li>Các cột trong file: <strong>&quot;Brand&quot;</strong> và <strong>&quot;Customer Code&quot;</strong></li>
-                                            <li>Brand và Customer Code là bắt buộc. Nếu Customer Code đã tồn tại, dữ liệu sẽ được xóa và tạo mới</li>
-                                            <li>Ví dụ format: Cột 1: &quot;Brand&quot; (menard), Cột 2: &quot;Customer Code&quot; (KH254032258)</li>
+                                            <li>Các cột trong file: <strong>&quot;Brand&quot;</strong>, <strong>&quot;Tên sàn&quot;</strong> và <strong>&quot;Customer Code&quot;</strong></li>
+                                            <li>Brand, Tên sàn và Customer Code là bắt buộc. Nếu Customer Code đã tồn tại, dữ liệu sẽ được xóa và tạo mới</li>
+                                            <li>Ví dụ format: Cột 1: &quot;Brand&quot; (menard), Cột 2: &quot;Tên sàn&quot; (Shopee), Cột 3: &quot;Customer Code&quot; (KH254032258)</li>
                                         </ul>
                                     </div>
 
@@ -760,6 +763,7 @@ export default function EcommerceCustomersPage() {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {[
                                         { key: 'brand', label: 'Brand', required: true },
+                                        { key: 'ecomName', label: 'Tên sàn', required: true },
                                         { key: 'customerCode', label: 'Customer Code', required: true },
                                         {
                                             key: 'trangThai', label: 'Trạng thái', type: 'select', options: [
