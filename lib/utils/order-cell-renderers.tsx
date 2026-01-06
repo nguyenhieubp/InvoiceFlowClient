@@ -62,7 +62,7 @@ export const renderCellValue = (order: Order, sale: SaleItem | null, field: Orde
   switch (field) {
     case 'docCode':
       return <div className="text-sm font-semibold text-gray-900">{order.docCode}</div>;
-    
+
     case 'docDate':
       return (
         <div className="text-sm text-gray-900">
@@ -73,51 +73,51 @@ export const renderCellValue = (order: Order, sale: SaleItem | null, field: Orde
           })}
         </div>
       );
-    
+
     case 'partnerCode': {
       // Với đơn "08. Tách thẻ": ưu tiên issuePartnerCode (từ API get_card)
       const ordertypeName = sale?.ordertypeName || sale?.ordertype || '';
       const isTachThe = ordertypeName.includes('08. Tách thẻ') ||
         ordertypeName.includes('08.Tách thẻ') ||
         ordertypeName.includes('08.  Tách thẻ');
-      
+
       const partnerCode = isTachThe && sale?.issuePartnerCode
         ? sale.issuePartnerCode
         : sale?.partnerCode;
-      
+
       return <div className="text-sm text-gray-900">{partnerCode || '-'}</div>;
     }
-    
+
     case 'customerName':
       return <div className="text-sm font-medium text-gray-900">{order.customer?.name || '-'}</div>;
-    
+
     case 'customerMobile':
       return <div className="text-sm text-gray-900">{order.customer?.mobile || '-'}</div>;
-    
+
     case 'customerSexual':
       return <div className="text-sm text-gray-900">{order.customer?.sexual || '-'}</div>;
-    
+
     case 'customerAddress':
       return <div className="text-sm text-gray-900">{order.customer?.address || '-'}</div>;
-    
+
     case 'customerProvince':
       return <div className="text-sm text-gray-900">{order.customer?.province_name || '-'}</div>;
-    
+
     case 'customerGrade':
       return <div className="text-sm text-gray-900">{order.customer?.grade_name || '-'}</div>;
-    
+
     case 'kyHieu':
       return <div className="text-sm text-gray-900">{sale?.department?.branchcode || sale?.branchCode || '-'}</div>;
-    
+
     case 'description':
       return <div className="text-sm text-gray-900">{order.docCode || '-'}</div>;
-    
+
     case 'nhanVienBan':
       return <div className="text-sm text-gray-900">{sale?.saleperson_id?.toString() || '-'}</div>;
-    
+
     case 'tenNhanVienBan':
       return <div className="text-sm text-gray-900">{sale?.tenNhanVienBan || '-'}</div>;
-    
+
     case 'itemCode': {
       const itemCode = sale?.product?.maVatTu || sale?.itemCode || '-';
       return (
@@ -126,16 +126,16 @@ export const renderCellValue = (order: Order, sale: SaleItem | null, field: Orde
         </div>
       );
     }
-    
+
     case 'itemName': {
       const itemName = sale?.product?.tenVatTu || sale?.itemName;
       if (!itemName) return null;
       return <div className="text-sm text-gray-900">{itemName}</div>;
     }
-    
+
     case 'dvt':
       return <div className="text-sm text-gray-900">{sale?.product?.dvt || sale?.dvt || '-'}</div>;
-    
+
     case 'loai': {
       // Hiển thị ordertypeName hoặc ordertype từ sale
       const loaiValue = sale?.ordertypeName || sale?.ordertype || sale?.loai ||
@@ -143,15 +143,15 @@ export const renderCellValue = (order: Order, sale: SaleItem | null, field: Orde
         (sale?.catcode1 ? `${sale.catcode1}${sale.catcode2 ? ` / ${sale.catcode2}` : ''}${sale.catcode3 ? ` / ${sale.catcode3}` : ''}` : null);
       return <div className="text-sm text-gray-900">{loaiValue || '-'}</div>;
     }
-    
+
     case 'ordertypeName':
       return <div className="text-sm text-gray-900">{sale?.ordertypeName || '-'}</div>;
-    
+
     case 'productType':
       // Hiển thị productType từ sale hoặc product
       const productType = sale?.productType || sale?.product?.productType || sale?.product?.producttype || null;
       return <div className="text-sm text-gray-900">{productType || '-'}</div>;
-    
+
     case 'promCode': {
       // Sử dụng giá trị từ backend
       if (sale?.promCodeDisplay) {
@@ -159,7 +159,7 @@ export const renderCellValue = (order: Order, sale: SaleItem | null, field: Orde
       }
       return <div className="text-sm text-gray-400 italic">-</div>;
     }
-    
+
     case 'muaHangGiamGia': {
       // Sử dụng giá trị từ backend
       if (sale?.muaHangGiamGiaDisplay) {
@@ -167,7 +167,7 @@ export const renderCellValue = (order: Order, sale: SaleItem | null, field: Orde
       }
       return <div className="text-sm text-gray-400 italic">-</div>;
     }
-    
+
     case 'maCtkmTangHang': {
       // Sử dụng giá trị từ backend
       if (sale?.maCtkmTangHang && sale.maCtkmTangHang.trim() !== '') {
@@ -175,10 +175,10 @@ export const renderCellValue = (order: Order, sale: SaleItem | null, field: Orde
       }
       return <div className="text-sm text-gray-400 italic">-</div>;
     }
-    
+
     case 'maKho':
       return <div className="text-sm text-gray-900">{sale?.maKho || '-'}</div>;
-    
+
     case 'maLo': {
       // Sử dụng giá trị từ backend
       if (sale?.maLo && sale.maLo.trim() !== '') {
@@ -186,60 +186,60 @@ export const renderCellValue = (order: Order, sale: SaleItem | null, field: Orde
       }
       return <span className="text-gray-400 italic">-</span>;
     }
-    
+
     case 'qty':
       return formatNumber(sale?.qty ?? null);
-    
+
     case 'giaBan':
       return formatNumber(calculateGiaBan(sale));
-    
+
     case 'tienHang': {
-      const tienHangValue =  sale?.tienHang;
+      const tienHangValue = sale?.tienHang;
       return formatNumber(tienHangValue ?? null);
     }
-    
+
     case 'revenue':
       return <div className="text-sm text-gray-900">{formatValue(sale?.revenue)}</div>;
-    
+
     case 'maNt':
       return <div className="text-sm text-gray-900">{sale?.maNt || '-'}</div>;
-    
+
     case 'tyGia':
       return formatNumber(sale?.tyGia ?? 1);
-    
+
     case 'maThue':
       return <div className="text-sm text-gray-900">{sale?.maThue || TAX_CODE}</div>;
-    
+
     case 'tkNo':
       return <div className="text-sm text-gray-900">{sale?.tkNo || DEBIT_ACCOUNT}</div>;
-    
+
     case 'tkDoanhThu': {
       // Sử dụng giá trị từ backend
       return <div className="text-sm text-gray-900">{sale?.tkDoanhThuDisplay || '-'}</div>;
     }
-    
+
     case 'tkGiaVon': {
       // Sử dụng giá trị từ backend
       return <div className="text-sm text-gray-900">{sale?.tkGiaVonDisplay || '-'}</div>;
     }
-    
+
     case 'tkChiPhiKhuyenMai':
       return <div className="text-sm text-gray-900">{sale?.tkChiPhiKhuyenMai || '-'}</div>;
-    
+
     case 'tkThueCo':
       return <div className="text-sm text-gray-900">{sale?.tkThueCo || '-'}</div>;
-    
+
     case 'cucThue': {
       // Sử dụng giá trị từ backend
       return <div className="text-sm text-gray-900">{sale?.cucThueDisplay || '-'}</div>;
     }
-    
+
     case 'boPhan':
       return <div className="text-sm text-gray-900">{sale?.department?.ma_bp || sale?.branchCode || '-'}</div>;
-    
+
     case 'chietKhauMuaHangGiamGia':
       return formatNumber(sale?.other_discamt ?? 0);
-    
+
     case 'muaHangCkVip': {
       // Sử dụng giá trị từ backend
       if (sale?.muaHangCkVip && sale.muaHangCkVip.trim() !== '') {
@@ -247,10 +247,10 @@ export const renderCellValue = (order: Order, sale: SaleItem | null, field: Orde
       }
       return <span className="text-gray-400 italic">-</span>;
     }
-    
+
     case 'chietKhauMuaHangCkVip':
       return <div className="text-sm text-gray-900">{formatValue(sale?.grade_discamt ?? sale?.chietKhauMuaHangCkVip ?? 0)}</div>;
-    
+
     case 'thanhToanCoupon': {
       // Sử dụng giá trị từ backend
       if (sale?.thanhToanCouponDisplay) {
@@ -258,7 +258,7 @@ export const renderCellValue = (order: Order, sale: SaleItem | null, field: Orde
       }
       return <span className="text-gray-400 italic">-</span>;
     }
-    
+
     case 'chietKhauThanhToanCoupon': {
       // Sử dụng giá trị từ backend
       if (sale?.chietKhauThanhToanCouponDisplay != null && sale.chietKhauThanhToanCouponDisplay > 0) {
@@ -266,15 +266,15 @@ export const renderCellValue = (order: Order, sale: SaleItem | null, field: Orde
       }
       return <span className="text-gray-400 italic">-</span>;
     }
-    
+
     case 'chietKhauThanhToanVoucher': {
       // Sử dụng giá trị từ backend
-      if (sale?.chietKhauThanhToanVoucherDisplay != null && sale.chietKhauThanhToanVoucherDisplay > 0) {
-        return <div className="text-sm text-gray-900">{formatValue(sale.chietKhauThanhToanVoucherDisplay)}</div>;
+      if (sale?.paid_by_voucher_ecode_ecoin_bp != null && sale.paid_by_voucher_ecode_ecoin_bp > 0) {
+        return <div className="text-sm text-gray-900">{formatValue(sale.paid_by_voucher_ecode_ecoin_bp)}</div>;
       }
       return <span className="text-gray-400 italic">-</span>;
     }
-    
+
     case 'thanhToanVoucher': {
       // Sử dụng giá trị từ backend
       if (sale?.thanhToanVoucherDisplay) {
@@ -282,7 +282,7 @@ export const renderCellValue = (order: Order, sale: SaleItem | null, field: Orde
       }
       return <span className="text-gray-400 italic">-</span>;
     }
-    
+
     case 'soSerial': {
       // Sử dụng giá trị từ backend
       if (sale?.soSerialDisplay) {
@@ -290,7 +290,7 @@ export const renderCellValue = (order: Order, sale: SaleItem | null, field: Orde
       }
       return <span className="text-gray-400 italic">-</span>;
     }
-    
+
     case 'voucherDp1': {
       // Sử dụng giá trị từ backend
       if (sale?.voucherDp1Display) {
@@ -298,7 +298,7 @@ export const renderCellValue = (order: Order, sale: SaleItem | null, field: Orde
       }
       return <span className="text-gray-400 italic">-</span>;
     }
-    
+
     case 'chietKhauVoucherDp1': {
       // Sử dụng giá trị từ backend
       if (sale?.chietKhauVoucherDp1Display != null && sale.chietKhauVoucherDp1Display > 0) {
@@ -306,7 +306,7 @@ export const renderCellValue = (order: Order, sale: SaleItem | null, field: Orde
       }
       return <span className="text-gray-400 italic">-</span>;
     }
-    
+
     case 'thanhToanTkTienAo': {
       // Sử dụng giá trị từ backend
       if (sale?.thanhToanTkTienAoDisplay) {
@@ -314,7 +314,7 @@ export const renderCellValue = (order: Order, sale: SaleItem | null, field: Orde
       }
       return <span className="text-gray-400 italic">-</span>;
     }
-    
+
     case 'chietKhauThanhToanTkTienAo': {
       // Sử dụng giá trị từ backend
       if (sale?.chietKhauThanhToanTkTienAoDisplay != null && sale.chietKhauThanhToanTkTienAoDisplay > 0) {
@@ -322,10 +322,10 @@ export const renderCellValue = (order: Order, sale: SaleItem | null, field: Orde
       }
       return <span className="text-gray-400 italic">-</span>;
     }
-    
+
     case 'maThe':
       return <div className="text-sm text-gray-900">{sale?.maThe ?? '-'}</div>;
-    
+
     // Stock Transfer columns - Sale item level (lấy từ stockTransfers của sale)
     case 'stockTransferDoctype': {
       const stockTransfers = sale?.stockTransfers || [];
@@ -335,7 +335,7 @@ export const renderCellValue = (order: Order, sale: SaleItem | null, field: Orde
       }
       return <span className="text-gray-400 italic">-</span>;
     }
-    
+
     case 'stockTransferTransDate': {
       const stockTransfers = sale?.stockTransfers || [];
       if (stockTransfers.length > 0) {
@@ -354,7 +354,7 @@ export const renderCellValue = (order: Order, sale: SaleItem | null, field: Orde
       }
       return <span className="text-gray-400 italic">-</span>;
     }
-    
+
     case 'stockTransferDocDesc': {
       const stockTransfers = sale?.stockTransfers || [];
       if (stockTransfers.length > 0) {
@@ -362,7 +362,7 @@ export const renderCellValue = (order: Order, sale: SaleItem | null, field: Orde
       }
       return <span className="text-gray-400 italic">-</span>;
     }
-    
+
     case 'stockTransferStockCode': {
       const stockTransfers = sale?.stockTransfers || [];
       if (stockTransfers.length > 0) {
@@ -372,7 +372,7 @@ export const renderCellValue = (order: Order, sale: SaleItem | null, field: Orde
       }
       return <span className="text-gray-400 italic">-</span>;
     }
-    
+
     case 'stockTransferQty': {
       const stockTransfers = sale?.stockTransfers || [];
       if (stockTransfers.length > 0) {
@@ -382,11 +382,11 @@ export const renderCellValue = (order: Order, sale: SaleItem | null, field: Orde
           const isStockOut = st.doctype === 'SALE_STOCKOUT' || Number(st.qty || 0) < 0;
           return isStockOut;
         });
-        
+
         if (stockOutTransfers.length === 0) {
           return <span className="text-gray-400 italic">-</span>;
         }
-        
+
         // Deduplicate stock transfers theo docCode để tránh tính trùng
         // (vì nhiều sale items cùng materialCode có thể share cùng stock transfers)
         const uniqueStockTransfers = new Map<string, any>();
@@ -397,17 +397,17 @@ export const renderCellValue = (order: Order, sale: SaleItem | null, field: Orde
             uniqueStockTransfers.set(key, st);
           }
         });
-        
+
         // Tổng số lượng xuất (lấy giá trị tuyệt đối) từ các stock transfers unique XUẤT KHO
         const totalQty = Array.from(uniqueStockTransfers.values()).reduce(
-          (sum, st) => sum + Math.abs(Number(st.qty || 0)), 
+          (sum, st) => sum + Math.abs(Number(st.qty || 0)),
           0
         );
         return formatNumber(totalQty);
       }
       return <span className="text-gray-400 italic">-</span>;
     }
-    
+
     case 'stockTransferIoType': {
       const stockTransfers = sale?.stockTransfers || [];
       if (stockTransfers.length > 0) {
@@ -415,7 +415,7 @@ export const renderCellValue = (order: Order, sale: SaleItem | null, field: Orde
       }
       return <span className="text-gray-400 italic">-</span>;
     }
-    
+
     case 'stockTransferBatchSerial': {
       const stockTransfers = sale?.stockTransfers || [];
       if (stockTransfers.length > 0) {
@@ -425,7 +425,7 @@ export const renderCellValue = (order: Order, sale: SaleItem | null, field: Orde
       }
       return <span className="text-gray-400 italic">-</span>;
     }
-    
+
     case 'stockTransferSoCode': {
       const stockTransfers = sale?.stockTransfers || [];
       if (stockTransfers.length > 0) {
@@ -433,7 +433,7 @@ export const renderCellValue = (order: Order, sale: SaleItem | null, field: Orde
       }
       return <span className="text-gray-400 italic">-</span>;
     }
-    
+
     case 'stockTransferDocCode': {
       const stockTransfers = sale?.stockTransfers || [];
       if (stockTransfers.length > 0) {
@@ -442,7 +442,7 @@ export const renderCellValue = (order: Order, sale: SaleItem | null, field: Orde
       }
       return <span className="text-gray-400 italic">-</span>;
     }
-    
+
     // Các field trả về "-"
     case 'tkVatTu':
     case 'suaTkVatTu':
@@ -458,17 +458,17 @@ export const renderCellValue = (order: Order, sale: SaleItem | null, field: Orde
       const tkChietKhau = sale?.product?.tkChietKhau || sale?.tkChietKhau;
       return <div className="text-sm text-gray-900">{tkChietKhau || '-'}</div>;
     }
-    
+
     case 'tkChiPhi': {
       // Tk chi phí từ creditAdvice (ví dụ: "64191" cho đơn "Đổi vỏ")
       return <div className="text-sm text-gray-900">{sale?.tkChiPhi || '-'}</div>;
     }
-    
+
     case 'maPhi': {
       // Mã phí từ creditAdvice (ví dụ: "161010" cho đơn "Đổi vỏ")
       return <div className="text-sm text-gray-900">{sale?.maPhi || '-'}</div>;
     }
-    
+
     case 'tkChiPhiKhuyenMaiProduct':
     case 'tkGiaVonBanLe':
     case 'tkDoanhThuBanLe':
@@ -478,7 +478,7 @@ export const renderCellValue = (order: Order, sale: SaleItem | null, field: Orde
     case 'tkGiaVonHangNo':
     case 'tkVatTuHangNo':
       return <div className="text-sm text-gray-900">-</div>;
-    
+
     default: {
       const value = sale?.[field as keyof typeof sale];
       return <div className="text-sm text-gray-900">{formatValue(value)}</div>;
