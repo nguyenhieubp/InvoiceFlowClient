@@ -450,6 +450,9 @@ export const categoriesApi = {
   getActiveEcommerceCustomers: () => {
     return api.get('/categories/ecommerce-customers/active');
   },
+  getActiveEcommerceCustomerByCode: (code: string) => {
+    return api.get(`/categories/ecommerce-customers/active/${code}`);
+  },
   getEcommerceCustomerById: (id: string) => {
     return api.get(`/categories/ecommerce-customers/${id}`);
   },
