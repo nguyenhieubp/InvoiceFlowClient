@@ -486,13 +486,6 @@ export const categoriesApi = {
   },
 };
 
-// Sync API - Customers
-export const syncCustomersApi = {
-  syncBrandT8: (brandName: string) => {
-    return api.post(`/sync/brand/${brandName}/t8`);
-  },
-};
-
 // Fast API Invoices API (Bảng kê hóa đơn)
 
 export const fastApiInvoicesApi = {
