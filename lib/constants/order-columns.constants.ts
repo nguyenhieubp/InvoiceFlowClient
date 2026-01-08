@@ -10,6 +10,8 @@ export type OrderColumn =
   | 'customerSexual'   // Giới tính
   | 'customerAddress'  // Địa chỉ
   | 'customerProvince' // Tỉnh/TP
+  | 'brand'            // Brand
+  | 'type_sale'        // Type sale
   | 'customerGrade'    // Hạng khách hàng
   | 'docDate'          // * Ngày
   | 'docCode'          // * Số hóa đơn
@@ -140,6 +142,8 @@ export const FIELD_LABELS: Record<OrderColumn, string> = {
   customerSexual: 'Giới tính',
   customerAddress: 'Địa chỉ',
   customerProvince: 'Tỉnh/TP',
+  brand: 'Nhãn Hàng',
+  type_sale: 'Loại Bán',
   customerGrade: 'Hạng khách hàng',
   docDate: '* Ngày',
   docCode: '* Số hóa đơn',
@@ -270,6 +274,8 @@ export const MAIN_COLUMNS: OrderColumn[] = [
   'docDate',                  // * Ngày
   'docCode',                  // * Số hóa đơn
   'kyHieu',                   // * Ký hiệu
+  'brand',
+  'type_sale',
   'description',              // Diễn giải
   'itemCode',                 // * Mã hàng
   'dvt',                      // Đvt

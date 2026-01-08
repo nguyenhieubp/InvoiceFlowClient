@@ -151,6 +151,10 @@ export const syncApi = {
   syncCashioByDateRange: (startDate: string, endDate: string, brand?: string) => {
     return api.post('/sync/cashio/range', { startDate, endDate, brand });
   },
+  // Sync sale bán buôn theo khoảng thời gian
+  syncWsaleByDateRange: (startDate: string, endDate: string, brand?: string) => {
+    return api.post('/sync/wsale/range', { startDate, endDate, brand });
+  },
 };
 
 // Voucher Issue API
@@ -521,6 +525,6 @@ export const fastApiInvoicesApi = {
     maDvcs?: string;
   }) => {
     return api.post('/fast-api-invoices/sync-by-date-range', data);
-  },
+  }
 };
 

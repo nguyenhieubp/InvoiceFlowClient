@@ -12,9 +12,9 @@ export const metadata: Metadata = {
   title: "Vita Hub",
   description: "Vita Hub",
   icons: {
-    icon: "https://images.crunchbase.com/image/upload/c_pad,h_256,w_256,f_auto,q_auto:eco,dpr_1/009f3fa2c79f4b35ae518d568753e59c?ik-sanitizeSvg=true",
-    apple: "https://images.crunchbase.com/image/upload/c_pad,h_256,w_256,f_auto,q_auto:eco,dpr_1/009f3fa2c79f4b35ae518d568753e59c?ik-sanitizeSvg=true",
-  },
+    icon: [{ url: "/logo.png", sizes: "any" }],
+    apple: [{ url: "/logo.png", sizes: "any" }],
+  },  
 };
 
 export default function RootLayout({

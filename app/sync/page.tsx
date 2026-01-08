@@ -14,7 +14,7 @@ const brands = [
 
 export default function SyncPage() {
   const [syncingBrand, setSyncingBrand] = useState<string | null>(null);
-  
+
   // Hàm convert từ Date object hoặc YYYY-MM-DD sang DDMMMYYYY
   const convertDateToDDMMMYYYY = (date: Date | string): string => {
     const d = typeof date === 'string' ? new Date(date) : date;
@@ -166,6 +166,26 @@ export default function SyncPage() {
     const day = now.getDate().toString().padStart(2, '0');
     return `${year}-${month}-${day}`;
   });
+  const [syncingWsaleRange, setSyncingWsaleRange] = useState(false);
+  const [wsaleRangeResult, setWsaleRangeResult] = useState<{
+    type: 'success' | 'error';
+    message: string;
+    data?: any;
+  } | null>(null);
+  const [wsaleStartDate, setWsaleStartDate] = useState<string>(() => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = (now.getMonth() + 1).toString().padStart(2, '0');
+    const day = now.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  });
+  const [wsaleEndDate, setWsaleEndDate] = useState<string>(() => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = (now.getMonth() + 1).toString().padStart(2, '0');
+    const day = now.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  });
 
   const handleSyncBrand = async (brandName: string) => {
     const syncDate = getSyncDate();
@@ -201,7 +221,7 @@ export default function SyncPage() {
   const handleSyncSalesByDateRange = async () => {
     const startDate = convertDateToDDMMMYYYY(salesStartDate);
     const endDate = convertDateToDDMMMYYYY(salesEndDate);
-    
+
     if (!startDate || !endDate) {
       setSalesRangeResult({
         type: 'error',
@@ -231,10 +251,42 @@ export default function SyncPage() {
     }
   };
 
+  const handleSyncWsaleByDateRange = async () => {
+    debugger;
+    const startDate = convertDateToDDMMMYYYY(wsaleStartDate);
+    const endDate = convertDateToDDMMMYYYY(wsaleEndDate);
+
+    if (!startDate || !endDate) {
+      setWsaleRangeResult({
+        type: 'error',
+        message: 'Vui lòng chọn đầy đủ từ ngày và đến ngày',
+      });
+      return;
+    }
+    const brands = ['menard'];
+    for (const brand of brands) {
+      try {
+        const response = await syncApi.syncWsaleByDateRange(startDate, endDate, brand);
+        const data = response.data;
+        setWsaleRangeResult({
+          type: 'success',
+          message: data.message || 'Đồng bộ sale bán buôn thành công',
+          data: data,
+        });
+        break;
+      } catch (error: any) {
+        setWsaleRangeResult({
+          type: 'error',
+          message: error.response?.data?.message || error.message || `Lỗi khi đồng bộ sale bán buôn ${brand}`,
+        });
+      }
+    }
+  };
+
   const handleSyncShiftEndCashByDateRange = async () => {
     const startDate = convertDateToDDMMMYYYY(shiftEndCashStartDate);
     const endDate = convertDateToDDMMMYYYY(shiftEndCashEndDate);
-    
+
     if (!startDate || !endDate) {
       setShiftEndCashRangeResult({
         type: 'error',
@@ -268,7 +320,7 @@ export default function SyncPage() {
   const handleSyncRepackFormulaByDateRange = async () => {
     const startDate = convertDateToDDMMMYYYY(repackFormulaStartDate);
     const endDate = convertDateToDDMMMYYYY(repackFormulaEndDate);
-    
+
     if (!startDate || !endDate) {
       setRepackFormulaRangeResult({
         type: 'error',
@@ -301,7 +353,7 @@ export default function SyncPage() {
   const handleSyncPromotionByDateRange = async () => {
     const startDate = convertDateToDDMMMYYYY(promotionStartDate);
     const endDate = convertDateToDDMMMYYYY(promotionEndDate);
-    
+
     if (!startDate || !endDate) {
       setPromotionRangeResult({
         type: 'error',
@@ -334,7 +386,7 @@ export default function SyncPage() {
   const handleSyncVoucherIssueByDateRange = async () => {
     const startDate = convertDateToDDMMMYYYY(voucherIssueStartDate);
     const endDate = convertDateToDDMMMYYYY(voucherIssueEndDate);
-    
+
     if (!startDate || !endDate) {
       setVoucherIssueRangeResult({
         type: 'error',
@@ -367,7 +419,7 @@ export default function SyncPage() {
   const handleSyncCashioByDateRange = async () => {
     const startDate = convertDateToDDMMMYYYY(cashioStartDate);
     const endDate = convertDateToDDMMMYYYY(cashioEndDate);
-    
+
     if (!startDate || !endDate) {
       setCashioRangeResult({
         type: 'error',
@@ -409,16 +461,16 @@ export default function SyncPage() {
                 {syncingBrand
                   ? `Đang đồng bộ ${syncingBrand.toUpperCase()}`
                   : syncingSalesRange
-                  ? `Đang đồng bộ Sale (${convertDateToDDMMMYYYY(salesStartDate)} - ${convertDateToDDMMMYYYY(salesEndDate)})`
-                  : syncingShiftEndCashRange
-                  ? `Đang đồng bộ Báo cáo nộp quỹ cuối ca ${shiftEndCashBrand ? `(${shiftEndCashBrand})` : ''} (${convertDateToDDMMMYYYY(shiftEndCashStartDate)} - ${convertDateToDDMMMYYYY(shiftEndCashEndDate)})`
-                  : syncingRepackFormulaRange
-                  ? `Đang đồng bộ Tách gộp BOM (${convertDateToDDMMMYYYY(repackFormulaStartDate)} - ${convertDateToDDMMMYYYY(repackFormulaEndDate)})`
-                  : syncingPromotionRange
-                  ? `Đang đồng bộ Danh sách CTKM (${convertDateToDDMMMYYYY(promotionStartDate)} - ${convertDateToDDMMMYYYY(promotionEndDate)})`
-                  : syncingVoucherIssueRange
-                  ? `Đang đồng bộ Danh sách Voucher (${convertDateToDDMMMYYYY(voucherIssueStartDate)} - ${convertDateToDDMMMYYYY(voucherIssueEndDate)})`
-                  : 'Đang xử lý...'}
+                    ? `Đang đồng bộ Sale (${convertDateToDDMMMYYYY(salesStartDate)} - ${convertDateToDDMMMYYYY(salesEndDate)})`
+                    : syncingShiftEndCashRange
+                      ? `Đang đồng bộ Báo cáo nộp quỹ cuối ca ${shiftEndCashBrand ? `(${shiftEndCashBrand})` : ''} (${convertDateToDDMMMYYYY(shiftEndCashStartDate)} - ${convertDateToDDMMMYYYY(shiftEndCashEndDate)})`
+                      : syncingRepackFormulaRange
+                        ? `Đang đồng bộ Tách gộp BOM (${convertDateToDDMMMYYYY(repackFormulaStartDate)} - ${convertDateToDDMMMYYYY(repackFormulaEndDate)})`
+                        : syncingPromotionRange
+                          ? `Đang đồng bộ Danh sách CTKM (${convertDateToDDMMMYYYY(promotionStartDate)} - ${convertDateToDDMMMYYYY(promotionEndDate)})`
+                          : syncingVoucherIssueRange
+                            ? `Đang đồng bộ Danh sách Voucher (${convertDateToDDMMMYYYY(voucherIssueStartDate)} - ${convertDateToDDMMMYYYY(voucherIssueEndDate)})`
+                            : 'Đang xử lý...'}
               </h3>
               <p className="text-sm text-gray-600 text-center">
                 Vui lòng đợi trong giây lát, không đóng trang này...
@@ -431,8 +483,8 @@ export default function SyncPage() {
       <div className="container mx-auto px-4 py-8 max-w-6xl">
         {/* Header */}
         <div className="mb-8">
-          <Link 
-            href="/" 
+          <Link
+            href="/"
             className="inline-flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-600 mb-6 transition-colors"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -484,11 +536,10 @@ export default function SyncPage() {
         {/* Result Notification */}
         {result && (
           <div
-            className={`mb-6 p-4 rounded-xl border-2 shadow-sm ${
-              result.type === 'success'
-                ? 'bg-gray-50 text-green-800 border-green-300'
-                : 'bg-red-50 text-red-800 border-red-300'
-            }`}
+            className={`mb-6 p-4 rounded-xl border-2 shadow-sm ${result.type === 'success'
+              ? 'bg-gray-50 text-green-800 border-green-300'
+              : 'bg-red-50 text-red-800 border-red-300'
+              }`}
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -528,13 +579,157 @@ export default function SyncPage() {
               </svg>
             </div>
             <div>
+              <h2 className="text-lg font-bold text-gray-900">Đồng bộ Sale bán buôn theo khoảng thời gian</h2>
+              <p className="text-sm text-gray-600 mt-1">
+                Đồng bộ sale bán buôn cho tất cả các nhãn hàng (menard)
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <span className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  Từ ngày
+                </span>
+              </label>
+              <input
+                type="date"
+                value={wsaleStartDate}
+                onChange={(e) => setWsaleStartDate(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400 transition-all"
+              />
+              {wsaleStartDate && (
+                <p className="mt-2 text-xs text-gray-500">
+                  <span className="font-mono font-semibold text-gray-700 bg-gray-50 px-2 py-1 rounded">{convertDateToDDMMMYYYY(salesStartDate)}</span>
+                </p>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <span className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  Đến ngày
+                </span>
+              </label>
+              <input
+                type="date"
+                value={wsaleEndDate}
+                onChange={(e) => setWsaleEndDate(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400 transition-all"
+              />
+              {wsaleEndDate && (
+                <p className="mt-2 text-xs text-gray-500">
+                  <span className="font-mono font-semibold text-gray-700 bg-gray-50 px-2 py-1 rounded">{convertDateToDDMMMYYYY(wsaleEndDate)}</span>
+                </p>
+              )}
+            </div>
+          </div>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            {wsaleRangeResult?.data && (
+              <div className="flex-1 bg-gray-50 rounded-lg p-4">
+                <div className="grid grid-cols-3 gap-4 mb-3">
+
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-gray-700">{wsaleRangeResult.data.salesCount || 0}</div>
+                    <div className="text-xs text-gray-600 mt-1">Tổng sale</div>
+                  </div>
+                </div>
+                {wsaleRangeResult.data.brandResults && wsaleRangeResult.data.brandResults.length > 0 && (
+                  <div className="pt-3 border-t border-gray-200">
+                    <p className="text-xs font-semibold text-gray-700 mb-2">Chi tiết theo nhãn:</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {wsaleRangeResult.data.brandResults.map((brand: any, idx: number) => (
+                        <div key={idx} className="text-xs text-gray-600 bg-white p-2 rounded">
+                          <span className="font-semibold">{brand.brand}:</span> {brand.ordersCount} đơn, {brand.salesCount} sale, {brand.customersCount} khách
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+            <button
+              onClick={handleSyncWsaleByDateRange}
+              disabled={isAnySyncing || !wsaleStartDate || !wsaleEndDate}
+              className="px-6 py-3 text-sm font-semibold text-white bg-gray-700 rounded-lg hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all min-w-[140px]"
+            >
+              {syncingWsaleRange ? (
+                <>
+                  <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Đang đồng bộ...
+                </>
+              ) : (
+                <>
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Đồng bộ Sale bán buôn
+                </>
+              )}
+            </button>
+          </div>
+          {wsaleRangeResult && (
+            <div
+              className={`mt-4 p-4 rounded-xl border-2 shadow-sm ${wsaleRangeResult.type === 'success'
+                ? 'bg-gray-50 text-green-800 border-green-300'
+                : 'bg-red-50 text-red-800 border-red-300'
+                }`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  {wsaleRangeResult.type === 'success' ? (
+                    <div className="p-2 bg-gray-100 rounded-lg">
+                      <svg className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                  ) : (
+                    <div className="p-2 bg-red-100 rounded-lg">
+                      <svg className="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                  )}
+                  <span className="font-medium">{wsaleRangeResult?.message}</span>
+                </div>
+                <button
+                  onClick={() => setWsaleRangeResult(null)}
+                  className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded hover:bg-white/50"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Sync Sales By Date Range */}
+        <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6 mb-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 bg-gray-100 rounded-lg">
+              <svg className="w-6 h-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+            </div>
+            <div>
               <h2 className="text-lg font-bold text-gray-900">Đồng bộ Sale theo khoảng thời gian</h2>
               <p className="text-sm text-gray-600 mt-1">
                 Đồng bộ sale cho tất cả các nhãn hàng (f3, labhair, yaman, menard)
               </p>
             </div>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -636,11 +831,10 @@ export default function SyncPage() {
           </div>
           {salesRangeResult && (
             <div
-              className={`mt-4 p-4 rounded-xl border-2 shadow-sm ${
-                salesRangeResult.type === 'success'
-                  ? 'bg-gray-50 text-green-800 border-green-300'
-                  : 'bg-red-50 text-red-800 border-red-300'
-              }`}
+              className={`mt-4 p-4 rounded-xl border-2 shadow-sm ${salesRangeResult.type === 'success'
+                ? 'bg-gray-50 text-green-800 border-green-300'
+                : 'bg-red-50 text-red-800 border-red-300'
+                }`}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -687,7 +881,7 @@ export default function SyncPage() {
               </p>
             </div>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -811,11 +1005,10 @@ export default function SyncPage() {
           </div>
           {shiftEndCashRangeResult && (
             <div
-              className={`mt-4 p-4 rounded-xl border-2 shadow-sm ${
-                shiftEndCashRangeResult.type === 'success'
-                  ? 'bg-gray-50 text-green-800 border-green-300'
-                  : 'bg-red-50 text-red-800 border-red-300'
-              }`}
+              className={`mt-4 p-4 rounded-xl border-2 shadow-sm ${shiftEndCashRangeResult.type === 'success'
+                ? 'bg-gray-50 text-green-800 border-green-300'
+                : 'bg-red-50 text-red-800 border-red-300'
+                }`}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -862,7 +1055,7 @@ export default function SyncPage() {
               </p>
             </div>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -964,11 +1157,10 @@ export default function SyncPage() {
           </div>
           {repackFormulaRangeResult && (
             <div
-              className={`mt-4 p-4 rounded-xl border-2 shadow-sm ${
-                repackFormulaRangeResult.type === 'success'
-                  ? 'bg-gray-50 text-green-800 border-green-300'
-                  : 'bg-red-50 text-red-800 border-red-300'
-              }`}
+              className={`mt-4 p-4 rounded-xl border-2 shadow-sm ${repackFormulaRangeResult.type === 'success'
+                ? 'bg-gray-50 text-green-800 border-green-300'
+                : 'bg-red-50 text-red-800 border-red-300'
+                }`}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -1015,7 +1207,7 @@ export default function SyncPage() {
               </p>
             </div>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -1117,11 +1309,10 @@ export default function SyncPage() {
           </div>
           {promotionRangeResult && (
             <div
-              className={`mt-4 p-4 rounded-xl border-2 shadow-sm ${
-                promotionRangeResult.type === 'success'
-                  ? 'bg-gray-50 text-green-800 border-green-300'
-                  : 'bg-red-50 text-red-800 border-red-300'
-              }`}
+              className={`mt-4 p-4 rounded-xl border-2 shadow-sm ${promotionRangeResult.type === 'success'
+                ? 'bg-gray-50 text-green-800 border-green-300'
+                : 'bg-red-50 text-red-800 border-red-300'
+                }`}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -1168,7 +1359,7 @@ export default function SyncPage() {
               </p>
             </div>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -1270,11 +1461,10 @@ export default function SyncPage() {
           </div>
           {voucherIssueRangeResult && (
             <div
-              className={`mt-4 p-4 rounded-xl border-2 shadow-sm ${
-                voucherIssueRangeResult.type === 'success'
-                  ? 'bg-gray-50 text-green-800 border-green-300'
-                  : 'bg-red-50 text-red-800 border-red-300'
-              }`}
+              className={`mt-4 p-4 rounded-xl border-2 shadow-sm ${voucherIssueRangeResult.type === 'success'
+                ? 'bg-gray-50 text-green-800 border-green-300'
+                : 'bg-red-50 text-red-800 border-red-300'
+                }`}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -1321,7 +1511,7 @@ export default function SyncPage() {
               </p>
             </div>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -1423,11 +1613,10 @@ export default function SyncPage() {
           </div>
           {cashioRangeResult && (
             <div
-              className={`mt-4 p-4 rounded-xl border-2 shadow-sm ${
-                cashioRangeResult.type === 'success'
-                  ? 'bg-green-50 text-green-800 border-green-300'
-                  : 'bg-red-50 text-red-800 border-red-300'
-              }`}
+              className={`mt-4 p-4 rounded-xl border-2 shadow-sm ${cashioRangeResult.type === 'success'
+                ? 'bg-green-50 text-green-800 border-green-300'
+                : 'bg-red-50 text-red-800 border-red-300'
+                }`}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
