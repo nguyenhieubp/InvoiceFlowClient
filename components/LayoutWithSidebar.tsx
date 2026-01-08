@@ -57,7 +57,7 @@ export default function LayoutWithSidebar({ children }: LayoutWithSidebarProps) 
                     className="object-contain"
                   />
                 </div>
-                <span className="text-lg font-bold text-gray-900">InvoiceFlow</span>
+                <span className="text-lg font-bold text-gray-900">Vita Hub</span>
               </div>
             </div>
             <div className="flex-1 lg:pl-4">

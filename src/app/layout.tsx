@@ -14,8 +14,8 @@ const geistMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "InvoiceFlow",
-  description: "Invoice management application",
+  title: "Vita Hub",
+  description: "Vita Hub",
 };
 
 export default function RootLayout({
@@ -31,7 +31,7 @@ export default function RootLayout({
         <nav className="bg-gray-800 text-white p-4">
           <div className="container mx-auto flex gap-6">
             <Link href="/" className="font-bold text-xl">
-              InvoiceFlow
+              Vita Hub
             </Link>
             <Link href="/sales" className="hover:text-gray-300">
               Đơn hàng

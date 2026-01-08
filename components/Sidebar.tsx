@@ -384,7 +384,7 @@ export default function Sidebar({ isOpen, onToggle, collapsed, onToggleCollapse 
                   />
                 </div>
                 {!collapsed && (
-                  <span className="text-sm font-bold text-gray-900 whitespace-nowrap">InvoiceFlow</span>
+                  <span className="text-sm font-bold text-gray-900 whitespace-nowrap">Vita Hub</span>
                 )}
               </Link>
               <div className="flex items-center gap-1">
@@ -422,7 +422,7 @@ export default function Sidebar({ isOpen, onToggle, collapsed, onToggleCollapse 
           {!collapsed && (
             <div className="p-3 border-t border-gray-200">
               <p className="text-xs text-gray-400 text-center">
-                © 2025 InvoiceFlow
+                © 2025 Vita Hub
               </p>
             </div>
           )}
