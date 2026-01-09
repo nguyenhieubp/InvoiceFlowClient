@@ -298,6 +298,7 @@ export default function VoucherIssuePage() {
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mã Voucher</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mô tả</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sản phẩm trả Ecode</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Giá trị</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nhãn</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ngày phát hành</th>
@@ -333,6 +334,7 @@ export default function VoucherIssuePage() {
                               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{voucher.api_id}</td>
                               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-medium">{voucher.code || '-'}</td>
                               <td className="px-4 py-3 text-sm text-gray-900 max-w-xs truncate" title={voucher.description || ''}>{voucher.description || '-'}</td>
+                              <td className="px-4 py-3 text-sm text-gray-900 max-w-xs truncate">{voucher.ecode_item_code || '-'}</td>
                               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-semibold">{formatCurrency(voucher.val)}</td>
                               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{voucher.brand || '-'}</td>
                               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{formatDate(voucher.docdate)}</td>
