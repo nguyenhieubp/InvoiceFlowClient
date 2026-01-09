@@ -1037,12 +1037,6 @@ export default function OrdersPage() {
       case 'dvt':
         // Ưu tiên lấy từ product (đã được enrich), nếu không có thì lấy từ sale
         return <div className="text-sm text-gray-900">{sale?.product?.dvt || sale?.dvt || '-'}</div>;
-      case 'loai':
-        // Map từ cat1, cat2, cat3 hoặc catcode1, catcode2, catcode3
-        const loaiValue = sale?.loai ||
-          (sale?.cat1 ? `${sale.cat1}${sale.cat2 ? ` / ${sale.cat2}` : ''}${sale.cat3 ? ` / ${sale.cat3}` : ''}` : null) ||
-          (sale?.catcode1 ? `${sale.catcode1}${sale.catcode2 ? ` / ${sale.catcode2}` : ''}${sale.catcode3 ? ` / ${sale.catcode3}` : ''}` : null);
-        return <div className="text-sm text-gray-900">{loaiValue || '-'}</div>;
       case 'promCode':
         // Chỉ hiển thị "Khuyến mãi" cho hàng tặng (giaBan = 0 và tienHang = 0 và revenue = 0)
         // Convert string to number nếu cần
