@@ -16,13 +16,14 @@ export default function OrdersPage() {
   const [loading, setLoading] = useState(true);
   // Track searchQuery và filter trước đó để chỉ reset page khi chúng thay đổi
   const prevSearchQueryRef = useRef<string>('');
-  const prevFilterRef = useRef<{ brand?: string; dateFrom?: string; dateTo?: string }>({});
+  const prevFilterRef = useRef<{ brand?: string; dateFrom?: string; dateTo?: string, typeSale?: string }>({});
   // Filter input values (không trigger API)
-  const [filterInput, setFilterInput] = useState<{ brand?: string; dateFrom?: string; dateTo?: string }>({});
+  const [filterInput, setFilterInput] = useState<{ brand?: string; dateFrom?: string; dateTo?: string, typeSale?: string }>({});
   // Filter thực tế (trigger API)
-  const [filter, setFilter] = useState<{ brand?: string; dateFrom?: string; dateTo?: string }>({});
+  const [filter, setFilter] = useState<{ brand?: string; dateFrom?: string; dateTo?: string, typeSale?: string }>({});
   const [searchInputValue, setSearchInputValue] = useState(''); // Giá trị trong input (không trigger API)
   const [searchQuery, setSearchQuery] = useState(''); // Giá trị search thực tế (trigger API)
+  const [typeSaleInput, setTypeSaleInput] = useState<string>('ALL'); // Giá trị input của typeSale
   const [selectedColumns, setSelectedColumns] = useState<OrderColumn[]>([...MAIN_COLUMNS]);
   const [showColumnSelector, setShowColumnSelector] = useState(false);
   const [columnSearchQuery, setColumnSearchQuery] = useState('');
@@ -37,7 +38,7 @@ export default function OrdersPage() {
   const [syncing, setSyncing] = useState(false);
   const [retrying, setRetrying] = useState<Record<string, boolean>>({});
   const [isExporting, setIsExporting] = useState(false);
-  
+
   // Hàm convert từ Date object hoặc YYYY-MM-DD sang DDMMMYYYY
   const convertDateToDDMMMYYYY = (date: Date | string): string => {
     const d = typeof date === 'string' ? new Date(date) : date;
@@ -74,65 +75,6 @@ export default function OrdersPage() {
   };
 
 
-
-  // Hàm xuất Excel - gọi backend API để xuất Excel
-  const handleExportExcel = async () => {
-    try {
-      setIsExporting(true);
-      showToast('info', 'Đang xuất Excel...');
-
-      // Gọi backend API để xuất Excel
-      const response = await salesApi.exportOrders({
-        brand: filter.brand,
-        processed: undefined, // Không filter theo processed
-        date: (!searchQuery.trim() && filter.dateFrom && !filter.dateTo) ? convertDateToDDMMMYYYY(filter.dateFrom) : undefined,
-        dateFrom: (searchQuery.trim() || filter.dateTo) ? filter.dateFrom : undefined,
-        dateTo: filter.dateTo || undefined,
-        search: searchQuery.trim() || undefined,
-        statusAsys: undefined, // Không filter theo statusAsys khi export (export tất cả)
-      });
-
-      // Tạo blob từ response data
-      const blob = new Blob([response.data], {
-        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      });
-
-      // Tạo URL tạm thời và download file
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-
-      // Lấy tên file từ Content-Disposition header hoặc tạo tên mặc định
-      const contentDisposition = response.headers['content-disposition'];
-      let fileName = `DonHang_${new Date().toISOString().split('T')[0].replace(/-/g, '')}.xlsx`;
-      if (contentDisposition) {
-        const fileNameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
-        if (fileNameMatch && fileNameMatch[1]) {
-          fileName = fileNameMatch[1].replace(/['"]/g, '');
-          // Decode URI nếu cần
-          try {
-            fileName = decodeURIComponent(fileName);
-          } catch (e) {
-            // Nếu không decode được, dùng tên gốc
-          }
-        }
-      }
-
-      link.setAttribute('download', fileName);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-
-      showToast('success', `Đã xuất Excel thành công: ${fileName}`);
-    } catch (error: any) {
-      const errorMessage = error?.response?.data?.message || error?.message || 'Unknown error';
-      showToast('error', `Lỗi khi xuất Excel: ${errorMessage}`);
-    } finally {
-      setIsExporting(false);
-    }
-  };
-
   // Hàm đồng bộ từ Zappy
   const handleSyncFromZappy = async () => {
     const syncDate = getSyncDate();
@@ -168,12 +110,13 @@ export default function OrdersPage() {
       setLoading(true);
       // Khi có search query, backend đã filter rồi, vẫn cần gửi page để backend trả về đúng trang
       // Chỉ reset về page 1 khi searchQuery thay đổi (xử lý ở useEffect khác)
-      
+
       // Lấy orders từ backend API - chỉ lấy basic data (backend đã tối ưu)
       // Nếu có search query, gửi lên backend để search trực tiếp trên database
       // Khi có search query, gửi dateFrom/dateTo để search trong date range
       // Khi không có search query, có thể dùng date (single day) để lấy từ Zappy API
       const response = await salesApi.getAllOrders({
+        typeSale: filter.typeSale,
         brand: filter.brand,
         page: pagination.page,
         limit: pagination.limit,
@@ -191,7 +134,6 @@ export default function OrdersPage() {
       const ordersData = normalizeOrderData(rawData);
 
       setAllOrders(ordersData);
-      
       // Cập nhật pagination từ backend response
       // Backend trả về total là tổng số rows (sale items) trong database
       // Frontend sẽ paginate lại sau khi flatten, nên dùng total từ backend
@@ -213,23 +155,24 @@ export default function OrdersPage() {
   // Reset về trang 1 khi search query hoặc filter thay đổi
   useEffect(() => {
     const searchQueryChanged = prevSearchQueryRef.current !== searchQuery;
-    const filterChanged = 
+    const filterChanged =
       prevFilterRef.current.brand !== filter.brand ||
       prevFilterRef.current.dateFrom !== filter.dateFrom ||
-      prevFilterRef.current.dateTo !== filter.dateTo;
-    
+      prevFilterRef.current.dateTo !== filter.dateTo ||
+      prevFilterRef.current.typeSale !== filter.typeSale;
+
     if (searchQueryChanged || filterChanged) {
       prevSearchQueryRef.current = searchQuery;
       prevFilterRef.current = { ...filter };
       setPagination((prev) => ({ ...prev, page: 1 }));
     }
-  }, [searchQuery, filter.brand, filter.dateFrom, filter.dateTo]);
+  }, [searchQuery, filter.brand, filter.dateFrom, filter.dateTo, filter.typeSale]);
 
-  // Load orders khi pagination hoặc filter thay đổi (chỉ khi click nút Tìm kiếm)
+  // Load orders khi pagination hoặc filter thay đổi
   useEffect(() => {
     loadOrders();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter.brand, filter.dateFrom, filter.dateTo, pagination.page, pagination.limit, searchQuery]);
+  }, [filter.brand, filter.dateFrom, filter.dateTo, filter.typeSale, pagination.page, pagination.limit, searchQuery]);
   
   // Hàm xử lý search/filter khi click nút Tìm kiếm
   const handleSearch = () => {
@@ -237,7 +180,6 @@ export default function OrdersPage() {
     setFilter({ ...filterInput }); // Áp dụng filter input vào filter thực tế
     setPagination((prev) => ({ ...prev, page: 1 }));
   };
-  
   // Hàm xử lý Enter key trong input search
   const handleSearchKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
@@ -301,7 +243,7 @@ export default function OrdersPage() {
       }
 
       // Check success flag và status trong result (status === 0 là lỗi)
-      const hasError = Array.isArray(result.result) 
+      const hasError = Array.isArray(result.result)
         ? result.result.some((item: any) => item.status === 0)
         : (result.result?.status === 0);
 
@@ -311,7 +253,7 @@ export default function OrdersPage() {
       } else {
         // Xử lý lỗi chi tiết hơn
         let errorMessage = result.message || 'Tạo hóa đơn thất bại';
-        
+
         if (Array.isArray(result.result) && result.result.length > 0) {
           const firstError = result.result[0];
           if (firstError.message) {
@@ -320,13 +262,13 @@ export default function OrdersPage() {
         } else if (result.result?.message) {
           errorMessage = result.result.message;
         }
-        
+
         showToast('error', errorMessage);
       }
     } catch (error: any) {
       // Xử lý lỗi từ response hoặc error object
       let errorMessage = 'Lỗi không xác định';
-      
+
       if (error?.response?.data) {
         const errorData = error.response.data;
         if (errorData.message) {
@@ -339,67 +281,10 @@ export default function OrdersPage() {
       } else if (error?.message) {
         errorMessage = error.message;
       }
-      
+
       showToast('error', `Lỗi: ${errorMessage}`);
     } finally {
       setSubmittingInvoice(false);
-    }
-  };
-
-  // Hàm retry invoice (giống như trong fast-api-invoices page)
-  const handleRetryInvoice = async (docCode: string) => {
-    try {
-      setRetrying((prev) => ({ ...prev, [docCode]: true }));
-      const response = await salesApi.createInvoiceViaFastApi(docCode, true);
-      const data = response.data;
-
-      if (data.alreadyExists) {
-        showToast('info', data.message || `Đơn hàng ${docCode} đã được tạo hóa đơn trước đó`);
-        return;
-      }
-
-      let hasError = false;
-      if (Array.isArray(data.result) && data.result.length > 0) {
-        hasError = data.result.some((item: any) => item.status === 0);
-      } else if (data.result && typeof data.result === 'object') {
-        hasError = data.result.status === 0;
-      }
-
-      if (data.success && !hasError) {
-        showToast('success', data.message || `Đồng bộ lại ${docCode} thành công`);
-      } else {
-        let errorMessage = data.message || `Đồng bộ lại ${docCode} thất bại`;
-        
-        if (Array.isArray(data.result) && data.result.length > 0) {
-          const firstError = data.result[0];
-          if (firstError.message) {
-            errorMessage = firstError.message;
-          }
-        } else if (data.result?.message) {
-          errorMessage = data.result.message;
-        }
-        
-        showToast('error', errorMessage);
-      }
-    } catch (error: any) {
-      let errorMessage = `Lỗi khi đồng bộ lại ${docCode}`;
-      
-      if (error?.response?.data) {
-        const errorData = error.response.data;
-        if (errorData.message) {
-          errorMessage = errorData.message;
-        } else if (errorData.error) {
-          errorMessage = errorData.error;
-        } else if (typeof errorData === 'string') {
-          errorMessage = errorData;
-        }
-      } else if (error?.message) {
-        errorMessage = error.message;
-      }
-      
-      showToast('error', errorMessage);
-    } finally {
-      setRetrying((prev) => ({ ...prev, [docCode]: false }));
     }
   };
 
@@ -408,12 +293,12 @@ export default function OrdersPage() {
   // Cần giới hạn lại để đảm bảo không vượt quá limit
   const flattenedRows: Array<{ order: Order; sale: SaleItem | null }> = [];
   const maxRows = pagination.limit; // Giới hạn số rows theo pagination limit
-  
+
   for (const order of enrichedDisplayedOrders) {
     if (flattenedRows.length >= maxRows) {
       break; // Đã đủ rows, dừng lại
     }
-    
+
     if (order.sales && order.sales.length > 0) {
       for (const sale of order.sales) {
         if (flattenedRows.length >= maxRows) {
@@ -429,7 +314,7 @@ export default function OrdersPage() {
           break; // Đã đủ rows, dừng lại
         }
         flattenedRows.push({ order, sale: null });
-    }
+      }
     }
   }
 
@@ -492,29 +377,6 @@ export default function OrdersPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
                   </svg>
                   Chọn cột hiển thị
-                </button>
-                <button
-                  onClick={handleExportExcel}
-                  disabled={isExporting || enrichedDisplayedOrders.length === 0}
-                  className="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-green-600 rounded-lg hover:bg-green-700 transition-colors inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                  title="Xuất Excel"
-                >
-                  {isExporting ? (
-                    <>
-                      <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Đang xuất...
-                    </>
-                  ) : (
-                    <>
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                      Xuất Excel
-                    </>
-                  )}
                 </button>
               </div>
             </div>
@@ -620,6 +482,19 @@ export default function OrdersPage() {
                 <option value="yaman">Yaman</option>
                 <option value="menard">Menard</option>
               </select>
+              <select
+                value={typeSaleInput}
+                onChange={(e) => {
+                  const newValue = e.target.value || 'ALL';
+                  setTypeSaleInput(newValue);
+                  setFilterInput({ ...filterInput, typeSale: newValue });
+                }}
+                className="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              >
+                <option value="ALL">Tất cả</option>
+                <option value="RETAIL">Retail</option>
+                <option value="WHOLESALE">WholeSale</option>
+              </select>
               <div className="flex items-center gap-2">
                 <label className="text-sm text-gray-700 whitespace-nowrap">Từ ngày:</label>
                 <input
@@ -689,8 +564,8 @@ export default function OrdersPage() {
                             handleRowDoubleClick(row.order, row.sale);
                           }}
                           className={`transition-colors cursor-pointer ${isStatusAsysFalse
-                              ? 'bg-red-100 hover:bg-red-200' // Bôi đỏ nếu statusAsys = false
-                              : isSelected
+                            ? 'bg-red-100 hover:bg-red-200' // Bôi đỏ nếu statusAsys = false
+                            : isSelected
                               ? 'bg-blue-100 hover:bg-blue-200'
                               : 'hover:bg-gray-50'
                             } ${submittingInvoice ? 'opacity-50 cursor-wait' : ''}`}
