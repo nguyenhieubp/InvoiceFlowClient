@@ -136,14 +136,6 @@ export const renderCellValue = (order: Order, sale: SaleItem | null, field: Orde
     case 'dvt':
       return <div className="text-sm text-gray-900">{sale?.product?.dvt || sale?.dvt || '-'}</div>;
 
-    case 'loai': {
-      // Hiển thị ordertypeName hoặc ordertype từ sale
-      const loaiValue = sale?.ordertypeName || sale?.ordertype || sale?.loai ||
-        (sale?.cat1 ? `${sale.cat1}${sale.cat2 ? ` / ${sale.cat2}` : ''}${sale.cat3 ? ` / ${sale.cat3}` : ''}` : null) ||
-        (sale?.catcode1 ? `${sale.catcode1}${sale.catcode2 ? ` / ${sale.catcode2}` : ''}${sale.catcode3 ? ` / ${sale.catcode3}` : ''}` : null);
-      return <div className="text-sm text-gray-900">{loaiValue || '-'}</div>;
-    }
-
     case 'ordertypeName':
       return <div className="text-sm text-gray-900">{sale?.ordertypeName || '-'}</div>;
 
