@@ -114,6 +114,7 @@ export default function Sidebar({ isOpen, onToggle, collapsed, onToggleCollapse 
             </svg>
           ),
           children: [
+
             {
               href: '/stock-transfer',
               label: 'Dữ liệu xuất kho',
@@ -129,6 +130,34 @@ export default function Sidebar({ isOpen, onToggle, collapsed, onToggleCollapse 
               icon: (
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              ),
+            },
+          ],
+        },
+        {
+          label: 'Nộp quỹ cuối ca',
+          icon: (
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          ),
+          children: [
+            {
+              href: '/shift-end-cash',
+              label: 'Nộp quỹ cuối ca',
+              icon: (
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              ),
+            },
+            {
+              href: '/shift-end-cash-report',
+              label: 'Báo cáo nộp quỹ cuối ca',
+              icon: (
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
               ),
             },
@@ -178,15 +207,7 @@ export default function Sidebar({ isOpen, onToggle, collapsed, onToggleCollapse 
                 </svg>
               ),
             },
-            {
-              href: '/shift-end-cash',
-              label: 'Báo cáo nộp quỹ cuối ca',
-              icon: (
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              ),
-            },
+
             {
               href: '/platform-fees',
               label: 'Chi phí Platform',
@@ -212,11 +233,12 @@ export default function Sidebar({ isOpen, onToggle, collapsed, onToggleCollapse 
   ];
 
   const isActive = (href?: string) => {
-    if (!href) return false;
+    if (!href || !pathname) return false;
     if (href === '/') {
       return pathname === '/';
     }
-    return pathname?.startsWith(href);
+    // Prevent partial match (e.g. /shift-end-cash matching /shift-end-cash-report)
+    return pathname === href || pathname.startsWith(`${href}/`);
   };
 
   const isParentActive = (item: MenuItem): boolean => {
