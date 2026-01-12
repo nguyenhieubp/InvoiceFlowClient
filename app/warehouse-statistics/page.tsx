@@ -175,6 +175,8 @@ export default function WarehouseStatisticsPage() {
     } catch (error: any) {
       const errorMessage = error?.response?.data?.message || error?.message || 'Lỗi khi xử lý lại warehouse';
       showToast('error', errorMessage);
+      // Reload data even on error because the backend saves the error details
+      await loadWarehouseProcessed();
     } finally {
       setRetryingDocCode(null);
     }
@@ -217,6 +219,8 @@ export default function WarehouseStatisticsPage() {
         failedCount: 0,
         errors: [],
       });
+      // Reload data even on error
+      await loadWarehouseProcessed();
     } finally {
       setBatchRetrying(false);
     }
