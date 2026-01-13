@@ -192,7 +192,19 @@ export default function PaymentDocumentsPage() {
                   </tr>
                 ) : (
                   payments.map((payment, index) => (
-                    <tr key={index} className="hover:bg-gray-50">
+                    <tr 
+                      key={index}
+                      className="hover:bg-gray-50 cursor-pointer"
+                      onDoubleClick={async () => {
+                        console.log('Logging FAST payment...', payment);
+                        try {
+                          await api.post('/payments/fast', payment);
+                          console.log('Logged successfully to backend!');
+                        } catch (err) {
+                          console.error('Failed to log payment', err);
+                        }
+                      }}
+                    >
                       <td className="sticky left-0 z-10 bg-white px-4 py-3 text-sm text-gray-900 border-r">
                         {(pagination.page - 1) * pagination.limit + index + 1}
                       </td>
