@@ -16,6 +16,8 @@ export default function PlatformFeesPage() {
   });
   const [brandFilter, setBrandFilter] = useState('');
   const [search, setSearch] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
   const fetchData = async () => {
     setLoading(true);
@@ -25,6 +27,8 @@ export default function PlatformFeesPage() {
         limit: pagination.limit,
         brand: brandFilter || undefined,
         search: search || undefined,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
       });
       setData(response.data.data);
       setPagination((prev) => ({
@@ -40,7 +44,7 @@ export default function PlatformFeesPage() {
 
   useEffect(() => {
     fetchData();
-  }, [pagination.page, brandFilter]);
+  }, [pagination.page, brandFilter, startDate, endDate]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -100,13 +104,42 @@ export default function PlatformFeesPage() {
             </label>
             <select
               value={brandFilter}
-              onChange={(e) => setBrandFilter(e.target.value)}
+              onChange={(e) => {
+                setBrandFilter(e.target.value);
+                setPagination((prev) => ({ ...prev, page: 1 }));
+              }}
               className="border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="">Tất cả</option>
               <option value="menard">Menard</option>
               <option value="yaman">Yaman</option>
             </select>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-gray-700">Từ:</span>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => {
+                setStartDate(e.target.value);
+                setPagination((prev) => ({ ...prev, page: 1 }));
+              }}
+              className="border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-gray-700">Đến:</span>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => {
+                setEndDate(e.target.value);
+                setPagination((prev) => ({ ...prev, page: 1 }));
+              }}
+              className="border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
           </div>
 
           <form onSubmit={handleSearch} className="flex-1 flex gap-2">
@@ -136,6 +169,7 @@ export default function PlatformFeesPage() {
                 <th className="px-6 py-4">Pancake Order ID</th>
                 <th className="px-6 py-4 text-right">Amount</th>
                 <th className="px-6 py-4">Formula</th>
+                <th className="px-6 py-4">Created At</th>
                 <th className="px-6 py-4">Last Synced</th>
               </tr>
             </thead>
@@ -173,6 +207,11 @@ export default function PlatformFeesPage() {
                     </td>
                     <td className="px-6 py-4 text-gray-500 text-xs font-mono truncate max-w-xs" title={item.formulaDescription}>
                       {item.formulaDescription}
+                    </td>
+                    <td className="px-6 py-4 text-gray-500">
+                      {item.orderFeeCreatedAt
+                        ? format(new Date(item.orderFeeCreatedAt), 'dd/MM/yyyy HH:mm')
+                        : '-'}
                     </td>
                     <td className="px-6 py-4 text-gray-500">
                       {item.syncedAt ? format(new Date(item.syncedAt), 'dd/MM/yyyy HH:mm') : '-'}

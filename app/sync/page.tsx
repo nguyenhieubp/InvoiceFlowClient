@@ -186,6 +186,26 @@ export default function SyncPage() {
     const day = now.getDate().toString().padStart(2, '0');
     return `${year}-${month}-${day}`;
   });
+  const [syncingOrderFeeRange, setSyncingOrderFeeRange] = useState(false);
+  const [orderFeeRangeResult, setOrderFeeRangeResult] = useState<{
+    type: 'success' | 'error';
+    message: string;
+    data?: any;
+  } | null>(null);
+  const [orderFeeStartDate, setOrderFeeStartDate] = useState<string>(() => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = (now.getMonth() + 1).toString().padStart(2, '0');
+    const day = now.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  });
+  const [orderFeeEndDate, setOrderFeeEndDate] = useState<string>(() => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = (now.getMonth() + 1).toString().padStart(2, '0');
+    const day = now.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  });
 
   const handleSyncBrand = async (brandName: string) => {
     const syncDate = getSyncDate();
@@ -216,7 +236,7 @@ export default function SyncPage() {
   };
 
   const isSyncing = syncingBrand !== null;
-  const isAnySyncing = isSyncing || syncingSalesRange || syncingShiftEndCashRange || syncingRepackFormulaRange || syncingPromotionRange || syncingVoucherIssueRange || syncingCashioRange;
+  const isAnySyncing = isSyncing || syncingSalesRange || syncingShiftEndCashRange || syncingRepackFormulaRange || syncingPromotionRange || syncingVoucherIssueRange || syncingCashioRange || syncingWsaleRange || syncingOrderFeeRange;
 
   const handleSyncSalesByDateRange = async () => {
     const startDate = convertDateToDDMMMYYYY(salesStartDate);
@@ -263,7 +283,7 @@ export default function SyncPage() {
       });
       return;
     }
-    const brands = ['menard'];
+    const brands = ['menard', 'yaman'];
     for (const brand of brands) {
       try {
         const response = await syncApi.syncWsaleByDateRange(startDate, endDate, brand);
@@ -449,6 +469,45 @@ export default function SyncPage() {
     }
   };
 
+  const handleSyncOrderFeeByDateRange = async () => {
+    if (!orderFeeStartDate || !orderFeeEndDate) {
+      setOrderFeeRangeResult({
+        type: 'error',
+        message: 'Vui lòng chọn đầy đủ từ ngày và đến ngày',
+      });
+      return;
+    }
+
+    // Construct ISO strings for start and end of day
+    const start = new Date(orderFeeStartDate);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(orderFeeEndDate);
+    end.setHours(23, 59, 59, 999);
+    
+    const startAt = start.toISOString();
+    const endAt = end.toISOString();
+
+    setSyncingOrderFeeRange(true);
+    setOrderFeeRangeResult(null);
+    setResult(null);
+    try {
+      const response = await syncApi.syncOrderFeesByDateRange(startAt, endAt);
+      const data = response.data;
+      setOrderFeeRangeResult({
+        type: 'success',
+        message: `Đồng bộ Order Fees thành công: ${data.synced} synced, ${data.failed} failed`,
+        data: data,
+      });
+    } catch (error: any) {
+      setOrderFeeRangeResult({
+        type: 'error',
+        message: error.response?.data?.message || error.message || 'Lỗi khi đồng bộ Order Fees',
+      });
+    } finally {
+      setSyncingOrderFeeRange(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       {/* Overlay khi đang đồng bộ */}
@@ -470,7 +529,9 @@ export default function SyncPage() {
                           ? `Đang đồng bộ Danh sách CTKM (${convertDateToDDMMMYYYY(promotionStartDate)} - ${convertDateToDDMMMYYYY(promotionEndDate)})`
                           : syncingVoucherIssueRange
                             ? `Đang đồng bộ Danh sách Voucher (${convertDateToDDMMMYYYY(voucherIssueStartDate)} - ${convertDateToDDMMMYYYY(voucherIssueEndDate)})`
-                            : 'Đang xử lý...'}
+                            : syncingOrderFeeRange
+                              ? `Đang đồng bộ Order Fees (${convertDateToDDMMMYYYY(orderFeeStartDate)} - ${convertDateToDDMMMYYYY(orderFeeEndDate)})`
+                              : 'Đang xử lý...'}
               </h3>
               <p className="text-sm text-gray-600 text-center">
                 Vui lòng đợi trong giây lát, không đóng trang này...
@@ -581,7 +642,7 @@ export default function SyncPage() {
             <div>
               <h2 className="text-lg font-bold text-gray-900">Đồng bộ Sale bán buôn theo khoảng thời gian</h2>
               <p className="text-sm text-gray-600 mt-1">
-                Đồng bộ sale bán buôn cho tất cả các nhãn hàng (menard)
+                Đồng bộ sale bán buôn cho tất cả các nhãn hàng (menard, yaman)
               </p>
             </div>
           </div>
@@ -1637,6 +1698,136 @@ export default function SyncPage() {
                 </div>
                 <button
                   onClick={() => setCashioRangeResult(null)}
+                  className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded hover:bg-white/50"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Sync Order Fees By Date Range */}
+        <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6 mb-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 bg-gray-100 rounded-lg">
+              <svg className="w-6 h-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-gray-900">Đồng bộ Order Fees (Multi-DB) theo khoảng thời gian</h2>
+              <p className="text-sm text-gray-600 mt-1">
+                Đồng bộ phí đơn hàng từ các DB phụ về DB chính
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <span className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  Từ ngày
+                </span>
+              </label>
+              <input
+                type="date"
+                value={orderFeeStartDate}
+                onChange={(e) => setOrderFeeStartDate(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400 transition-all"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <span className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  Đến ngày
+                </span>
+              </label>
+              <input
+                type="date"
+                value={orderFeeEndDate}
+                onChange={(e) => setOrderFeeEndDate(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400 transition-all"
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            {orderFeeRangeResult?.data && (
+              <div className="flex-1 bg-gray-50 rounded-lg p-4">
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-gray-700">{orderFeeRangeResult.data.total || 0}</div>
+                    <div className="text-xs text-gray-600 mt-1">Tổng Records</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-green-600">{orderFeeRangeResult.data.synced || 0}</div>
+                    <div className="text-xs text-gray-600 mt-1">Đã Sync</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-red-600">{orderFeeRangeResult.data.failed || 0}</div>
+                    <div className="text-xs text-gray-600 mt-1">Lỗi</div>
+                  </div>
+                </div>
+              </div>
+            )}
+            <button
+              onClick={handleSyncOrderFeeByDateRange}
+              disabled={isAnySyncing || !orderFeeStartDate || !orderFeeEndDate}
+              className="px-6 py-3 text-sm font-semibold text-white bg-gray-700 rounded-lg hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all min-w-[140px]"
+            >
+              {syncingOrderFeeRange ? (
+                <>
+                  <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Đang đồng bộ...
+                </>
+              ) : (
+                <>
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Đồng bộ
+                </>
+              )}
+            </button>
+          </div>
+          {orderFeeRangeResult && (
+            <div
+              className={`mt-4 p-4 rounded-xl border-2 shadow-sm ${orderFeeRangeResult.type === 'success'
+                ? 'bg-green-50 text-green-800 border-green-300'
+                : 'bg-red-50 text-red-800 border-red-300'
+                }`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  {orderFeeRangeResult.type === 'success' ? (
+                    <div className="p-2 bg-green-100 rounded-lg">
+                      <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                  ) : (
+                    <div className="p-2 bg-red-100 rounded-lg">
+                      <svg className="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                  )}
+                  <span className="font-medium">{orderFeeRangeResult.message}</span>
+                </div>
+                <button
+                  onClick={() => setOrderFeeRangeResult(null)}
                   className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded hover:bg-white/50"
                 >
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

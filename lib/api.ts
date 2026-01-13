@@ -214,6 +214,10 @@ export const syncApi = {
   ) => {
     return api.post("/sync/wsale/range", { startDate, endDate, brand });
   },
+  // Sync Order Fees theo khoảng thời gian
+  syncOrderFeesByDateRange: (startAt: string, endAt: string) => {
+    return api.post("/multi-db/range-sync-order-fees", { startAt, endAt });
+  },
 };
 
 // Voucher Issue API
@@ -599,6 +603,8 @@ export const platformFeesApi = {
     limit?: number;
     brand?: string;
     search?: string;
+    startDate?: string;
+    endDate?: string;
   }) => {
     return api.get("/platform-fees", { params });
   },
