@@ -18,6 +18,7 @@ interface PaymentMethod {
   ngaySua?: string;
   nguoiTao?: string;
   nguoiSua?: string;
+  maDoiTac?: string;
 }
 
 const FIELD_LABELS: Record<keyof PaymentMethod, string> = {
@@ -34,6 +35,7 @@ const FIELD_LABELS: Record<keyof PaymentMethod, string> = {
   ngaySua: 'Ngày sửa',
   nguoiTao: 'Người tạo',
   nguoiSua: 'Người sửa',
+  maDoiTac: 'Mã đối tác',
 };
 
 // Các fields chính để hiển thị trong bảng (ẩn id UUID)
@@ -45,6 +47,8 @@ const MAIN_COLUMNS: (keyof PaymentMethod)[] = [
   'documentType',
   'erp',
   'bankUnit',
+  'trangThai',
+  'maDoiTac',
 ];
 
 export default function PaymentMethodsPage() {
@@ -106,6 +110,11 @@ export default function PaymentMethodsPage() {
   }, [searchQuery]);
 
   useEffect(() => {
+    // Force reset selected columns to match MAIN_COLUMNS ensures new columns appear after code updates
+    setSelectedColumns([...MAIN_COLUMNS]);
+  }, []);
+
+  useEffect(() => {
     loadPaymentMethods();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pagination.page, pagination.limit, debouncedSearchQuery]);
@@ -119,6 +128,10 @@ export default function PaymentMethodsPage() {
         search: debouncedSearchQuery || undefined,
       });
       const data = response.data.data || response.data || [];
+      console.log('Payment methods loaded:', data);
+      if (data.length > 0) {
+        console.log('First item maDoiTac:', data[0].maDoiTac);
+      }
       setPaymentMethods(data);
       setPagination((prev) => ({
         ...prev,
@@ -540,7 +553,7 @@ export default function PaymentMethodsPage() {
                   className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                 />
                 <p className="mt-2 text-xs text-gray-500">
-                  File Excel phải có các cột: <strong>Id</strong>, <strong>Mã</strong>, <strong>Diễn giải</strong>, <strong>Mã hệ thống</strong>, <strong>Loại chứng từ</strong>, <strong>ERP</strong>, <strong>Đơn vị ngân hàng</strong>
+                  File Excel phải có các cột: <strong>Id</strong>, <strong>Mã</strong>, <strong>Diễn giải</strong>, <strong>Mã hệ thống</strong>, <strong>Loại chứng từ</strong>, <strong>ERP</strong>, <strong>Đơn vị ngân hàng</strong>, <strong>Mã đối tác</strong>
                 </p>
               </div>
 
@@ -719,6 +732,18 @@ export default function PaymentMethodsPage() {
                     type="text"
                     value={formData.bankUnit || ''}
                     onChange={(e) => updateFormField('bankUnit', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Mã đối tác
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.maDoiTac || ''}
+                    onChange={(e) => updateFormField('maDoiTac', e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
