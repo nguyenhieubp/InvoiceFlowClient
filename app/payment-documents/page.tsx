@@ -49,7 +49,6 @@ const FIELD_LABELS: Record<keyof PaymentData, string> = {
 export default function PaymentDocumentsPage() {
   const [payments, setPayments] = useState<PaymentData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
@@ -57,22 +56,14 @@ export default function PaymentDocumentsPage() {
     totalPages: 0,
   });
 
-  // Debounce search query
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearchQuery(searchQuery);
-      setPagination((prev) => ({ ...prev, page: 1 }));
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
+  // Search states
+  const [searchQuery, setSearchQuery] = useState(''); // Actual query to send to API
+  const [tempSearchQuery, setTempSearchQuery] = useState(''); // Temporary input state
 
   useEffect(() => {
     loadPayments();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pagination.page, pagination.limit, debouncedSearchQuery]);
+  }, [pagination.page, pagination.limit, searchQuery]);
 
   const loadPayments = async () => {
     try {
@@ -81,7 +72,7 @@ export default function PaymentDocumentsPage() {
         params: {
           page: pagination.page,
           limit: pagination.limit,
-          search: debouncedSearchQuery || undefined,
+          search: searchQuery || undefined,
         },
       });
       
@@ -138,14 +129,29 @@ export default function PaymentDocumentsPage() {
         {/* Search and Stats */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4">
           <div className="flex items-center gap-4">
-            <div className="flex-1">
+            <div className="flex-1 flex gap-2">
               <input
                 type="text"
                 placeholder="Tìm kiếm theo mã đơn hàng, mã đối tác, mã tham chiếu..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                value={tempSearchQuery}
+                onChange={(e) => setTempSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    setSearchQuery(tempSearchQuery);
+                    setPagination((prev) => ({ ...prev, page: 1 }));
+                  }
+                }}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
+              <button
+                onClick={() => {
+                  setSearchQuery(tempSearchQuery);
+                  setPagination((prev) => ({ ...prev, page: 1 }));
+                }}
+                className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              >
+                Tìm kiếm
+              </button>
             </div>
             <div className="text-sm text-gray-600">
               Tổng: <span className="font-semibold">{pagination.total}</span> bản ghi
