@@ -225,10 +225,10 @@ export default function PaymentDocumentsPage() {
                       <td className="px-4 py-3 text-sm text-orange-600 font-medium whitespace-nowrap">{formatValue(payment.boPhan)}</td>
                       <td className="px-4 py-3 text-sm text-indigo-600 font-medium whitespace-nowrap">{formatValue(payment.ma_dvcs_cashio)}</td>
                       <td className="px-4 py-3 text-sm text-indigo-600 font-medium whitespace-nowrap">{formatValue(payment.ma_dvcs_sale)}</td>
-                      <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{formatValue(payment.maCa)}</td>
+                      <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{payment.maCa || '-'}</td>
                       <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{formatValue(payment.partnerCode)}</td>
                       <td className="px-4 py-3 text-sm text-pink-600 font-medium whitespace-nowrap">{formatValue(payment.ma_doi_tac_payment)}</td>
-                      <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{formatValue(payment.refno)}</td>
+                      <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{payment.refno || '-'}</td>
                       <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{formatValue(payment.bank_code)}</td>
                       <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{formatValue(payment.period_code)}</td>
                     </tr>
