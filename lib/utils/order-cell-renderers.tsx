@@ -246,10 +246,8 @@ export const renderCellValue = (order: Order, sale: SaleItem | null, field: Orde
     case 'chietKhauMuaHangCkVip':
       return <div className="text-sm text-gray-900">{formatValue(sale?.grade_discamt ?? sale?.chietKhauMuaHangCkVip ?? 0)}</div>;
 
-    case 'ckTheoChinhSach': {
-      // Map from disc_ctkm
-      const val = (sale as any)?.disc_ctkm ?? sale?.ckTheoChinhSach;
-      return <div className="text-sm text-gray-900">{formatValue(val)}</div>;
+    case 'ckTheoChinhSach': {    
+      return <div className="text-sm text-gray-900">-</div>;
     }
 
     case 'chietKhauCkTheoChinhSach': {
