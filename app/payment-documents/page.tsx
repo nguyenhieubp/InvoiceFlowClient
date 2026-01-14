@@ -26,24 +26,24 @@ interface PaymentData {
   partnerCode: string;
 }
 
-const FIELD_LABELS: Record<keyof PaymentData, string> = {
+const FIELD_LABELS = {
   fop_syscode: 'Mã HTTT',
   docdate: 'Ngày (Cashio)',
   total_in: 'Tiền thu',
-  so_code: 'Mã đơn hàng',
-  branch_code_cashio: 'Chi nhánh (Cashio)',
-  ma_dvcs_cashio: 'ĐVCS (Cashio)',
-  ma_doi_tac_payment: 'Mã ĐT (Payment)',
+  currency: 'Tiền tệ', // Hardcoded
+  exchange_rate: 'Tỷ giá', // Hardcoded
+  so_code: 'Số hóa đơn',
+  docDate: 'Ngày hóa đơn',
+  revenue: 'Tiền trên hóa đơn',
+  boPhan: 'Mã bộ phận',
+  ma_dvcs_cashio: 'Mã đơn vị nhận tiền',
+  ma_dvcs_sale: 'Mã đơn vị bán hàng',
+  maCa: 'Mã ca',
+  partnerCode: 'Mã khách hàng',
+  ma_doi_tac_payment: 'Mã đối tác',
   refno: 'Mã tham chiếu',
   bank_code: 'Ngân hàng',
   period_code: 'Kỳ hạn',
-  docDate: 'Ngày (Sale)',
-  revenue: 'Doanh thu',
-  branchCode: 'Chi nhánh (Sale)',
-  boPhan: 'Bộ phận',
-  ma_dvcs_sale: 'ĐVCS (Sale)',
-  maCa: 'Mã ca',
-  partnerCode: 'Mã khách hàng'
 };
 
 export default function PaymentDocumentsPage() {
@@ -168,9 +168,9 @@ export default function PaymentDocumentsPage() {
                   <th className="sticky left-0 z-10 bg-gray-50 px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider border-r">
                     STT
                   </th>
-                  {Object.entries(FIELD_LABELS).map(([key, label]) => (
+                  {Object.values(FIELD_LABELS).map((label, index) => (
                     <th
-                      key={key}
+                      key={index}
                       className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap"
                     >
                       {label}
@@ -217,20 +217,20 @@ export default function PaymentDocumentsPage() {
                       <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{formatValue(payment.fop_syscode)}</td>
                       <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{formatValue(payment.docdate)}</td>
                       <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap text-right font-medium text-green-600">{formatValue(payment.total_in)}</td>
+                      <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap text-right">VNĐ</td>
+                      <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap text-right">1</td>
                       <td className="px-4 py-3 text-sm text-blue-600 font-medium whitespace-nowrap">{formatValue(payment.so_code)}</td>
-                      <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{formatValue(payment.branch_code_cashio)}</td>
+                      <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{formatValue(payment.docDate)}</td>
+                      <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap text-right font-medium text-purple-600">{formatValue(payment.revenue)}</td>
+                      <td className="px-4 py-3 text-sm text-orange-600 font-medium whitespace-nowrap">{formatValue(payment.boPhan)}</td>
                       <td className="px-4 py-3 text-sm text-indigo-600 font-medium whitespace-nowrap">{formatValue(payment.ma_dvcs_cashio)}</td>
+                      <td className="px-4 py-3 text-sm text-indigo-600 font-medium whitespace-nowrap">{formatValue(payment.ma_dvcs_sale)}</td>
+                      <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{formatValue(payment.maCa)}</td>
+                      <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{formatValue(payment.partnerCode)}</td>
                       <td className="px-4 py-3 text-sm text-pink-600 font-medium whitespace-nowrap">{formatValue(payment.ma_doi_tac_payment)}</td>
                       <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{formatValue(payment.refno)}</td>
                       <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{formatValue(payment.bank_code)}</td>
                       <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{formatValue(payment.period_code)}</td>
-                      <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{formatValue(payment.docDate)}</td>
-                      <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap text-right font-medium text-purple-600">{formatValue(payment.revenue)}</td>
-                      <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{formatValue(payment.branchCode)}</td>
-                      <td className="px-4 py-3 text-sm text-orange-600 font-medium whitespace-nowrap">{formatValue(payment.boPhan)}</td>
-                      <td className="px-4 py-3 text-sm text-indigo-600 font-medium whitespace-nowrap">{formatValue(payment.ma_dvcs_sale)}</td>
-                      <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{formatValue(payment.maCa)}</td>
-                      <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{formatValue(payment.partnerCode)}</td>
                     </tr>
                   ))
                 )}
