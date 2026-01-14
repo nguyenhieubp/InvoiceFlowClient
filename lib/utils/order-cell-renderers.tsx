@@ -243,6 +243,18 @@ export const renderCellValue = (order: Order, sale: SaleItem | null, field: Orde
     case 'chietKhauMuaHangCkVip':
       return <div className="text-sm text-gray-900">{formatValue(sale?.grade_discamt ?? sale?.chietKhauMuaHangCkVip ?? 0)}</div>;
 
+    case 'ckTheoChinhSach': {
+      // Map from disc_ctkm
+      const val = (sale as any)?.disc_ctkm ?? sale?.ckTheoChinhSach;
+      return <div className="text-sm text-gray-900">{formatValue(val)}</div>;
+    }
+
+    case 'chietKhauCkTheoChinhSach': {
+      // Map from disc_tm
+      const val = (sale as any)?.disc_tm ?? sale?.chietKhauCkTheoChinhSach;
+      return <div className="text-sm text-gray-900">{formatValue(val)}</div>;
+    }
+
     case 'thanhToanCoupon': {
       // Sử dụng giá trị từ backend
       if (sale?.thanhToanCouponDisplay) {
