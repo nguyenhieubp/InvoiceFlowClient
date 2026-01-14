@@ -239,7 +239,7 @@ export default function Sidebar({ isOpen, onToggle, collapsed, onToggleCollapse 
           ),
         },
         {
-          href: '/payment-reports',
+          href: '/payment-audit',
           label: 'Báo cáo',
           icon: (
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
