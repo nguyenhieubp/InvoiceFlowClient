@@ -3,7 +3,7 @@
  * Các hàm tiện ích để map/normalize dữ liệu order từ các format khác nhau
  */
 
-import { Order, OrderCustomer, SaleItem } from '@/types/order.types';
+import { Order, OrderCustomer, SaleItem } from "@/types/order.types";
 
 /**
  * Format mới từ ERP: { data_customer: { Personal_Info: {...}, Sales: [...] } }
@@ -77,8 +77,13 @@ interface ERPRawOrderData {
  * @param erpData - Dữ liệu từ ERP API với format mới
  * @returns Array of Order objects
  */
-export const mapERPRawOrderDataToOrders = (erpData: ERPRawOrderData): Order[] => {
-  if (!erpData?.data_customer?.Personal_Info || !erpData?.data_customer?.Sales) {
+export const mapERPRawOrderDataToOrders = (
+  erpData: ERPRawOrderData
+): Order[] => {
+  if (
+    !erpData?.data_customer?.Personal_Info ||
+    !erpData?.data_customer?.Sales
+  ) {
     return [];
   }
 
@@ -103,13 +108,14 @@ export const mapERPRawOrderDataToOrders = (erpData: ERPRawOrderData): Order[] =>
 
       // Cập nhật totals
       existingOrder.totalQty += mappedSale.qty || 0;
-      existingOrder.totalRevenue += mappedSale.revenue || mappedSale.linetotal || 0;
+      existingOrder.totalRevenue +=
+        mappedSale.revenue || mappedSale.linetotal || 0;
       existingOrder.totalItems += 1;
     } else {
       // Tạo order mới
       const docDate = sale.docdate || new Date().toISOString();
-      const branchCode = sale.branch_code || personalInfo.branch_code || '';
-      const docSourceType = sale.docsourcetype || 'SALE_ORDER';
+      const branchCode = sale.branch_code || personalInfo.branch_code || "";
+      const docSourceType = sale.docsourcetype || "SALE_ORDER";
 
       const mappedSale = mapERPSaleToSaleItem(sale);
 
@@ -136,11 +142,13 @@ export const mapERPRawOrderDataToOrders = (erpData: ERPRawOrderData): Order[] =>
 /**
  * Map Personal_Info từ ERP format sang OrderCustomer
  */
-const mapERPPersonalInfoToCustomer = (personalInfo: ERPRawOrderData['data_customer']['Personal_Info']): OrderCustomer => {
+const mapERPPersonalInfoToCustomer = (
+  personalInfo: ERPRawOrderData["data_customer"]["Personal_Info"]
+): OrderCustomer => {
   return {
-    code: personalInfo.code || '',
-    name: personalInfo.name || '',
-    brand: '', // Không có trong format mới, để rỗng hoặc lấy từ nguồn khác
+    code: personalInfo.code || "",
+    name: personalInfo.name || "",
+    brand: "", // Không có trong format mới, để rỗng hoặc lấy từ nguồn khác
     mobile: personalInfo.mobile,
     sexual: personalInfo.sexual,
     idnumber: personalInfo.idnumber || undefined,
@@ -157,7 +165,9 @@ const mapERPPersonalInfoToCustomer = (personalInfo: ERPRawOrderData['data_custom
 /**
  * Map Sale từ ERP format sang SaleItem
  */
-const mapERPSaleToSaleItem = (sale: ERPRawOrderData['data_customer']['Sales'][0]): SaleItem => {
+const mapERPSaleToSaleItem = (
+  sale: ERPRawOrderData["data_customer"]["Sales"][0]
+): SaleItem => {
   return {
     promCode: sale.prom_code || undefined,
     itemCode: sale.itemcode || undefined,
@@ -218,7 +228,7 @@ export const normalizeOrderData = (data: any): Order[] => {
       // Kiểm tra format mới từ ERP (có data_customer)
       if (item?.data_customer?.Personal_Info && item?.data_customer?.Sales) {
         normalized.push(...mapERPRawOrderDataToOrders(item));
-      } 
+      }
       // Format cũ - đã là Order object
       else if (item?.docCode) {
         // Preserve cashio fields từ backend
@@ -235,8 +245,10 @@ export const normalizeOrderData = (data: any): Order[] => {
           // Preserve statusAsys và stockTransfers trong sales array nếu có
           sales: item.sales?.map((sale: any) => ({
             ...sale,
-            statusAsys: sale.statusAsys !== undefined ? sale.statusAsys : undefined,
+            statusAsys:
+              sale.statusAsys !== undefined ? sale.statusAsys : undefined,
             stockTransfers: sale.stockTransfers || undefined,
+            svcCode: sale.svc_code || sale.svcCode || undefined, // Preserve svc_code từ backend
           })),
         };
         normalized.push(order);
@@ -269,6 +281,7 @@ export const normalizeOrderData = (data: any): Order[] => {
         ...sale,
         statusAsys: sale.statusAsys !== undefined ? sale.statusAsys : undefined,
         stockTransfers: sale.stockTransfers || undefined,
+        svcCode: sale.svc_code || sale.svcCode || undefined, // Preserve svc_code từ backend
       })),
     };
     return [order];
@@ -276,4 +289,3 @@ export const normalizeOrderData = (data: any): Order[] => {
 
   return [];
 };
-

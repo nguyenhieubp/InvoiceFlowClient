@@ -51,6 +51,7 @@ export type OrderColumn =
   | "kol" // KOL
   | "kheUoc" // Khế ước
   | "maCa" // Mã ca
+  | "svcCode" // Mã dịch vụ
   | "isRewardLine" // is_reward_line
   | "isBundleRewardLine" // is_bundle_reward_line
   | "dongThuocGoi" // Dòng thuộc gói
@@ -183,6 +184,7 @@ export const FIELD_LABELS: Record<OrderColumn, string> = {
   kol: "KOL",
   kheUoc: "Khế ước",
   maCa: "Mã ca",
+  svcCode: "Mã dịch vụ",
   isRewardLine: "is_reward_line",
   isBundleRewardLine: "is_bundle_reward_line",
   dongThuocGoi: "Dòng thuộc gói",
@@ -300,6 +302,7 @@ export const MAIN_COLUMNS: OrderColumn[] = [
   "maThanhToan", // Mã thanh toán
   "vuViec", // Vụ việc
   "boPhan", // Bộ phận
+  "svcCode", // Mã dịch vụ
   "trangThai", // Trạng thai
   "barcode", // Barcode
   "muaHangGiamGia", // Mua hàng giảm giá

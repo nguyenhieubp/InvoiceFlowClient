@@ -91,6 +91,9 @@ export const renderCellValue = (order: Order, sale: SaleItem | null, field: Orde
     case 'maCa':
       return <div className="text-sm text-gray-900">{sale?.maCa || '-'}</div>;
 
+    case 'svcCode':
+      return <div className="text-sm text-gray-900">{sale?.svcCode || '-'}</div>;
+
     case 'customerName':
       return <div className="text-sm font-medium text-gray-900">{order.customer?.name || '-'}</div>;
 

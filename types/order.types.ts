@@ -115,6 +115,7 @@ export interface SaleItem {
   kol?: string;
   kheUoc?: string;
   maCa?: string;
+  svcCode?: string; // Mã dịch vụ từ Zappy API
   isRewardLine?: boolean;
   isBundleRewardLine?: boolean;
   dongThuocGoi?: string;
@@ -280,4 +281,3 @@ export type OrderRow = {
   order: Order;
   sale: SaleItem | null;
 };
-
