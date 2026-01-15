@@ -622,6 +622,20 @@ export const platformFeesApi = {
   },
 };
 
+// Order Fees API (Raw data from e-commerce platforms)
+export const orderFeesApi = {
+  getAll: (params?: {
+    page?: number;
+    limit?: number;
+    brand?: string;
+    search?: string;
+    startDate?: string;
+    endDate?: string;
+  }) => {
+    return api.get("/order-fees", { params });
+  },
+};
+
 // Fast API Invoices API (Bảng kê hóa đơn)
 
 export const fastApiInvoicesApi = {

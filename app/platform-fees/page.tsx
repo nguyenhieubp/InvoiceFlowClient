@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { platformFeesApi } from '@/lib/api';
+import { orderFeesApi } from '@/lib/api';
 import Link from 'next/link';
 import { format } from 'date-fns';
 
@@ -22,7 +22,7 @@ export default function PlatformFeesPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const response = await platformFeesApi.getAll({
+      const response = await orderFeesApi.getAll({
         page: pagination.page,
         limit: pagination.limit,
         brand: brandFilter || undefined,
@@ -36,7 +36,7 @@ export default function PlatformFeesPage() {
         ...response.data.meta,
       }));
     } catch (error) {
-      console.error('Error fetching platform fees:', error);
+      console.error('Error fetching order fees:', error);
     } finally {
       setLoading(false);
     }
@@ -54,13 +54,6 @@ export default function PlatformFeesPage() {
 
   const handlePageChange = (newPage: number) => {
     setPagination((prev) => ({ ...prev, page: newPage }));
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND',
-    }).format(amount);
   };
 
   return (
@@ -165,12 +158,11 @@ export default function PlatformFeesPage() {
             <thead className="bg-gray-100 text-gray-600 font-semibold uppercase text-xs">
               <tr>
                 <th className="px-6 py-4">Brand</th>
+                <th className="px-6 py-4">Sàn</th>
                 <th className="px-6 py-4">ERP Order Code</th>
-                <th className="px-6 py-4">Pancake Order ID</th>
-                <th className="px-6 py-4 text-right">Amount</th>
-                <th className="px-6 py-4">Formula</th>
-                <th className="px-6 py-4">Created At</th>
-                <th className="px-6 py-4">Last Synced</th>
+                <th className="px-6 py-4">Raw Data</th>
+                <th className="px-6 py-4">Ngày tạo đơn</th>
+                <th className="px-6 py-4">Ngày đồng bộ</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -200,17 +192,25 @@ export default function PlatformFeesPage() {
                         {(item.brand || 'N/A').toUpperCase()}
                       </span>
                     </td>
-                    <td className="px-6 py-4 font-mono text-gray-700">{item.erpOrderCode}</td>
-                    <td className="px-6 py-4 font-mono text-gray-500">{item.pancakeOrderId}</td>
-                    <td className="px-6 py-4 text-right font-medium text-gray-900">
-                      {formatCurrency(Number(item.amount))}
+                    <td className="px-6 py-4">
+                      <span className="px-2 py-1 rounded text-xs font-semibold bg-orange-100 text-orange-700">
+                        {(item.platform || 'SHOPEE').toUpperCase()}
+                      </span>
                     </td>
-                    <td className="px-6 py-4 text-gray-500 text-xs font-mono truncate max-w-xs" title={item.formulaDescription}>
-                      {item.formulaDescription}
+                    <td className="px-6 py-4 font-mono text-gray-700">{item.erpOrderCode}</td>
+                    <td className="px-6 py-4">
+                      <details className="cursor-pointer">
+                        <summary className="text-xs text-blue-600 hover:text-blue-800 font-medium">
+                          Xem chi tiết
+                        </summary>
+                        <pre className="mt-2 p-3 bg-gray-50 rounded text-xs overflow-x-auto max-w-2xl">
+                          {JSON.stringify(item.rawData || item, null, 2)}
+                        </pre>
+                      </details>
                     </td>
                     <td className="px-6 py-4 text-gray-500">
-                      {item.orderFeeCreatedAt
-                        ? format(new Date(item.orderFeeCreatedAt), 'dd/MM/yyyy HH:mm')
+                      {item.rawData?.created_at
+                        ? format(new Date(item.rawData.created_at), 'dd/MM/yyyy HH:mm')
                         : '-'}
                     </td>
                     <td className="px-6 py-4 text-gray-500">
