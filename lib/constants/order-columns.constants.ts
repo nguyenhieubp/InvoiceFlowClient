@@ -59,8 +59,8 @@ export type OrderColumn =
   | "barcode" // Barcode
   | "muaHangGiamGia" // Mua hàng giảm giá
   | "chietKhauMuaHangGiamGia" // Chiết khấu mua hàng giảm giá
+  | "maCkTheoChinhSach" // Mã CK theo chính sách (bán buôn)
   | "ckTheoChinhSach" // CK theo chính sách
-  | "chietKhauCkTheoChinhSach" // Chiết khấu ck theo chính sách
   | "muaHangCkVip" // Mua hàng CK VIP
   | "chietKhauMuaHangCkVip" // Chiết khấu mua hàng CK VIP
   | "thanhToanCoupon" // Thanh toán coupon
@@ -192,8 +192,8 @@ export const FIELD_LABELS: Record<OrderColumn, string> = {
   barcode: "Barcode",
   muaHangGiamGia: "Mua hàng giảm giá",
   chietKhauMuaHangGiamGia: "Chiết khấu mua hàng giảm giá",
-  ckTheoChinhSach: "Mã CK theo chính sách",
-  chietKhauCkTheoChinhSach: "Chiết khấu theo chính sách",
+  maCkTheoChinhSach: "Mã CK theo chính sách",
+  ckTheoChinhSach: "CK theo chính sách",
   muaHangCkVip: "Mua hàng CK VIP",
   chietKhauMuaHangCkVip: "Chiết khấu mua hàng CK VIP",
   thanhToanCoupon: "Thanh toán coupon",
@@ -307,8 +307,8 @@ export const MAIN_COLUMNS: OrderColumn[] = [
   "barcode", // Barcode
   "muaHangGiamGia", // Mua hàng giảm giá
   "chietKhauMuaHangGiamGia", // Chiết khấu mua hàng giảm giá
+  "maCkTheoChinhSach", // Mã CK theo chính sách (bán buôn)
   "ckTheoChinhSach", // CK theo chính sách
-  "chietKhauCkTheoChinhSach", // Chiết khấu CK theo chính sách
   "muaHangCkVip", // Mua hàng CK VIP
   "chietKhauMuaHangCkVip", // Chiết khấu mua hàng CK VIP
   "thanhToanCoupon", // Thanh toán coupon

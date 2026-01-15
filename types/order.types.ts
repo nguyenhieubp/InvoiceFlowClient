@@ -127,6 +127,7 @@ export interface SaleItem {
   chietKhauCkTheoChinhSach?: number;
   muaHangCkVip?: string;
   chietKhauMuaHangCkVip?: number;
+  maCkTheoChinhSach?: string;
   thanhToanCoupon?: number;
   chietKhauThanhToanCoupon?: number;
   thanhToanVoucher?: number;
