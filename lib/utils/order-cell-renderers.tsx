@@ -256,7 +256,11 @@ export const renderCellValue = (order: Order, sale: SaleItem | null, field: Orde
     case 'chietKhauCkTheoChinhSach': {
       // Map from disc_tm
       const val = (sale as any)?.disc_tm ?? sale?.chietKhauCkTheoChinhSach;
-      return <div className="text-sm text-gray-900">{formatValue(val)}</div>;
+      // Hiển thị số nguyên không có format
+      if (val === null || val === undefined || val === '') {
+        return <span className="text-gray-400 italic">-</span>;
+      }
+      return <div className="text-sm text-gray-900">{Number(val) || 0}</div>;
     }
 
     case 'thanhToanCoupon': {
