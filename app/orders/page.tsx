@@ -1,39 +1,64 @@
-'use client';
+"use client";
 
-import React, { useEffect, useState, useRef } from 'react';
-import { salesApi } from '@/lib/api';
-import { Toast } from '@/components/Toast';
-import { Order, SaleItem } from '@/types/order.types';
-import { OrderColumn, FIELD_LABELS, MAIN_COLUMNS } from '@/lib/constants/order-columns.constants';
-import { normalizeOrderData } from '@/lib/utils/order-mapper.utils';
-import { renderCellValue } from '@/lib/utils/order-cell-renderers';
-
+import React, { useEffect, useState, useRef } from "react";
+import { salesApi } from "@/lib/api";
+import { Toast } from "@/components/Toast";
+import { Order, SaleItem } from "@/types/order.types";
+import {
+  OrderColumn,
+  FIELD_LABELS,
+  MAIN_COLUMNS,
+} from "@/lib/constants/order-columns.constants";
+import { normalizeOrderData } from "@/lib/utils/order-mapper.utils";
+import { renderCellValue } from "@/lib/utils/order-cell-renderers";
 
 export default function OrdersPage() {
   const [allOrders, setAllOrders] = useState<Order[]>([]);
   const [displayedOrders, setDisplayedOrders] = useState<Order[]>([]);
-  const [enrichedDisplayedOrders, setEnrichedDisplayedOrders] = useState<Order[]>([]);
+  const [enrichedDisplayedOrders, setEnrichedDisplayedOrders] = useState<
+    Order[]
+  >([]);
   const [loading, setLoading] = useState(true);
   // Track searchQuery và filter trước đó để chỉ reset page khi chúng thay đổi
-  const prevSearchQueryRef = useRef<string>('');
-  const prevFilterRef = useRef<{ brand?: string; dateFrom?: string; dateTo?: string, typeSale?: string }>({});
+  const prevSearchQueryRef = useRef<string>("");
+  const prevFilterRef = useRef<{
+    brand?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    typeSale?: string;
+  }>({});
   // Filter input values (không trigger API)
-  const [filterInput, setFilterInput] = useState<{ brand?: string; dateFrom?: string; dateTo?: string, typeSale?: string }>({});
+  const [filterInput, setFilterInput] = useState<{
+    brand?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    typeSale?: string;
+  }>({});
   // Filter thực tế (trigger API)
-  const [filter, setFilter] = useState<{ brand?: string; dateFrom?: string; dateTo?: string, typeSale?: string }>({});
-  const [searchInputValue, setSearchInputValue] = useState(''); // Giá trị trong input (không trigger API)
-  const [searchQuery, setSearchQuery] = useState(''); // Giá trị search thực tế (trigger API)
-  const [typeSaleInput, setTypeSaleInput] = useState<string>('ALL'); // Giá trị input của typeSale
-  const [selectedColumns, setSelectedColumns] = useState<OrderColumn[]>([...MAIN_COLUMNS]);
+  const [filter, setFilter] = useState<{
+    brand?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    typeSale?: string;
+  }>({});
+  const [searchInputValue, setSearchInputValue] = useState(""); // Giá trị trong input (không trigger API)
+  const [searchQuery, setSearchQuery] = useState(""); // Giá trị search thực tế (trigger API)
+  const [typeSaleInput, setTypeSaleInput] = useState<string>("ALL"); // Giá trị input của typeSale
+  const [selectedColumns, setSelectedColumns] = useState<OrderColumn[]>([
+    ...MAIN_COLUMNS,
+  ]);
   const [showColumnSelector, setShowColumnSelector] = useState(false);
-  const [columnSearchQuery, setColumnSearchQuery] = useState('');
+  const [columnSearchQuery, setColumnSearchQuery] = useState("");
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
     total: 0,
     totalPages: 0,
   });
-  const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
+  const [toast, setToast] = useState<{
+    type: "success" | "error" | "info";
+    message: string;
+  } | null>(null);
   const [selectedRowKey, setSelectedRowKey] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [retrying, setRetrying] = useState<Record<string, boolean>>({});
@@ -41,24 +66,36 @@ export default function OrdersPage() {
 
   // Hàm convert từ Date object hoặc YYYY-MM-DD sang DDMMMYYYY
   const convertDateToDDMMMYYYY = (date: Date | string): string => {
-    const d = typeof date === 'string' ? new Date(date) : date;
+    const d = typeof date === "string" ? new Date(date) : date;
     if (isNaN(d.getTime())) {
-      return '';
+      return "";
     }
-    const day = d.getDate().toString().padStart(2, '0');
-    const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+    const day = d.getDate().toString().padStart(2, "0");
+    const months = [
+      "JAN",
+      "FEB",
+      "MAR",
+      "APR",
+      "MAY",
+      "JUN",
+      "JUL",
+      "AUG",
+      "SEP",
+      "OCT",
+      "NOV",
+      "DEC",
+    ];
     const month = months[d.getMonth()];
     const year = d.getFullYear();
     return `${day}${month}${year}`;
   };
 
-
   const [syncDateInput, setSyncDateInput] = useState<string>(() => {
     // Format ngày hiện tại thành YYYY-MM-DD cho date picker
     const now = new Date();
     const year = now.getFullYear();
-    const month = (now.getMonth() + 1).toString().padStart(2, '0');
-    const day = now.getDate().toString().padStart(2, '0');
+    const month = (now.getMonth() + 1).toString().padStart(2, "0");
+    const day = now.getDate().toString().padStart(2, "0");
     return `${year}-${month}-${day}`;
   });
 
@@ -70,40 +107,11 @@ export default function OrdersPage() {
 
   // Bỏ cache - chỉ dùng data trực tiếp từ backend order API
 
-  const showToast = (type: 'success' | 'error' | 'info', message: string) => {
+  const showToast = (type: "success" | "error" | "info", message: string) => {
     setToast({ type, message });
   };
 
-
-  // Hàm đồng bộ từ Zappy
-  const handleSyncFromZappy = async () => {
-    const syncDate = getSyncDate();
-    if (!syncDate) {
-      showToast('error', 'Vui lòng chọn ngày cần đồng bộ');
-      return;
-    }
-
-    try {
-      setSyncing(true);
-      const response = await salesApi.syncFromZappy(syncDate);
-      const data = response.data;
-
-      if (data.success) {
-        showToast('success', `${data.message} Đã đồng bộ ${data.ordersCount} đơn hàng, ${data.salesCount} dòng bán hàng mới, ${data.customersCount} khách hàng mới.`);
-        // Reload orders sau khi đồng bộ thành công
-        await loadOrders();
-      } else {
-        showToast('error', data.message || 'Đồng bộ thất bại');
-      }
-    } catch (error: any) {
-      showToast('error', error?.response?.data?.message || 'Lỗi khi đồng bộ dữ liệu từ Zappy');
-    } finally {
-      setSyncing(false);
-    }
-  };
-
   // Backend đã enrich đầy đủ, frontend chỉ cần hiển thị data
-
 
   const loadOrders = async () => {
     try {
@@ -122,8 +130,12 @@ export default function OrdersPage() {
         limit: pagination.limit,
         // Nếu có search query, dùng dateFrom/dateTo (date range)
         // Nếu không có search query, dùng date (single day) để lấy từ Zappy API
-        date: (!searchQuery.trim() && filter.dateFrom && !filter.dateTo) ? convertDateToDDMMMYYYY(filter.dateFrom) : undefined,
-        dateFrom: (searchQuery.trim() || filter.dateTo) ? filter.dateFrom : undefined,
+        date:
+          !searchQuery.trim() && filter.dateFrom && !filter.dateTo
+            ? convertDateToDDMMMYYYY(filter.dateFrom)
+            : undefined,
+        dateFrom:
+          searchQuery.trim() || filter.dateTo ? filter.dateFrom : undefined,
         dateTo: filter.dateTo || undefined,
         search: searchQuery.trim() || undefined, // Gửi search query lên backend
       });
@@ -137,16 +149,22 @@ export default function OrdersPage() {
       // Cập nhật pagination từ backend response
       // Backend trả về total là tổng số rows (sale items) trong database
       // Frontend sẽ paginate lại sau khi flatten, nên dùng total từ backend
-      const calculatedTotalPages = backendTotal > 0 ? Math.ceil(backendTotal / pagination.limit) : 0;
+      const calculatedTotalPages =
+        backendTotal > 0 ? Math.ceil(backendTotal / pagination.limit) : 0;
       setPagination((prev) => ({
         ...prev,
         total: backendTotal,
         totalPages: calculatedTotalPages,
         // Đảm bảo page không vượt quá totalPages, reset về 1 nếu vượt quá
-        page: calculatedTotalPages > 0 && prev.page > calculatedTotalPages ? 1 : (calculatedTotalPages === 0 ? 1 : prev.page),
+        page:
+          calculatedTotalPages > 0 && prev.page > calculatedTotalPages
+            ? 1
+            : calculatedTotalPages === 0
+            ? 1
+            : prev.page,
       }));
     } catch (error: any) {
-      showToast('error', 'Không thể tải danh sách đơn hàng');
+      showToast("error", "Không thể tải danh sách đơn hàng");
     } finally {
       setLoading(false);
     }
@@ -166,14 +184,28 @@ export default function OrdersPage() {
       prevFilterRef.current = { ...filter };
       setPagination((prev) => ({ ...prev, page: 1 }));
     }
-  }, [searchQuery, filter.brand, filter.dateFrom, filter.dateTo, filter.typeSale]);
+  }, [
+    searchQuery,
+    filter.brand,
+    filter.dateFrom,
+    filter.dateTo,
+    filter.typeSale,
+  ]);
 
   // Load orders khi pagination hoặc filter thay đổi
   useEffect(() => {
     loadOrders();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter.brand, filter.dateFrom, filter.dateTo, filter.typeSale, pagination.page, pagination.limit, searchQuery]);
-  
+  }, [
+    filter.brand,
+    filter.dateFrom,
+    filter.dateTo,
+    filter.typeSale,
+    pagination.page,
+    pagination.limit,
+    searchQuery,
+  ]);
+
   // Hàm xử lý search/filter khi click nút Tìm kiếm
   const handleSearch = () => {
     setSearchQuery(searchInputValue);
@@ -182,7 +214,7 @@ export default function OrdersPage() {
   };
   // Hàm xử lý Enter key trong input search
   const handleSearchKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       handleSearch();
     }
   };
@@ -194,10 +226,10 @@ export default function OrdersPage() {
   }, [allOrders]);
 
   const toggleColumn = (field: OrderColumn) => {
-    setSelectedColumns(prev => {
+    setSelectedColumns((prev) => {
       const index = prev.indexOf(field);
       if (index > -1) {
-        return prev.filter(col => col !== field);
+        return prev.filter((col) => col !== field);
       } else {
         const allFields = Object.keys(FIELD_LABELS) as OrderColumn[];
         const fieldIndex = allFields.indexOf(field);
@@ -221,7 +253,7 @@ export default function OrdersPage() {
   // Hàm xử lý double click - gọi backend API để tạo hóa đơn
   const handleRowDoubleClick = async (order: Order, sale: SaleItem | null) => {
     if (!sale) {
-      showToast('error', 'Không có dữ liệu bán hàng cho dòng này');
+      showToast("error", "Không có dữ liệu bán hàng cho dòng này");
       return;
     }
 
@@ -233,26 +265,32 @@ export default function OrdersPage() {
       setSubmittingInvoice(true);
 
       // Gọi backend API để tạo hóa đơn với forceRetry = true để cho phép retry nếu đã tồn tại
-      const response = await salesApi.createInvoiceViaFastApi(order.docCode, true);
+      const response = await salesApi.createInvoiceViaFastApi(
+        order.docCode,
+        true
+      );
       const result = response.data;
 
       // Nếu đã tồn tại (alreadyExists = true), vẫn coi như thành công
       if (result.alreadyExists) {
-        showToast('info', result.message || 'Đơn hàng đã được tạo hóa đơn trước đó');
+        showToast(
+          "info",
+          result.message || "Đơn hàng đã được tạo hóa đơn trước đó"
+        );
         return;
       }
 
       // Check success flag và status trong result (status === 0 là lỗi)
       const hasError = Array.isArray(result.result)
         ? result.result.some((item: any) => item.status === 0)
-        : (result.result?.status === 0);
+        : result.result?.status === 0;
 
       if (result.success && !hasError) {
-        showToast('success', result.message || 'Tạo hóa đơn thành công');
+        showToast("success", result.message || "Tạo hóa đơn thành công");
         // Reload invoice statuses sau khi tạo thành công
       } else {
         // Xử lý lỗi chi tiết hơn
-        let errorMessage = result.message || 'Tạo hóa đơn thất bại';
+        let errorMessage = result.message || "Tạo hóa đơn thất bại";
 
         if (Array.isArray(result.result) && result.result.length > 0) {
           const firstError = result.result[0];
@@ -263,11 +301,11 @@ export default function OrdersPage() {
           errorMessage = result.result.message;
         }
 
-        showToast('error', errorMessage);
+        showToast("error", errorMessage);
       }
     } catch (error: any) {
       // Xử lý lỗi từ response hoặc error object
-      let errorMessage = 'Lỗi không xác định';
+      let errorMessage = "Lỗi không xác định";
 
       if (error?.response?.data) {
         const errorData = error.response.data;
@@ -275,14 +313,14 @@ export default function OrdersPage() {
           errorMessage = errorData.message;
         } else if (errorData.error) {
           errorMessage = errorData.error;
-        } else if (typeof errorData === 'string') {
+        } else if (typeof errorData === "string") {
           errorMessage = errorData;
         }
       } else if (error?.message) {
         errorMessage = error.message;
       }
 
-      showToast('error', `Lỗi: ${errorMessage}`);
+      showToast("error", `Lỗi: ${errorMessage}`);
     } finally {
       setSubmittingInvoice(false);
     }
@@ -318,17 +356,26 @@ export default function OrdersPage() {
     }
   }
 
-  const filteredColumns = Object.entries(FIELD_LABELS).filter(([key]) =>
-    columnSearchQuery.trim() === '' ||
-    FIELD_LABELS[key as OrderColumn].toLowerCase().includes(columnSearchQuery.toLowerCase()) ||
-    key.toLowerCase().includes(columnSearchQuery.toLowerCase())
+  const filteredColumns = Object.entries(FIELD_LABELS).filter(
+    ([key]) =>
+      columnSearchQuery.trim() === "" ||
+      FIELD_LABELS[key as OrderColumn]
+        .toLowerCase()
+        .includes(columnSearchQuery.toLowerCase()) ||
+      key.toLowerCase().includes(columnSearchQuery.toLowerCase())
   );
 
   return (
     <div className="min-h-screen bg-white relative overflow-auto">
       {/* Toast notifications */}
       <div className="fixed top-4 right-4 z-50 space-y-3">
-        {toast && <Toast type={toast.type} message={toast.message} onClose={() => setToast(null)} />}
+        {toast && (
+          <Toast
+            type={toast.type}
+            message={toast.message}
+            onClose={() => setToast(null)}
+          />
+        )}
       </div>
 
       <div className="w-full px-4 py-4">
@@ -348,33 +395,23 @@ export default function OrdersPage() {
                     className="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                     disabled={syncing}
                   />
-                  <button
-                    onClick={handleSyncFromZappy}
-                    disabled={syncing || !syncDateInput}
-                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-blue-600 rounded-lg hover:bg-blue-700 transition-colors inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                    title="Đồng bộ dữ liệu từ Zappy"
-                  >
-                    {syncing ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                        Đang đồng bộ...
-                      </>
-                    ) : (
-                      <>
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
-                        Đồng bộ từ Zappy
-                      </>
-                    )}
-                  </button>
                 </div>
                 <button
                   onClick={() => setShowColumnSelector(!showColumnSelector)}
                   className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors inline-flex items-center gap-2"
                 >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
+                    />
                   </svg>
                   Chọn cột hiển thị
                 </button>
@@ -385,7 +422,9 @@ export default function OrdersPage() {
             {showColumnSelector && (
               <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold text-gray-700">Chọn cột hiển thị</h3>
+                  <h3 className="text-sm font-semibold text-gray-700">
+                    Chọn cột hiển thị
+                  </h3>
                   <div className="flex gap-2">
                     <button
                       onClick={() => setSelectedColumns([...MAIN_COLUMNS])}
@@ -395,7 +434,9 @@ export default function OrdersPage() {
                     </button>
                     <button
                       onClick={() => {
-                        const allFields = Object.keys(FIELD_LABELS) as OrderColumn[];
+                        const allFields = Object.keys(
+                          FIELD_LABELS
+                        ) as OrderColumn[];
                         setSelectedColumns(allFields);
                       }}
                       className="text-xs px-2 py-1 text-blue-600 hover:bg-blue-50 rounded"
@@ -408,8 +449,18 @@ export default function OrdersPage() {
                 <div className="mb-3">
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      <svg
+                        className="h-4 w-4 text-gray-400"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                        />
                       </svg>
                     </div>
                     <input
@@ -423,7 +474,9 @@ export default function OrdersPage() {
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-64 overflow-y-auto">
                   {filteredColumns.map(([key, label]) => {
-                    const isSelected = selectedColumns.includes(key as OrderColumn);
+                    const isSelected = selectedColumns.includes(
+                      key as OrderColumn
+                    );
                     return (
                       <label
                         key={key}
@@ -447,8 +500,18 @@ export default function OrdersPage() {
             <div className="flex items-center gap-2">
               <div className="relative flex-1">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  <svg
+                    className="h-5 w-5 text-gray-400"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                    />
                   </svg>
                 </div>
                 <input
@@ -471,8 +534,13 @@ export default function OrdersPage() {
             {/* Filters */}
             <div className="flex items-center gap-2 flex-wrap">
               <select
-                value={filterInput.brand || ''}
-                onChange={(e) => setFilterInput({ ...filterInput, brand: e.target.value || undefined })}
+                value={filterInput.brand || ""}
+                onChange={(e) =>
+                  setFilterInput({
+                    ...filterInput,
+                    brand: e.target.value || undefined,
+                  })
+                }
                 className="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               >
                 <option value="">Tất cả nhãn hàng</option>
@@ -485,7 +553,7 @@ export default function OrdersPage() {
               <select
                 value={typeSaleInput}
                 onChange={(e) => {
-                  const newValue = e.target.value || 'ALL';
+                  const newValue = e.target.value || "ALL";
                   setTypeSaleInput(newValue);
                   setFilterInput({ ...filterInput, typeSale: newValue });
                 }}
@@ -496,20 +564,28 @@ export default function OrdersPage() {
                 <option value="WHOLESALE">WholeSale</option>
               </select>
               <div className="flex items-center gap-2">
-                <label className="text-sm text-gray-700 whitespace-nowrap">Từ ngày:</label>
+                <label className="text-sm text-gray-700 whitespace-nowrap">
+                  Từ ngày:
+                </label>
                 <input
                   type="date"
-                  value={filterInput.dateFrom || ''}
-                  onChange={(e) => setFilterInput({ ...filterInput, dateFrom: e.target.value })}
+                  value={filterInput.dateFrom || ""}
+                  onChange={(e) =>
+                    setFilterInput({ ...filterInput, dateFrom: e.target.value })
+                  }
                   className="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                 />
               </div>
               <div className="flex items-center gap-2">
-                <label className="text-sm text-gray-700 whitespace-nowrap">Đến ngày:</label>
+                <label className="text-sm text-gray-700 whitespace-nowrap">
+                  Đến ngày:
+                </label>
                 <input
                   type="date"
-                  value={filterInput.dateTo || ''}
-                  onChange={(e) => setFilterInput({ ...filterInput, dateTo: e.target.value })}
+                  value={filterInput.dateTo || ""}
+                  onChange={(e) =>
+                    setFilterInput({ ...filterInput, dateTo: e.target.value })
+                  }
                   className="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                 />
               </div>
@@ -544,13 +620,18 @@ export default function OrdersPage() {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {flattenedRows.length === 0 ? (
                     <tr>
-                      <td colSpan={selectedColumns.length} className="px-4 py-8 text-center text-gray-500">
+                      <td
+                        colSpan={selectedColumns.length}
+                        className="px-4 py-8 text-center text-gray-500"
+                      >
                         Không có dữ liệu
                       </td>
                     </tr>
                   ) : (
                     flattenedRows.map((row, index) => {
-                      const rowKey = `${row.order.docCode}-${row.sale?.id || index}`;
+                      const rowKey = `${row.order.docCode}-${
+                        row.sale?.id || index
+                      }`;
                       const isSelected = selectedRowKey === rowKey;
                       // Kiểm tra statusAsys: nếu false thì bôi đỏ dòng
                       // Chú ý: statusAsys có thể là undefined, null, true, hoặc false
@@ -563,15 +644,21 @@ export default function OrdersPage() {
                             setSelectedRowKey(isSelected ? null : rowKey);
                             handleRowDoubleClick(row.order, row.sale);
                           }}
-                          className={`transition-colors cursor-pointer ${isStatusAsysFalse
-                            ? 'bg-red-100 hover:bg-red-200' // Bôi đỏ nếu statusAsys = false
-                            : isSelected
-                              ? 'bg-blue-100 hover:bg-blue-200'
-                              : 'hover:bg-gray-50'
-                            } ${submittingInvoice ? 'opacity-50 cursor-wait' : ''}`}
+                          className={`transition-colors cursor-pointer ${
+                            isStatusAsysFalse
+                              ? "bg-red-100 hover:bg-red-200" // Bôi đỏ nếu statusAsys = false
+                              : isSelected
+                              ? "bg-blue-100 hover:bg-blue-200"
+                              : "hover:bg-gray-50"
+                          } ${
+                            submittingInvoice ? "opacity-50 cursor-wait" : ""
+                          }`}
                         >
                           {selectedColumns.map((column) => (
-                            <td key={column} className="px-4 py-3 whitespace-nowrap">
+                            <td
+                              key={column}
+                              className="px-4 py-3 whitespace-nowrap"
+                            >
                               {renderCellValue(row.order, row.sale, column)}
                             </td>
                           ))}
@@ -593,7 +680,11 @@ export default function OrdersPage() {
                       value={pagination.limit}
                       onChange={(e) => {
                         const newLimit = parseInt(e.target.value);
-                        setPagination((prev) => ({ ...prev, limit: newLimit, page: 1 }));
+                        setPagination((prev) => ({
+                          ...prev,
+                          limit: newLimit,
+                          page: 1,
+                        }));
                       }}
                       className="border border-gray-300 rounded-md px-3 py-1.5 text-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
@@ -607,23 +698,46 @@ export default function OrdersPage() {
 
                   <div className="flex items-center gap-3">
                     <p className="text-sm text-gray-700">
-                      Hiển thị <span className="font-medium">{(pagination.page - 1) * pagination.limit + 1}</span> đến{' '}
+                      Hiển thị{" "}
                       <span className="font-medium">
-                        {Math.min(pagination.page * pagination.limit, pagination.total)}
-                      </span>{' '}
-                      trong tổng số <span className="font-medium">{pagination.total}</span> bản ghi
+                        {(pagination.page - 1) * pagination.limit + 1}
+                      </span>{" "}
+                      đến{" "}
+                      <span className="font-medium">
+                        {Math.min(
+                          pagination.page * pagination.limit,
+                          pagination.total
+                        )}
+                      </span>{" "}
+                      trong tổng số{" "}
+                      <span className="font-medium">{pagination.total}</span>{" "}
+                      bản ghi
                     </p>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-3">
                   <button
-                    onClick={() => setPagination((prev) => ({ ...prev, page: Math.max(1, prev.page - 1) }))}
+                    onClick={() =>
+                      setPagination((prev) => ({
+                        ...prev,
+                        page: Math.max(1, prev.page - 1),
+                      }))
+                    }
                     disabled={pagination.page === 1}
                     className="relative inline-flex items-center px-3 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                    <svg
+                      className="h-5 w-5"
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z"
+                        clipRule="evenodd"
+                      />
                     </svg>
                   </button>
 
@@ -632,15 +746,32 @@ export default function OrdersPage() {
                   </span>
 
                   <button
-                    onClick={() => setPagination((prev) => {
-                      const maxPage = Math.max(1, prev.totalPages);
-                      return { ...prev, page: Math.min(maxPage, prev.page + 1) };
-                    })}
-                    disabled={pagination.page >= Math.max(1, pagination.totalPages) || pagination.totalPages === 0}
+                    onClick={() =>
+                      setPagination((prev) => {
+                        const maxPage = Math.max(1, prev.totalPages);
+                        return {
+                          ...prev,
+                          page: Math.min(maxPage, prev.page + 1),
+                        };
+                      })
+                    }
+                    disabled={
+                      pagination.page >= Math.max(1, pagination.totalPages) ||
+                      pagination.totalPages === 0
+                    }
                     className="relative inline-flex items-center px-3 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                    <svg
+                      className="h-5 w-5"
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
+                        clipRule="evenodd"
+                      />
                     </svg>
                   </button>
                 </div>

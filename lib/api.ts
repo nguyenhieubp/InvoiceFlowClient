@@ -230,6 +230,7 @@ export const voucherIssueApi = {
     dateTo?: string;
     status?: string;
     serial?: string;
+    code?: string;
   }) => {
     return api.get("/sync/voucher-issue", { params });
   },
