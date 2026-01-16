@@ -12,9 +12,9 @@ export const metadata: Metadata = {
   title: "Vita Hub",
   description: "Vita Hub",
   icons: {
-    icon: [{ url: "/logo.png", sizes: "any" }],
-    apple: [{ url: "/logo.png", sizes: "any" }],
-  },  
+    icon: [{ url: "/logo.jpg", sizes: "any" }],
+    apple: [{ url: "/logo.jpg", sizes: "any" }],
+  },
 };
 
 export default function RootLayout({
@@ -24,12 +24,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${inter.variable} font-sans antialiased`}
-      >
-        <LayoutWithSidebar>
-          {children}
-        </LayoutWithSidebar>
+      <body className={`${inter.variable} font-sans antialiased`}>
+        <LayoutWithSidebar>{children}</LayoutWithSidebar>
       </body>
     </html>
   );
