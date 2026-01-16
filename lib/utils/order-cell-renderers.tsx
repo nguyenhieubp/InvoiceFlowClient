@@ -513,24 +513,19 @@ export const renderCellValue = (
     case "maThe":
       return <div className="text-sm text-gray-900">{sale?.maThe ?? "-"}</div>;
 
-    // Stock Transfer columns - Sale item level (lấy từ stockTransfers của sale)
+    // Stock Transfer columns - Sale item level (lấy từ stockTransfer của sale)
     case "stockTransferDoctype": {
-      const stockTransfers = sale?.stockTransfers || [];
-      if (stockTransfers.length > 0) {
-        // Lấy doctype từ stock transfer đầu tiên
-        return (
-          <div className="text-sm text-gray-900">
-            {stockTransfers[0]?.doctype || "-"}
-          </div>
-        );
+      const st = sale?.stockTransfer;
+      if (st) {
+        return <div className="text-sm text-gray-900">{st.doctype || "-"}</div>;
       }
       return <span className="text-gray-400 italic">-</span>;
     }
 
     case "stockTransferTransDate": {
-      const stockTransfers = sale?.stockTransfers || [];
-      if (stockTransfers.length > 0) {
-        const transDate = stockTransfers[0]?.transDate;
+      const st = sale?.stockTransfer;
+      if (st) {
+        const transDate = st.transDate;
         if (transDate) {
           return (
             <div className="text-sm text-gray-900">
@@ -547,119 +542,64 @@ export const renderCellValue = (
     }
 
     case "stockTransferDocDesc": {
-      const stockTransfers = sale?.stockTransfers || [];
-      if (stockTransfers.length > 0) {
-        return (
-          <div className="text-sm text-gray-900">
-            {stockTransfers[0]?.docDesc || "-"}
-          </div>
-        );
+      const st = sale?.stockTransfer;
+      if (st) {
+        return <div className="text-sm text-gray-900">{st.docDesc || "-"}</div>;
       }
       return <span className="text-gray-400 italic">-</span>;
     }
 
     case "stockTransferStockCode": {
-      const stockTransfers = sale?.stockTransfers || [];
-      if (stockTransfers.length > 0) {
-        // Có thể có nhiều stock code, hiển thị tất cả
-        const stockCodes = Array.from(
-          new Set(stockTransfers.map((st) => st.stockCode).filter(Boolean))
-        );
+      const st = sale?.stockTransfer;
+      if (st) {
         return (
-          <div className="text-sm text-gray-900">
-            {stockCodes.join(", ") || "-"}
-          </div>
+          <div className="text-sm text-gray-900">{st.stockCode || "-"}</div>
         );
       }
       return <span className="text-gray-400 italic">-</span>;
     }
 
     case "stockTransferQty": {
-      const stockTransfers = sale?.stockTransfers || [];
-      if (stockTransfers.length > 0) {
-        // Chỉ lấy stock transfer XUẤT KHO (SALE_STOCKOUT hoặc qty < 0)
-        // Bỏ qua các stock transfer nhập lại (RETURN) với qty > 0
-        const stockOutTransfers = stockTransfers.filter((st: any) => {
-          const isStockOut =
-            st.doctype === "SALE_STOCKOUT" || Number(st.qty || 0) < 0;
-          return isStockOut;
-        });
-
-        if (stockOutTransfers.length === 0) {
-          return <span className="text-gray-400 italic">-</span>;
-        }
-
-        // Deduplicate stock transfers theo docCode để tránh tính trùng
-        // (vì nhiều sale items cùng materialCode có thể share cùng stock transfers)
-        const uniqueStockTransfers = new Map<string, any>();
-        stockOutTransfers.forEach((st: any) => {
-          // Sử dụng docCode làm key để deduplicate (mỗi chứng từ chỉ tính một lần)
-          const key =
-            st.docCode ||
-            st.id ||
-            `${st.soCode}_${st.itemCode}_${st.stockCode}_${st.qty}`;
-          if (!uniqueStockTransfers.has(key)) {
-            uniqueStockTransfers.set(key, st);
-          }
-        });
-
-        // Tổng số lượng xuất (lấy giá trị tuyệt đối) từ các stock transfers unique XUẤT KHO
-        const totalQty = Array.from(uniqueStockTransfers.values()).reduce(
-          (sum, st) => sum + Math.abs(Number(st.qty || 0)),
-          0
-        );
-        return formatNumber(totalQty);
+      const st = sale?.stockTransfer;
+      if (st) {
+        const qty = Math.abs(Number(st.qty || 0));
+        return formatNumber(qty);
       }
       return <span className="text-gray-400 italic">-</span>;
     }
 
     case "stockTransferIoType": {
-      const stockTransfers = sale?.stockTransfers || [];
-      if (stockTransfers.length > 0) {
-        return (
-          <div className="text-sm text-gray-900">
-            {stockTransfers[0]?.ioType || "-"}
-          </div>
-        );
+      const st = sale?.stockTransfer;
+      if (st) {
+        return <div className="text-sm text-gray-900">{st.ioType || "-"}</div>;
       }
       return <span className="text-gray-400 italic">-</span>;
     }
 
     case "stockTransferBatchSerial": {
-      const stockTransfers = sale?.stockTransfers || [];
-      if (stockTransfers.length > 0) {
-        // Có thể có nhiều batch/serial, hiển thị tất cả
-        const batchSerials = Array.from(
-          new Set(stockTransfers.map((st) => st.batchSerial).filter(Boolean))
-        );
+      const st = sale?.stockTransfer;
+      if (st) {
         return (
-          <div className="text-sm text-gray-900">
-            {batchSerials.join(", ") || "-"}
-          </div>
+          <div className="text-sm text-gray-900">{st.batchSerial || "-"}</div>
         );
       }
       return <span className="text-gray-400 italic">-</span>;
     }
 
     case "stockTransferSoCode": {
-      const stockTransfers = sale?.stockTransfers || [];
-      if (stockTransfers.length > 0) {
-        return (
-          <div className="text-sm text-gray-900">
-            {stockTransfers[0]?.soCode || "-"}
-          </div>
-        );
+      const st = sale?.stockTransfer;
+      if (st) {
+        return <div className="text-sm text-gray-900">{st.soCode || "-"}</div>;
       }
       return <span className="text-gray-400 italic">-</span>;
     }
 
     case "stockTransferDocCode": {
-      const stockTransfers = sale?.stockTransfers || [];
-      if (stockTransfers.length > 0) {
-        // Hiển thị docCode của stock transfer (Mã CT)
+      const st = sale?.stockTransfer;
+      if (st) {
         return (
           <div className="text-sm text-gray-900 font-mono">
-            {stockTransfers[0]?.docCode || "-"}
+            {st.docCode || "-"}
           </div>
         );
       }

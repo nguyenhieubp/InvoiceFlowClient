@@ -225,7 +225,7 @@ export interface SaleItem {
   promotion?: OrderPromotion | null;
   department?: OrderDepartment | null;
   statusAsys?: boolean; // Trạng thái đồng bộ: true = đồng bộ thành công, false = sản phẩm không tồn tại trong Loyalty API (404)
-  stockTransfers?: StockTransfer[]; // Danh sách stock transfers cho sale item này
+  stockTransfer?: StockTransfer; // Thông tin stock transfer cụ thể cho sale item này (nếu có)
 }
 
 export interface StockTransfer {
@@ -268,14 +268,11 @@ export interface Order {
   cashioData?: any[] | null;
   cashioTotalIn?: number | null;
   brand?: string; // Brand name (f3, menard, labhair, yaman, etc.)
-  stockTransfers?: StockTransfer[]; // Danh sách stock transfers của đơn hàng
-  stockTransferInfo?: {
-    totalItems: number; // Số dòng xuất kho
-    totalQty: number; // Tổng số lượng xuất
-    uniqueItems: number; // Số sản phẩm khác nhau
-    stockCodes: string[]; // Danh sách mã kho
-    hasStockTransfer: boolean; // Có xuất kho hay không
-  };
+  // stockTransferInfo is removed/flattened?
+  // User just wants simpler structure.
+  // I will just add back minimal fields if needed, or stick to what backend returns.
+  // Backend REMOVED stockTransferInfo object in Step 1177 (user edit).
+  // So I should not define it.
 }
 
 export type OrderRow = {
