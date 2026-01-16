@@ -68,20 +68,18 @@ export default function VoucherIssuePage() {
     dateFrom?: string;
     dateTo?: string;
     status?: string;
-    code?: string;
-    materialType?: string;
+    serial?: string;
   }>({});
   const [filter, setFilter] = useState<{
     brand?: string;
     dateFrom?: string;
     dateTo?: string;
     status?: string;
-    code?: string;
-    materialType?: string;
+    serial?: string;
   }>({});
   const [pagination, setPagination] = useState({
     page: 1,
-    limit: 20, // Tăng limit mặc định lên vì display line
+    limit: 10, // Tăng limit mặc định lên vì display line
     total: 0,
     totalPages: 0,
   });
@@ -312,35 +310,18 @@ export default function VoucherIssuePage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Mã Voucher
+                Serial
               </label>
               <input
                 type="text"
-                value={filterInput.code || ""}
+                value={filterInput.serial || ""}
                 onChange={(e) =>
                   setFilterInput({
                     ...filterInput,
-                    code: e.target.value || undefined,
+                    serial: e.target.value || undefined,
                   })
                 }
-                placeholder="Nhập mã voucher"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Loại vật tư
-              </label>
-              <input
-                type="text"
-                value={filterInput.materialType || ""}
-                onChange={(e) =>
-                  setFilterInput({
-                    ...filterInput,
-                    materialType: e.target.value || undefined,
-                  })
-                }
-                placeholder="Nhập loại vật tư"
+                placeholder="Nhập serial"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -391,6 +372,9 @@ export default function VoucherIssuePage() {
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Giá trị
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Brand
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Ngày phát hành
@@ -460,6 +444,9 @@ export default function VoucherIssuePage() {
                             </td>
                             <td className="px-4 py-3 whitespace-nowrap text-gray-900 font-semibold">
                               {formatCurrency(voucher.val)}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-gray-900 font-semibold">
+                              {voucher.brand}
                             </td>
                             <td className="px-4 py-3 whitespace-nowrap text-gray-900">
                               {formatDateTime(voucher.docdate)}

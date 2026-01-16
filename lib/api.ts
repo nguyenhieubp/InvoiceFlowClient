@@ -229,8 +229,7 @@ export const voucherIssueApi = {
     dateFrom?: string;
     dateTo?: string;
     status?: string;
-    code?: string;
-    materialType?: string;
+    serial?: string;
   }) => {
     return api.get("/sync/voucher-issue", { params });
   },
