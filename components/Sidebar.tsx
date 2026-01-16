@@ -726,7 +726,7 @@ export default function Sidebar({
               >
                 <div className="w-7 h-7 rounded flex items-center justify-center flex-shrink-0 overflow-hidden">
                   <Image
-                    src="https://images.crunchbase.com/image/upload/c_pad,h_256,w_256,f_auto,q_auto:eco,dpr_1/009f3fa2c79f4b35ae518d568753e59c?ik-sanitizeSvg=true"
+                    src="https://home.vmt.vn/uploads/default/original/1X/1a6392a51b6d64eae6a9c1d5aded7b76944a4eab.jpeg"
                     alt="Logo"
                     width={28}
                     height={28}
