@@ -453,11 +453,10 @@ export const renderCellValue = (
     }
 
     case "soSerial": {
-      // Sử dụng giá trị từ backend
-      if (sale?.soSerialDisplay) {
-        return (
-          <div className="text-sm text-gray-900">{sale.soSerialDisplay}</div>
-        );
+      // Sử dụng giá trị từ backend (soSerialDisplay hoặc soSerial)
+      const val = sale?.soSerialDisplay || sale?.soSerial;
+      if (val) {
+        return <div className="text-sm text-gray-900">{val}</div>;
       }
       return <span className="text-gray-400 italic">-</span>;
     }
