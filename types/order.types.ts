@@ -268,11 +268,8 @@ export interface Order {
   cashioData?: any[] | null;
   cashioTotalIn?: number | null;
   brand?: string; // Brand name (f3, menard, labhair, yaman, etc.)
-  // stockTransferInfo is removed/flattened?
-  // User just wants simpler structure.
-  // I will just add back minimal fields if needed, or stick to what backend returns.
-  // Backend REMOVED stockTransferInfo object in Step 1177 (user edit).
-  // So I should not define it.
+  stockTransferInfo?: any;
+  stockTransfers?: StockTransfer[];
 }
 
 export type OrderRow = {
