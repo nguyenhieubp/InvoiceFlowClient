@@ -78,7 +78,7 @@ interface ERPRawOrderData {
  * @returns Array of Order objects
  */
 export const mapERPRawOrderDataToOrders = (
-  erpData: ERPRawOrderData
+  erpData: ERPRawOrderData,
 ): Order[] => {
   if (
     !erpData?.data_customer?.Personal_Info ||
@@ -143,7 +143,7 @@ export const mapERPRawOrderDataToOrders = (
  * Map Personal_Info từ ERP format sang OrderCustomer
  */
 const mapERPPersonalInfoToCustomer = (
-  personalInfo: ERPRawOrderData["data_customer"]["Personal_Info"]
+  personalInfo: ERPRawOrderData["data_customer"]["Personal_Info"],
 ): OrderCustomer => {
   return {
     code: personalInfo.code || "",
@@ -166,7 +166,7 @@ const mapERPPersonalInfoToCustomer = (
  * Map Sale từ ERP format sang SaleItem
  */
 const mapERPSaleToSaleItem = (
-  sale: ERPRawOrderData["data_customer"]["Sales"][0]
+  sale: ERPRawOrderData["data_customer"]["Sales"][0],
 ): SaleItem => {
   return {
     promCode: sale.prom_code || undefined,
@@ -248,7 +248,7 @@ export const normalizeOrderData = (data: any): Order[] => {
             statusAsys:
               sale.statusAsys !== undefined ? sale.statusAsys : undefined,
             stockTransfers: sale.stockTransfers || undefined,
-            svcCode: sale.svc_code || sale.svcCode || undefined, // Preserve svc_code từ backend
+            svcCode: sale.svcCode || sale.svc_code || undefined, // Preserve svc_code từ backend
           })),
         };
         normalized.push(order);
@@ -281,7 +281,7 @@ export const normalizeOrderData = (data: any): Order[] => {
         ...sale,
         statusAsys: sale.statusAsys !== undefined ? sale.statusAsys : undefined,
         stockTransfers: sale.stockTransfers || undefined,
-        svcCode: sale.svc_code || sale.svcCode || undefined, // Preserve svc_code từ backend
+        svcCode: sale.svcCode || sale.svc_code || undefined, // Preserve svc_code từ backend
       })),
     };
     return [order];

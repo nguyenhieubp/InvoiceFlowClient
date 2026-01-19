@@ -160,8 +160,8 @@ export default function OrdersPage() {
           calculatedTotalPages > 0 && prev.page > calculatedTotalPages
             ? 1
             : calculatedTotalPages === 0
-            ? 1
-            : prev.page,
+              ? 1
+              : prev.page,
       }));
     } catch (error: any) {
       showToast("error", "Không thể tải danh sách đơn hàng");
@@ -267,7 +267,7 @@ export default function OrdersPage() {
       // Gọi backend API để tạo hóa đơn với forceRetry = true để cho phép retry nếu đã tồn tại
       const response = await salesApi.createInvoiceViaFastApi(
         order.docCode,
-        true
+        true,
       );
       const result = response.data;
 
@@ -275,7 +275,7 @@ export default function OrdersPage() {
       if (result.alreadyExists) {
         showToast(
           "info",
-          result.message || "Đơn hàng đã được tạo hóa đơn trước đó"
+          result.message || "Đơn hàng đã được tạo hóa đơn trước đó",
         );
         return;
       }
@@ -362,7 +362,7 @@ export default function OrdersPage() {
       FIELD_LABELS[key as OrderColumn]
         .toLowerCase()
         .includes(columnSearchQuery.toLowerCase()) ||
-      key.toLowerCase().includes(columnSearchQuery.toLowerCase())
+      key.toLowerCase().includes(columnSearchQuery.toLowerCase()),
   );
 
   return (
@@ -435,7 +435,7 @@ export default function OrdersPage() {
                     <button
                       onClick={() => {
                         const allFields = Object.keys(
-                          FIELD_LABELS
+                          FIELD_LABELS,
                         ) as OrderColumn[];
                         setSelectedColumns(allFields);
                       }}
@@ -475,7 +475,7 @@ export default function OrdersPage() {
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-64 overflow-y-auto">
                   {filteredColumns.map(([key, label]) => {
                     const isSelected = selectedColumns.includes(
-                      key as OrderColumn
+                      key as OrderColumn,
                     );
                     return (
                       <label
@@ -648,8 +648,8 @@ export default function OrdersPage() {
                             isStatusAsysFalse
                               ? "bg-red-100 hover:bg-red-200" // Bôi đỏ nếu statusAsys = false
                               : isSelected
-                              ? "bg-blue-100 hover:bg-blue-200"
-                              : "hover:bg-gray-50"
+                                ? "bg-blue-100 hover:bg-blue-200"
+                                : "hover:bg-gray-50"
                           } ${
                             submittingInvoice ? "opacity-50 cursor-wait" : ""
                           }`}
@@ -706,7 +706,7 @@ export default function OrdersPage() {
                       <span className="font-medium">
                         {Math.min(
                           pagination.page * pagination.limit,
-                          pagination.total
+                          pagination.total,
                         )}
                       </span>{" "}
                       trong tổng số{" "}
