@@ -71,7 +71,7 @@ const calculateGiaBan = (sale: SaleItem | null): number => {
 export const renderCellValue = (
   order: Order,
   sale: SaleItem | null,
-  field: OrderColumn
+  field: OrderColumn,
 ): React.ReactNode => {
   if (
     !sale &&
@@ -362,8 +362,13 @@ export const renderCellValue = (
         </div>
       );
 
-    case "chietKhauMuaHangGiamGia":
-      return formatNumber(sale?.other_discamt ?? 0);
+    case "chietKhauMuaHangGiamGia": {
+      const val = (sale?.other_discamt ?? sale?.chietKhauMuaHangGiamGia) as any;
+      if (!val || Number(val) === 0 || val === "0" || val === "-") {
+        return <span className="text-gray-400 italic">-</span>;
+      }
+      return formatNumber(val);
+    }
 
     case "muaHangCkVip": {
       // Sử dụng giá trị từ backend
