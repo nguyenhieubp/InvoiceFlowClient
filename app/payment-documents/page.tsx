@@ -407,7 +407,7 @@ export default function PaymentDocumentsPage() {
                         {formatValue(payment.revenue)}
                       </td>
                       <td className="px-4 py-3 text-sm text-orange-600 font-medium whitespace-nowrap">
-                        {formatValue(payment.boPhan)}
+                        {formatValue(payment.branch_code_cashio)}
                       </td>
                       <td className="px-4 py-3 text-sm text-indigo-600 font-medium whitespace-nowrap">
                         {formatValue(payment.ma_dvcs_cashio)}
