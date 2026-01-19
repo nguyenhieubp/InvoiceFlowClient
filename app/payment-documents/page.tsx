@@ -23,6 +23,7 @@ interface PaymentData {
   boPhan: string | null;
   ma_dvcs_sale: string | null;
   maCa: string;
+  company: string | null;
   partnerCode: string;
 }
 
@@ -38,6 +39,7 @@ const FIELD_LABELS = {
   boPhan: "Mã bộ phận",
   ma_dvcs_cashio: "Mã đơn vị nhận tiền",
   ma_dvcs_sale: "Mã đơn vị bán hàng",
+  company: "Nhãn hàng",
   maCa: "Mã ca",
   partnerCode: "Mã khách hàng",
   ma_doi_tac_payment: "Mã đối tác",
@@ -57,13 +59,40 @@ export default function PaymentDocumentsPage() {
   });
 
   // Search states
-  const [searchQuery, setSearchQuery] = useState(""); // Actual query to send to API
+  const [searchQuery, setSearchQuery] = useState(""); // General search
   const [tempSearchQuery, setTempSearchQuery] = useState(""); // Temporary input state
+
+  // Specific Filters
+  const [fopSyscode, setFopSyscode] = useState("");
+  const [company, setCompany] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+
+  // Active filters (committed on Search click)
+  const [activeFilters, setActiveFilters] = useState({
+    search: "",
+    fopSyscode: "",
+    company: "",
+    dateFrom: "",
+    dateTo: "",
+  });
+
+  // Handle Search Click
+  const handleSearch = () => {
+    setActiveFilters({
+      search: tempSearchQuery,
+      fopSyscode,
+      company,
+      dateFrom,
+      dateTo,
+    });
+    setPagination((prev) => ({ ...prev, page: 1 }));
+  };
 
   useEffect(() => {
     loadPayments();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pagination.page, pagination.limit, searchQuery]);
+  }, [pagination.page, pagination.limit, activeFilters]);
 
   const loadPayments = async () => {
     try {
@@ -72,7 +101,11 @@ export default function PaymentDocumentsPage() {
         params: {
           page: pagination.page,
           limit: pagination.limit,
-          search: searchQuery || undefined,
+          search: activeFilters.search || undefined,
+          fopSyscode: activeFilters.fopSyscode || undefined,
+          brand: activeFilters.company || undefined,
+          dateFrom: activeFilters.dateFrom || undefined,
+          dateTo: activeFilters.dateTo || undefined,
         },
       });
 
@@ -132,36 +165,137 @@ export default function PaymentDocumentsPage() {
           </p>
         </div>
 
-        {/* Search and Stats */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4">
-          <div className="flex items-center gap-4">
-            <div className="flex-1 flex gap-2">
+        {/* Combined Search & Filter Bar */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+            {/* General Search */}
+            <div className="col-span-1 md:col-span-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                Tìm kiếm chung
+              </label>
               <input
                 type="text"
-                placeholder="Tìm kiếm theo mã đơn hàng, mã đối tác, mã tham chiếu..."
+                placeholder="Mã đơn hàng, mã đối tác, mã tham chiếu..."
                 value={tempSearchQuery}
                 onChange={(e) => setTempSearchQuery(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    setSearchQuery(tempSearchQuery);
-                    setPagination((prev) => ({ ...prev, page: 1 }));
-                  }
+                  if (e.key === "Enter") handleSearch();
                 }}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
               />
+            </div>
+
+            {/* Mã HTTT */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                Mã HTTT
+              </label>
+              <input
+                type="text"
+                placeholder="Ví dụ: CASH, VNPAY..."
+                value={fopSyscode}
+                onChange={(e) => setFopSyscode(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleSearch();
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+              />
+            </div>
+
+            {/* Nhãn hàng */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                Nhãn hàng
+              </label>
+              <input
+                type="text"
+                placeholder="Ví dụ: Menard, F3..."
+                value={company}
+                onChange={(e) => setCompany(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleSearch();
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+              />
+            </div>
+
+            {/* Date From */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                Từ ngày (Cashio)
+              </label>
+              <input
+                type="date"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+              />
+            </div>
+
+            {/* Date To */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                Đến ngày (Cashio)
+              </label>
+              <input
+                type="date"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+              />
+            </div>
+
+            {/* Actions */}
+            <div className="col-span-1 md:col-span-2 flex gap-3">
+              <button
+                onClick={handleSearch}
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center gap-2"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+                Tìm kiếm & Lọc
+              </button>
               <button
                 onClick={() => {
-                  setSearchQuery(tempSearchQuery);
+                  setFopSyscode("");
+                  setCompany("");
+                  setDateFrom("");
+                  setDateTo("");
+                  setTempSearchQuery("");
+                  setActiveFilters({
+                    search: "",
+                    fopSyscode: "",
+                    company: "",
+                    dateFrom: "",
+                    dateTo: "",
+                  });
                   setPagination((prev) => ({ ...prev, page: 1 }));
                 }}
-                className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                className="px-6 py-2 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition-colors duration-200"
               >
-                Tìm kiếm
+                Xóa bộ lọc
               </button>
             </div>
-            <div className="text-sm text-gray-600">
-              Tổng: <span className="font-semibold">{pagination.total}</span>{" "}
-              bản ghi
+          </div>
+
+          <div className="mt-4 pt-4 border-t border-gray-100 flex justify-between items-center text-sm text-gray-500">
+            <div>
+              Tổng bản ghi:{" "}
+              <span className="font-bold text-gray-900 text-lg">
+                {pagination.total}
+              </span>
             </div>
           </div>
         </div>
@@ -277,6 +411,9 @@ export default function PaymentDocumentsPage() {
                         {formatValue(payment.ma_dvcs_sale)}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">
+                        {payment.company || "-"}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">
                         {payment.maCa || "-"}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">
@@ -342,7 +479,7 @@ export default function PaymentDocumentsPage() {
                       <span className="font-medium">
                         {Math.min(
                           pagination.page * pagination.limit,
-                          pagination.total
+                          pagination.total,
                         )}
                       </span>{" "}
                       trong{" "}
