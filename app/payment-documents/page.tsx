@@ -8,6 +8,7 @@ interface PaymentData {
   fop_syscode: string;
   docdate: string;
   total_in: string;
+  total_out: string;
   so_code: string;
   branch_code_cashio: string;
   ma_dvcs_cashio: string | null;
@@ -31,6 +32,7 @@ const FIELD_LABELS = {
   fop_syscode: "Mã HTTT",
   docdate: "Ngày (Cashio)",
   total_in: "Tiền thu",
+  total_out: "Tiền chi",
   currency: "Tiền tệ", // Hardcoded
   exchange_rate: "Tỷ giá", // Hardcoded
   so_code: "Số hóa đơn",
@@ -385,6 +387,9 @@ export default function PaymentDocumentsPage() {
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap text-right font-medium text-green-600">
                         {formatValue(payment.total_in)}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap text-right font-medium text-red-600">
+                        {formatValue(payment.total_out)}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap text-right">
                         VNĐ
