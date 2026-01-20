@@ -125,6 +125,7 @@ export type OrderColumn =
   | "tkVatTuHangNo" // Tk vật tư hàng nợ
   | "tkChiPhi" // Tk chi phí
   | "maPhi" // Mã phí
+  | "ma_vt_ref" // Mã vật tư tham chiếu
   // Stock Transfer columns
   | "stockTransferDoctype" // Loại xuất kho
   | "stockTransferTransDate" // Ngày xuất kho
@@ -258,6 +259,7 @@ export const FIELD_LABELS: Record<OrderColumn, string> = {
   tkChietKhau: "TK Chiết khấu",
   tkChiPhi: "TK Chi phí",
   maPhi: "Mã phí",
+  ma_vt_ref: "Mã VT tham chiếu",
   // Stock Transfer labels
   stockTransferDoctype: "Loại xuất kho",
   stockTransferTransDate: "Ngày xuất kho",

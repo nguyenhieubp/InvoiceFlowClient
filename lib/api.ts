@@ -192,7 +192,7 @@ export const syncApi = {
     endDate: string,
     brand?: string,
   ) => {
-    return api.post("/sync/voucher-issue/range", { startDate, endDate, brand });
+    return api.post("/voucher-issue/sync/range", { startDate, endDate, brand });
   },
   // Sync cashio theo ngày
   syncCashio: (date: string, brand?: string) => {
@@ -232,7 +232,7 @@ export const voucherIssueApi = {
     serial?: string;
     code?: string;
   }) => {
-    return api.get("/sync/voucher-issue", { params });
+    return api.get("/voucher-issue", { params });
   },
 };
 

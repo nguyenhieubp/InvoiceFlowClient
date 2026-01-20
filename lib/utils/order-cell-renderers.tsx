@@ -638,6 +638,13 @@ export const renderCellValue = (
       return <div className="text-sm text-gray-900">{sale?.maPhi || "-"}</div>;
     }
 
+    case "ma_vt_ref":
+      return (
+        <div className="text-sm text-gray-900">
+          {(sale as any)?.ma_vt_ref || "-"}
+        </div>
+      );
+
     case "tkChiPhiKhuyenMaiProduct":
     case "tkGiaVonBanLe":
     case "tkDoanhThuBanLe":
