@@ -471,7 +471,11 @@ export default function PaymentDocumentsPage() {
                   payments.map((payment, index) => (
                     <tr
                       key={index}
-                      className="hover:bg-gray-50 cursor-pointer"
+                      className={`hover:bg-gray-50 cursor-pointer ${
+                        payment.docdate && !payment.docDate
+                          ? "bg-red-100 hover:bg-red-200"
+                          : ""
+                      }`}
                       onDoubleClick={async () => {
                         console.log("Logging FAST payment...", payment);
                         try {
