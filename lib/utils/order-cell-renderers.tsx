@@ -5,15 +5,18 @@ import { TAX_CODE, DEBIT_ACCOUNT } from "@/lib/constants/accounting.constants";
 import { debug } from "console";
 
 // Helper: Format số với 2 chữ số thập phân hoặc số nguyên
-const formatNumber = (value: number | null | undefined): React.ReactNode => {
+const formatNumber = (
+  value: number | null | undefined,
+  className: string = "text-gray-900",
+): React.ReactNode => {
   if (value === null || value === undefined) {
     return <span className="text-gray-400 italic">-</span>;
   }
   const numValue = Number(value);
   if (numValue % 1 !== 0) {
-    return <div className="text-sm text-gray-900">{numValue.toFixed(2)}</div>;
+    return <div className={`text-sm ${className}`}>{numValue.toFixed(2)}</div>;
   }
-  return <div className="text-sm text-gray-900">{numValue}</div>;
+  return <div className={`text-sm ${className}`}>{numValue}</div>;
 };
 
 // Helper: Format giá trị chung
@@ -73,6 +76,11 @@ export const renderCellValue = (
   sale: SaleItem | null,
   field: OrderColumn,
 ): React.ReactNode => {
+  const isMissingCucThue = !sale?.cucThueDisplay;
+  const textClass = isMissingCucThue
+    ? "text-red-600 font-bold"
+    : "text-gray-900";
+
   if (
     !sale &&
     field !== "docCode" &&
@@ -83,17 +91,31 @@ export const renderCellValue = (
     return <span className="text-gray-400 italic">-</span>;
   }
 
+  // ... rest of the function using textClass instead of "${textClass}"
+  // Note: I will use multi_replace for the specific switch cases to be safer and cleaner than replacing the whole function.
+  // Wait, replace_file_content does not support multiple non-contiguous blocks.
+  // I should use multi_replace_file_content for this.
+  // But wait, allowMultiple is true here.
+  // So I can replace all instances of "${textClass}" with "${textClass}".
+  // But I need to also insert the definition of textClass.
+
+  // Strategy:
+  // 1. Insert the definition of textClass at the start of the function.
+  // 2. Replace "${textClass}" with "${textClass}" throughout the switch statement.
+
+  // Let's use multi_replace_file_content.
+
   switch (field) {
     case "docCode":
       return (
-        <div className="text-sm font-semibold text-gray-900">
+        <div className={`text-sm font-semibold ${textClass}`}>
           {order.docCode}
         </div>
       );
 
     case "docDate":
       return (
-        <div className="text-sm text-gray-900">
+        <div className={`text-sm ${textClass}`}>
           {new Date(order.docDate).toLocaleDateString("vi-VN", {
             year: "numeric",
             month: "2-digit",
@@ -115,81 +137,81 @@ export const renderCellValue = (
           ? sale.issuePartnerCode
           : sale?.partnerCode;
 
-      return <div className="text-sm text-gray-900">{partnerCode || "-"}</div>;
+      return <div className={`text-sm ${textClass}`}>{partnerCode || "-"}</div>;
     }
 
     case "maCa":
-      return <div className="text-sm text-gray-900">{sale?.maCa || "-"}</div>;
+      return <div className={`text-sm ${textClass}`}>{sale?.maCa || "-"}</div>;
 
     case "svcCode":
       return (
-        <div className="text-sm text-gray-900">{sale?.svcCode || "-"}</div>
+        <div className={`text-sm ${textClass}`}>{sale?.svcCode || "-"}</div>
       );
 
     case "customerName":
       return (
-        <div className="text-sm font-medium text-gray-900">
+        <div className={`text-sm font-medium ${textClass}`}>
           {order.customer?.name || "-"}
         </div>
       );
 
     case "customerMobile":
       return (
-        <div className="text-sm text-gray-900">
+        <div className={`text-sm ${textClass}`}>
           {order.customer?.mobile || "-"}
         </div>
       );
 
     case "customerSexual":
       return (
-        <div className="text-sm text-gray-900">
+        <div className={`text-sm ${textClass}`}>
           {order.customer?.sexual || "-"}
         </div>
       );
 
     case "customerAddress":
       return (
-        <div className="text-sm text-gray-900">
+        <div className={`text-sm ${textClass}`}>
           {order.customer?.address || "-"}
         </div>
       );
 
     case "customerProvince":
       return (
-        <div className="text-sm text-gray-900">
+        <div className={`text-sm ${textClass}`}>
           {order.customer?.province_name || "-"}
         </div>
       );
 
     case "customerGrade":
       return (
-        <div className="text-sm text-gray-900">
+        <div className={`text-sm ${textClass}`}>
           {order.customer?.grade_name || "-"}
         </div>
       );
 
     case "kyHieu":
       return (
-        <div className="text-sm text-gray-900">
+        <div className={`text-sm ${textClass}`}>
           {sale?.department?.branchcode || sale?.branchCode || "-"}
         </div>
       );
 
     case "description":
       return (
-        <div className="text-sm text-gray-900">{order.docCode || "-"}</div>
+        <div className={`text-sm ${textClass}`}>{order.docCode || "-"}</div>
       );
 
     case "nhanVienBan":
       return (
-        <div className="text-sm text-gray-900">
+        <div className={`text-sm ${textClass}`}>
           {sale?.saleperson_id?.toString() || "-"}
         </div>
       );
 
     case "tenNhanVienBan":
       return (
-        <div className="text-sm text-gray-900">
+        <div className={`text-sm ${textClass}`}>
           {sale?.tenNhanVienBan || "-"}
         </div>
       );
@@ -199,7 +221,7 @@ export const renderCellValue = (
       return (
         <div className="max-w-[120px]">
           <div
-            className="text-sm font-semibold text-gray-900 truncate"
+            className={`text-sm font-semibold ${textClass} truncate`}
             title={itemCode}
           >
             {itemCode}
@@ -211,19 +233,19 @@ export const renderCellValue = (
     case "itemName": {
       const itemName = sale?.product?.tenVatTu || sale?.itemName;
       if (!itemName) return null;
-      return <div className="text-sm text-gray-900">{itemName}</div>;
+      return <div className={`text-sm ${textClass}`}>{itemName}</div>;
     }
 
     case "dvt":
       return (
-        <div className="text-sm text-gray-900">
+        <div className={`text-sm ${textClass}`}>
           {sale?.product?.dvt || sale?.dvt || "-"}
         </div>
       );
 
     case "ordertypeName":
       return (
-        <div className="text-sm text-gray-900">
+        <div className={`text-sm ${textClass}`}>
           {sale?.ordertypeName || "-"}
         </div>
       );
@@ -235,13 +257,13 @@ export const renderCellValue = (
         sale?.product?.productType ||
         sale?.product?.producttype ||
         null;
-      return <div className="text-sm text-gray-900">{productType || "-"}</div>;
+      return <div className={`text-sm ${textClass}`}>{productType || "-"}</div>;
 
     case "promCode": {
       // Sử dụng giá trị từ backend
       if (sale?.promCodeDisplay) {
         return (
-          <div className="text-sm text-gray-900">{sale.promCodeDisplay}</div>
+          <div className={`text-sm ${textClass}`}>{sale.promCodeDisplay}</div>
         );
       }
       return <div className="text-sm text-gray-400 italic">-</div>;
@@ -251,7 +273,7 @@ export const renderCellValue = (
       // Sử dụng giá trị từ backend
       if (sale?.muaHangGiamGiaDisplay) {
         return (
-          <div className="text-sm text-gray-900">
+          <div className={`text-sm ${textClass}`}>
             {sale.muaHangGiamGiaDisplay}
           </div>
         );
@@ -263,19 +285,19 @@ export const renderCellValue = (
       // Sử dụng giá trị từ backend
       if (sale?.maCtkmTangHang && sale.maCtkmTangHang.trim() !== "") {
         return (
-          <div className="text-sm text-gray-900">{sale.maCtkmTangHang}</div>
+          <div className={`text-sm ${textClass}`}>{sale.maCtkmTangHang}</div>
         );
       }
       return <div className="text-sm text-gray-400 italic">-</div>;
     }
 
     case "maKho":
-      return <div className="text-sm text-gray-900">{sale?.maKho || "-"}</div>;
+      return <div className={`text-sm ${textClass}`}>{sale?.maKho || "-"}</div>;
 
     case "maLo": {
       // Sử dụng giá trị từ backend
       if (sale?.maLo && sale.maLo.trim() !== "") {
-        return <div className="text-sm text-gray-900">{sale.maLo}</div>;
+        return <div className={`text-sm ${textClass}`}>{sale.maLo}</div>;
       }
       return <span className="text-gray-400 italic">-</span>;
     }
@@ -293,25 +315,25 @@ export const renderCellValue = (
 
     case "revenue":
       return (
-        <div className="text-sm text-gray-900">
+        <div className={`text-sm ${textClass}`}>
           {formatValue(sale?.revenue)}
         </div>
       );
 
     case "maNt":
-      return <div className="text-sm text-gray-900">{sale?.maNt || "-"}</div>;
+      return <div className={`text-sm ${textClass}`}>{sale?.maNt || "-"}</div>;
 
     case "tyGia":
       return formatNumber(sale?.tyGia ?? 1);
 
     case "maThue":
       return (
-        <div className="text-sm text-gray-900">{sale?.maThue || TAX_CODE}</div>
+        <div className={`text-sm ${textClass}`}>{sale?.maThue || TAX_CODE}</div>
       );
 
     case "tkNo":
       return (
-        <div className="text-sm text-gray-900">
+        <div className={`text-sm ${textClass}`}>
           {sale?.tkNo || DEBIT_ACCOUNT}
         </div>
       );
@@ -319,7 +341,7 @@ export const renderCellValue = (
     case "tkDoanhThu": {
       // Sử dụng giá trị từ backend
       return (
-        <div className="text-sm text-gray-900">
+        <div className={`text-sm ${textClass}`}>
           {sale?.tkDoanhThuDisplay || "-"}
         </div>
       );
@@ -328,7 +350,7 @@ export const renderCellValue = (
     case "tkGiaVon": {
       // Sử dụng giá trị từ backend
       return (
-        <div className="text-sm text-gray-900">
+        <div className={`text-sm ${textClass}`}>
           {sale?.tkGiaVonDisplay || "-"}
         </div>
       );
@@ -336,20 +358,20 @@ export const renderCellValue = (
 
     case "tkChiPhiKhuyenMai":
       return (
-        <div className="text-sm text-gray-900">
+        <div className={`text-sm ${textClass}`}>
           {sale?.tkChiPhiKhuyenMai || "-"}
         </div>
       );
 
     case "tkThueCo":
       return (
-        <div className="text-sm text-gray-900">{sale?.tkThueCo || "-"}</div>
+        <div className={`text-sm ${textClass}`}>{sale?.tkThueCo || "-"}</div>
       );
 
     case "cucThue": {
       // Sử dụng giá trị từ backend
       return (
-        <div className="text-sm text-gray-900">
+        <div className={`text-sm ${textClass}`}>
           {sale?.cucThueDisplay || "-"}
         </div>
       );
@@ -357,7 +379,7 @@ export const renderCellValue = (
 
     case "boPhan":
       return (
-        <div className="text-sm text-gray-900">
+        <div className={`text-sm ${textClass}`}>
           {sale?.department?.ma_bp || sale?.branchCode || "-"}
         </div>
       );
@@ -373,14 +395,16 @@ export const renderCellValue = (
     case "muaHangCkVip": {
       // Sử dụng giá trị từ backend
       if (sale?.muaHangCkVip && sale.muaHangCkVip.trim() !== "") {
-        return <div className="text-sm text-gray-900">{sale.muaHangCkVip}</div>;
+        return (
+          <div className={`text-sm ${textClass}`}>{sale.muaHangCkVip}</div>
+        );
       }
       return <span className="text-gray-400 italic">-</span>;
     }
 
     case "chietKhauMuaHangCkVip":
       return (
-        <div className="text-sm text-gray-900">
+        <div className={`text-sm ${textClass}`}>
           {formatValue(sale?.grade_discamt ?? sale?.chietKhauMuaHangCkVip ?? 0)}
         </div>
       );
@@ -390,7 +414,7 @@ export const renderCellValue = (
       if (val === null || val === undefined || val === "") {
         return <span className="text-gray-400 italic">-</span>;
       }
-      return <div className="text-sm text-gray-900">{val}</div>;
+      return <div className={`text-sm ${textClass}`}>{val}</div>;
     }
 
     case "ckTheoChinhSach": {
@@ -400,14 +424,14 @@ export const renderCellValue = (
       if (val === null || val === undefined || val === "") {
         return <span className="text-gray-400 italic">-</span>;
       }
-      return <div className="text-sm text-gray-900">{Number(val) || 0}</div>;
+      return <div className={`text-sm ${textClass}`}>{Number(val) || 0}</div>;
     }
 
     case "thanhToanCoupon": {
       // Sử dụng giá trị từ backend
       if (sale?.thanhToanCouponDisplay) {
         return (
-          <div className="text-sm text-gray-900">
+          <div className={`text-sm ${textClass}`}>
             {sale.thanhToanCouponDisplay}
           </div>
         );
@@ -422,7 +446,7 @@ export const renderCellValue = (
         sale.chietKhauThanhToanCouponDisplay > 0
       ) {
         return (
-          <div className="text-sm text-gray-900">
+          <div className={`text-sm ${textClass}`}>
             {formatValue(sale.chietKhauThanhToanCouponDisplay)}
           </div>
         );
@@ -437,7 +461,7 @@ export const renderCellValue = (
         sale.paid_by_voucher_ecode_ecoin_bp > 0
       ) {
         return (
-          <div className="text-sm text-gray-900">
+          <div className={`text-sm ${textClass}`}>
             {formatValue(sale.paid_by_voucher_ecode_ecoin_bp)}
           </div>
         );
@@ -449,7 +473,7 @@ export const renderCellValue = (
       // Sử dụng giá trị từ backend
       if (sale?.thanhToanVoucherDisplay) {
         return (
-          <div className="text-sm text-gray-900">
+          <div className={`text-sm ${textClass}`}>
             {sale.thanhToanVoucherDisplay}
           </div>
         );
@@ -461,7 +485,7 @@ export const renderCellValue = (
       // Sử dụng giá trị từ backend (soSerialDisplay hoặc soSerial)
       const val = sale?.soSerialDisplay || sale?.soSerial;
       if (val) {
-        return <div className="text-sm text-gray-900">{val}</div>;
+        return <div className={`text-sm ${textClass}`}>{val}</div>;
       }
       return <span className="text-gray-400 italic">-</span>;
     }
@@ -470,7 +494,7 @@ export const renderCellValue = (
       // Sử dụng giá trị từ backend
       if (sale?.voucherDp1Display) {
         return (
-          <div className="text-sm text-gray-900">{sale.voucherDp1Display}</div>
+          <div className={`text-sm ${textClass}`}>{sale.voucherDp1Display}</div>
         );
       }
       return <span className="text-gray-400 italic">-</span>;
@@ -491,7 +515,7 @@ export const renderCellValue = (
       // Sử dụng giá trị từ backend
       if (sale?.thanhToanTkTienAoDisplay) {
         return (
-          <div className="text-sm text-gray-900">
+          <div className={`text-sm ${textClass}`}>
             {sale.thanhToanTkTienAoDisplay}
           </div>
         );
@@ -506,7 +530,7 @@ export const renderCellValue = (
         sale.chietKhauThanhToanTkTienAoDisplay > 0
       ) {
         return (
-          <div className="text-sm text-gray-900">
+          <div className={`text-sm ${textClass}`}>
             {formatValue(sale.chietKhauThanhToanTkTienAoDisplay)}
           </div>
         );
@@ -515,13 +539,15 @@ export const renderCellValue = (
     }
 
     case "maThe":
-      return <div className="text-sm text-gray-900">{sale?.maThe ?? "-"}</div>;
+      return <div className={`text-sm ${textClass}`}>{sale?.maThe ?? "-"}</div>;
 
     // Stock Transfer columns - Sale item level (lấy từ stockTransfer của sale)
     case "stockTransferDoctype": {
       const st = sale?.stockTransfer;
       if (st) {
-        return <div className="text-sm text-gray-900">{st.doctype || "-"}</div>;
+        return (
+          <div className={`text-sm ${textClass}`}>{st.doctype || "-"}</div>
+        );
       }
       return <span className="text-gray-400 italic">-</span>;
     }
@@ -532,7 +558,7 @@ export const renderCellValue = (
         const transDate = st.transDate;
         if (transDate) {
           return (
-            <div className="text-sm text-gray-900">
+            <div className={`text-sm ${textClass}`}>
               {new Date(transDate).toLocaleDateString("vi-VN", {
                 year: "numeric",
                 month: "2-digit",
@@ -548,7 +574,9 @@ export const renderCellValue = (
     case "stockTransferDocDesc": {
       const st = sale?.stockTransfer;
       if (st) {
-        return <div className="text-sm text-gray-900">{st.docDesc || "-"}</div>;
+        return (
+          <div className={`text-sm ${textClass}`}>{st.docDesc || "-"}</div>
+        );
       }
       return <span className="text-gray-400 italic">-</span>;
     }
@@ -557,7 +585,7 @@ export const renderCellValue = (
       const st = sale?.stockTransfer;
       if (st) {
         return (
-          <div className="text-sm text-gray-900">{st.stockCode || "-"}</div>
+          <div className={`text-sm ${textClass}`}>{st.stockCode || "-"}</div>
         );
       }
       return <span className="text-gray-400 italic">-</span>;
@@ -575,7 +603,7 @@ export const renderCellValue = (
     case "stockTransferIoType": {
       const st = sale?.stockTransfer;
       if (st) {
-        return <div className="text-sm text-gray-900">{st.ioType || "-"}</div>;
+        return <div className={`text-sm ${textClass}`}>{st.ioType || "-"}</div>;
       }
       return <span className="text-gray-400 italic">-</span>;
     }
@@ -584,7 +612,7 @@ export const renderCellValue = (
       const st = sale?.stockTransfer;
       if (st) {
         return (
-          <div className="text-sm text-gray-900">{st.batchSerial || "-"}</div>
+          <div className={`text-sm ${textClass}`}>{st.batchSerial || "-"}</div>
         );
       }
       return <span className="text-gray-400 italic">-</span>;
@@ -593,7 +621,7 @@ export const renderCellValue = (
     case "stockTransferSoCode": {
       const st = sale?.stockTransfer;
       if (st) {
-        return <div className="text-sm text-gray-900">{st.soCode || "-"}</div>;
+        return <div className={`text-sm ${textClass}`}>{st.soCode || "-"}</div>;
       }
       return <span className="text-gray-400 italic">-</span>;
     }
@@ -602,7 +630,7 @@ export const renderCellValue = (
       const st = sale?.stockTransfer;
       if (st) {
         return (
-          <div className="text-sm text-gray-900 font-mono">
+          <div className={`text-sm ${textClass} font-mono`}>
             {st.docCode || "-"}
           </div>
         );
@@ -623,24 +651,24 @@ export const renderCellValue = (
     case "tkChietKhau": {
       // Lấy từ product hoặc sale
       const tkChietKhau = sale?.product?.tkChietKhau || sale?.tkChietKhau;
-      return <div className="text-sm text-gray-900">{tkChietKhau || "-"}</div>;
+      return <div className={`text-sm ${textClass}`}>{tkChietKhau || "-"}</div>;
     }
 
     case "tkChiPhi": {
       // Tk chi phí từ creditAdvice (ví dụ: "64191" cho đơn "Đổi vỏ")
       return (
-        <div className="text-sm text-gray-900">{sale?.tkChiPhi || "-"}</div>
+        <div className={`text-sm ${textClass}`}>{sale?.tkChiPhi || "-"}</div>
       );
     }
 
     case "maPhi": {
       // Mã phí từ creditAdvice (ví dụ: "161010" cho đơn "Đổi vỏ")
-      return <div className="text-sm text-gray-900">{sale?.maPhi || "-"}</div>;
+      return <div className={`text-sm ${textClass}`}>{sale?.maPhi || "-"}</div>;
     }
 
     case "ma_vt_ref":
       return (
-        <div className="text-sm text-gray-900">
+        <div className={`text-sm ${textClass}`}>
           {(sale as any)?.ma_vt_ref || "-"}
         </div>
       );
@@ -653,11 +681,11 @@ export const renderCellValue = (
     case "tkDoanhThuHangNo":
     case "tkGiaVonHangNo":
     case "tkVatTuHangNo":
-      return <div className="text-sm text-gray-900">-</div>;
+      return <div className={`text-sm ${textClass}`}>-</div>;
 
     default: {
       const value = sale?.[field as keyof typeof sale];
-      return <div className="text-sm text-gray-900">{formatValue(value)}</div>;
+      return <div className={`text-sm ${textClass}`}>{formatValue(value)}</div>;
     }
   }
 };

@@ -63,7 +63,7 @@ export default function StockTransferPage() {
     message: string;
   } | null>(null);
   const [processingWarehouse, setProcessingWarehouse] = useState<string | null>(
-    null
+    null,
   );
 
   // Hàm convert từ Date object hoặc YYYY-MM-DD sang DDMMMYYYY
@@ -232,7 +232,7 @@ export default function StockTransferPage() {
       if (!syncDate || syncDate.length < 9) {
         showToast(
           "error",
-          `Ngày không hợp lệ: "${syncDate}". Vui lòng chọn lại ngày.`
+          `Ngày không hợp lệ: "${syncDate}". Vui lòng chọn lại ngày.`,
         );
         setSyncing(false);
         return;
@@ -271,14 +271,14 @@ export default function StockTransferPage() {
       const response = await syncApi.syncStockTransferRange(
         dateFrom,
         dateTo,
-        brand
+        brand,
       );
       showToast("success", response.data.message || "Đồng bộ thành công");
       loadStockTransfers();
     } catch (error: any) {
       showToast(
         "error",
-        error.response?.data?.message || error.message || "Lỗi khi đồng bộ"
+        error.response?.data?.message || error.message || "Lỗi khi đồng bộ",
       );
     } finally {
       setSyncingRange(false);
@@ -295,7 +295,7 @@ export default function StockTransferPage() {
       ) {
         showToast(
           "error",
-          `Không thể xử lý stock transfer điều chuyển kho. relatedStockCode không được để trống.`
+          `Không thể xử lý stock transfer điều chuyển kho. relatedStockCode không được để trống.`,
         );
         return;
       }
@@ -303,7 +303,7 @@ export default function StockTransferPage() {
     } else if (stockTransfer.doctype !== "STOCK_IO") {
       showToast(
         "error",
-        `Không thể xử lý stock transfer có doctype = "${stockTransfer.doctype}". Chỉ chấp nhận doctype = "STOCK_IO" hoặc "STOCK_TRANSFER".`
+        `Không thể xử lý stock transfer có doctype = "${stockTransfer.doctype}". Chỉ chấp nhận doctype = "STOCK_IO" hoặc "STOCK_TRANSFER".`,
       );
       return;
     }
@@ -314,7 +314,7 @@ export default function StockTransferPage() {
       if (stockTransfer.soCode !== "null" && stockTransfer.soCode !== null) {
         showToast(
           "error",
-          `Không thể xử lý stock transfer có soCode = "${stockTransfer.soCode}". Chỉ chấp nhận soCode = "null" hoặc null.`
+          `Không thể xử lý stock transfer có soCode = "${stockTransfer.soCode}". Chỉ chấp nhận soCode = "null" hoặc null.`,
         );
         return;
       }
@@ -323,7 +323,7 @@ export default function StockTransferPage() {
       if (stockTransfer.ioType !== "I" && stockTransfer.ioType !== "O") {
         showToast(
           "error",
-          `ioType không hợp lệ: "${stockTransfer.ioType}". Chỉ chấp nhận "I" (nhập) hoặc "O" (xuất).`
+          `ioType không hợp lệ: "${stockTransfer.ioType}". Chỉ chấp nhận "I" (nhập) hoặc "O" (xuất).`,
         );
         return;
       }
@@ -332,7 +332,7 @@ export default function StockTransferPage() {
     setProcessingWarehouse(stockTransfer.id);
     try {
       const response = await stockTransferApi.processWarehouse(
-        stockTransfer.id
+        stockTransfer.id,
       );
       let message = "";
       if (stockTransfer.doctype === "STOCK_TRANSFER") {
@@ -362,8 +362,8 @@ export default function StockTransferPage() {
             toast.type === "success"
               ? "bg-green-500 text-white"
               : toast.type === "error"
-              ? "bg-red-500 text-white"
-              : "bg-blue-500 text-white"
+                ? "bg-red-500 text-white"
+                : "bg-blue-500 text-white"
           }`}
         >
           <div className="flex items-center justify-between">
@@ -709,95 +709,135 @@ export default function StockTransferPage() {
                         </td>
                       </tr>
                     ) : (
-                      stockTransfers.map((st) => (
-                        <tr
-                          key={st.id}
-                          className={`hover:bg-gray-50 transition-colors ${
-                            processingWarehouse === st.id
-                              ? "opacity-50 cursor-wait"
-                              : "cursor-pointer"
-                          }`}
-                          onDoubleClick={() => handleDoubleClick(st)}
-                          title="Double-click để tạo phiếu nhập/xuất kho"
-                        >
-                          <td className="px-2 py-2.5 whitespace-nowrap text-xs text-gray-700">
-                            {st.doctype}
-                          </td>
-                          <td className="px-2 py-2.5 whitespace-nowrap text-xs text-gray-900">
-                            {formatDateOnly(st.transDate)}
-                          </td>
-                          <td className="px-2 py-2.5 whitespace-nowrap text-xs text-gray-900 font-mono">
-                            {st.docCode}
-                          </td>
-                          <td
-                            className="px-2 py-2.5 text-xs text-gray-700 max-w-xs truncate"
-                            title={st.docDesc}
+                      stockTransfers.map((st) => {
+                        const isMissingMaterialCode = !st.materialCode;
+                        const textColor = isMissingMaterialCode
+                          ? "text-red-600"
+                          : "text-gray-700";
+                        const textDarkColor = isMissingMaterialCode
+                          ? "text-red-600"
+                          : "text-gray-900";
+
+                        return (
+                          <tr
+                            key={st.id}
+                            className={`hover:bg-gray-50 transition-colors ${
+                              processingWarehouse === st.id
+                                ? "opacity-50 cursor-wait"
+                                : "cursor-pointer"
+                            }`}
+                            onDoubleClick={() => handleDoubleClick(st)}
+                            title="Double-click để tạo phiếu nhập/xuất kho"
                           >
-                            {st.docDesc || "-"}
-                          </td>
-                          <td className="px-2 py-2.5 whitespace-nowrap text-xs text-gray-700">
-                            {st.branchCode}
-                          </td>
-                          <td className="px-2 py-2.5 whitespace-nowrap text-xs text-gray-700">
-                            {st.brand || st.brandCode}
-                          </td>
-                          <td className="px-2 py-2.5 whitespace-nowrap text-xs text-gray-900 font-mono">
-                            {st.itemCode}
-                          </td>
-                          <td className="px-2 py-2.5 whitespace-nowrap text-xs text-gray-900 font-mono">
-                            {st.materialCode || "-"}
-                          </td>
-                          <td
-                            className="px-2 py-2.5 text-xs text-gray-700 max-w-xs truncate"
-                            title={st.itemName}
-                          >
-                            {st.itemName}
-                          </td>
-                          <td className="px-2 py-2.5 whitespace-nowrap text-xs text-gray-700 font-mono">
-                            {st.stockCode}
-                          </td>
-                          <td className="px-2 py-2.5 whitespace-nowrap text-xs text-gray-700 font-mono">
-                            {st.relatedStockCode || "-"}
-                          </td>
-                          <td className="px-2 py-2.5 whitespace-nowrap text-xs">
-                            <span
-                              className={`px-2 py-0.5 rounded text-xs font-medium ${
-                                st.ioType === "I"
-                                  ? "bg-green-100 text-green-800"
-                                  : st.ioType === "O"
-                                  ? "bg-red-100 text-red-800"
-                                  : "bg-gray-100 text-gray-800"
-                              }`}
+                            <td
+                              className={`px-2 py-2.5 whitespace-nowrap text-xs ${textColor}`}
                             >
-                              {st.ioType}
-                            </span>
-                          </td>
-                          <td className="px-2 py-2.5 whitespace-nowrap text-xs text-gray-900 text-right font-medium">
-                            {formatQty(st.qty)}
-                          </td>
-                          <td className="px-2 py-2.5 whitespace-nowrap text-xs text-gray-700 font-mono">
-                            {st.batchSerial || "-"}
-                          </td>
-                          <td className="px-2 py-2.5 whitespace-nowrap text-xs text-gray-700 font-mono">
-                            {st.lineInfo1 || "-"}
-                          </td>
-                          <td className="px-2 py-2.5 whitespace-nowrap text-xs text-gray-700 font-mono">
-                            {st.lineInfo2 || "-"}
-                          </td>
-                          <td className="px-2 py-2.5 whitespace-nowrap text-xs text-gray-700 font-mono">
-                            {st.soCode || "-"}
-                          </td>
-                          <td className="px-2 py-2.5 whitespace-nowrap text-xs text-gray-700 font-mono">
-                            {st.syncDate || "-"}
-                          </td>
-                          <td className="px-2 py-2.5 whitespace-nowrap text-xs text-gray-500">
-                            {formatDate(st.createdAt)}
-                          </td>
-                          <td className="px-2 py-2.5 whitespace-nowrap text-xs text-gray-500">
-                            {formatDate(st.updatedAt)}
-                          </td>
-                        </tr>
-                      ))
+                              {st.doctype}
+                            </td>
+                            <td
+                              className={`px-2 py-2.5 whitespace-nowrap text-xs ${textDarkColor}`}
+                            >
+                              {formatDateOnly(st.transDate)}
+                            </td>
+                            <td
+                              className={`px-2 py-2.5 whitespace-nowrap text-xs ${textDarkColor} font-mono`}
+                            >
+                              {st.docCode}
+                            </td>
+                            <td
+                              className={`px-2 py-2.5 text-xs ${textColor} max-w-xs truncate`}
+                              title={st.docDesc}
+                            >
+                              {st.docDesc || "-"}
+                            </td>
+                            <td
+                              className={`px-2 py-2.5 whitespace-nowrap text-xs ${textColor}`}
+                            >
+                              {st.branchCode}
+                            </td>
+                            <td
+                              className={`px-2 py-2.5 whitespace-nowrap text-xs ${textColor}`}
+                            >
+                              {st.brand || st.brandCode}
+                            </td>
+                            <td
+                              className={`px-2 py-2.5 whitespace-nowrap text-xs ${textDarkColor} font-mono`}
+                            >
+                              {st.itemCode}
+                            </td>
+                            <td
+                              className={`px-2 py-2.5 whitespace-nowrap text-xs ${textDarkColor} font-mono`}
+                            >
+                              {st.materialCode || "-"}
+                            </td>
+                            <td
+                              className={`px-2 py-2.5 text-xs ${textColor} max-w-xs truncate`}
+                              title={st.itemName}
+                            >
+                              {st.itemName}
+                            </td>
+                            <td
+                              className={`px-2 py-2.5 whitespace-nowrap text-xs ${textColor} font-mono`}
+                            >
+                              {st.stockCode}
+                            </td>
+                            <td
+                              className={`px-2 py-2.5 whitespace-nowrap text-xs ${textColor} font-mono`}
+                            >
+                              {st.relatedStockCode || "-"}
+                            </td>
+                            <td className="px-2 py-2.5 whitespace-nowrap text-xs">
+                              <span
+                                className={`px-2 py-0.5 rounded text-xs font-medium ${
+                                  st.ioType === "I"
+                                    ? "bg-green-100 text-green-800"
+                                    : st.ioType === "O"
+                                      ? "bg-red-100 text-red-800"
+                                      : "bg-gray-100 text-gray-800"
+                                }`}
+                              >
+                                {st.ioType}
+                              </span>
+                            </td>
+                            <td
+                              className={`px-2 py-2.5 whitespace-nowrap text-xs ${textDarkColor} text-right font-medium`}
+                            >
+                              {formatQty(st.qty)}
+                            </td>
+                            <td
+                              className={`px-2 py-2.5 whitespace-nowrap text-xs ${textColor} font-mono`}
+                            >
+                              {st.batchSerial || "-"}
+                            </td>
+                            <td
+                              className={`px-2 py-2.5 whitespace-nowrap text-xs ${textColor} font-mono`}
+                            >
+                              {st.lineInfo1 || "-"}
+                            </td>
+                            <td
+                              className={`px-2 py-2.5 whitespace-nowrap text-xs ${textColor} font-mono`}
+                            >
+                              {st.lineInfo2 || "-"}
+                            </td>
+                            <td
+                              className={`px-2 py-2.5 whitespace-nowrap text-xs ${textColor} font-mono`}
+                            >
+                              {st.soCode || "-"}
+                            </td>
+                            <td
+                              className={`px-2 py-2.5 whitespace-nowrap text-xs ${textColor} font-mono`}
+                            >
+                              {st.syncDate || "-"}
+                            </td>
+                            <td className="px-2 py-2.5 whitespace-nowrap text-xs text-gray-500">
+                              {formatDate(st.createdAt)}
+                            </td>
+                            <td className="px-2 py-2.5 whitespace-nowrap text-xs text-gray-500">
+                              {formatDate(st.updatedAt)}
+                            </td>
+                          </tr>
+                        );
+                      })
                     )}
                   </tbody>
                 </table>

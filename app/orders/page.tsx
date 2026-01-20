@@ -637,6 +637,8 @@ export default function OrdersPage() {
                       // Chú ý: statusAsys có thể là undefined, null, true, hoặc false
                       // Chỉ bôi đỏ khi statusAsys === false (không phải undefined hoặc null)
                       const isStatusAsysFalse = row.sale?.statusAsys === false;
+                      const isMissingCucThue = !row.sale?.cucThue;
+
                       return (
                         <tr
                           key={rowKey}
@@ -652,7 +654,7 @@ export default function OrdersPage() {
                                 : "hover:bg-gray-50"
                           } ${
                             submittingInvoice ? "opacity-50 cursor-wait" : ""
-                          }`}
+                          } ${isMissingCucThue ? "text-red-600 font-medium" : ""}`}
                         >
                           {selectedColumns.map((column) => (
                             <td
