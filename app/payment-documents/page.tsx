@@ -472,7 +472,9 @@ export default function PaymentDocumentsPage() {
                     <tr
                       key={index}
                       className={`hover:bg-gray-50 cursor-pointer ${
-                        payment.docdate && !payment.docDate
+                        payment.docdate &&
+                        !payment.docDate &&
+                        payment.so_code?.startsWith("SO")
                           ? "bg-red-100 hover:bg-red-200"
                           : ""
                       }`}

@@ -322,6 +322,7 @@ export const MAIN_COLUMNS: OrderColumn[] = [
   "maCtkmTangHang", // Mã CTKM tặng hàng
   "maThe", // Mã thẻ
   "soSerial", // Số serial
+  "ma_vt_ref", // Mã VT tham chiếu
   // Stock Transfer columns
   "stockTransferStockCode", // Mã kho xuất
   "stockTransferQty", // Số lượng xuất kho
