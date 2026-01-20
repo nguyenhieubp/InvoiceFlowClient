@@ -146,7 +146,7 @@ export const syncApi = {
   syncStockTransferRange: (
     dateFrom: string,
     dateTo: string,
-    brand?: string
+    brand?: string,
   ) => {
     return api.post("/sync/stock-transfer/range", { dateFrom, dateTo, brand });
   },
@@ -158,7 +158,7 @@ export const syncApi = {
   syncShiftEndCashByDateRange: (
     startDate: string,
     endDate: string,
-    brand?: string
+    brand?: string,
   ) => {
     return api.post("/sync/shift-end-cash/range", {
       startDate,
@@ -170,7 +170,7 @@ export const syncApi = {
   syncRepackFormulaByDateRange: (
     startDate: string,
     endDate: string,
-    brand?: string
+    brand?: string,
   ) => {
     return api.post("/sync/repack-formula/range", {
       startDate,
@@ -182,7 +182,7 @@ export const syncApi = {
   syncPromotionByDateRange: (
     startDate: string,
     endDate: string,
-    brand?: string
+    brand?: string,
   ) => {
     return api.post("/sync/promotion/range", { startDate, endDate, brand });
   },
@@ -190,7 +190,7 @@ export const syncApi = {
   syncVoucherIssueByDateRange: (
     startDate: string,
     endDate: string,
-    brand?: string
+    brand?: string,
   ) => {
     return api.post("/sync/voucher-issue/range", { startDate, endDate, brand });
   },
@@ -202,7 +202,7 @@ export const syncApi = {
   syncCashioByDateRange: (
     startDate: string,
     endDate: string,
-    brand?: string
+    brand?: string,
   ) => {
     return api.post("/sync/cashio/range", { startDate, endDate, brand });
   },
@@ -210,7 +210,7 @@ export const syncApi = {
   syncWsaleByDateRange: (
     startDate: string,
     endDate: string,
-    brand?: string
+    brand?: string,
   ) => {
     return api.post("/sync/wsale/range", { startDate, endDate, brand });
   },
@@ -337,7 +337,7 @@ export const warehouseProcessedApi = {
   },
   retryByDocCode: (docCode: string) => {
     return api.post(
-      `/sales/stock-transfer/doc-code/${docCode}/warehouse-retry`
+      `/sales/stock-transfer/doc-code/${docCode}/warehouse-retry`,
     );
   },
   retryFailedByDateRange: (dateFrom: string, dateTo: string) => {
@@ -346,7 +346,7 @@ export const warehouseProcessedApi = {
       {
         dateFrom,
         dateTo,
-      }
+      },
     );
   },
 };
@@ -471,7 +471,7 @@ export const categoriesApi = {
   },
   getWarehouseCodeMappingByMaCu: (maCu: string) => {
     return api.get(
-      `/categories/warehouse-code-mappings/ma-cu/${encodeURIComponent(maCu)}`
+      `/categories/warehouse-code-mappings/ma-cu/${encodeURIComponent(maCu)}`,
     );
   },
   createWarehouseCodeMapping: (data: any) => {
@@ -513,7 +513,7 @@ export const categoriesApi = {
   },
   getPaymentMethodByCode: (code: string) => {
     return api.get(
-      `/categories/payment-methods/code/${encodeURIComponent(code)}`
+      `/categories/payment-methods/code/${encodeURIComponent(code)}`,
     );
   },
   createPaymentMethod: (data: any) => {
@@ -532,6 +532,11 @@ export const categoriesApi = {
       headers: {
         "Content-Type": "multipart/form-data",
       },
+    });
+  },
+  exportPaymentMethodsExcel: () => {
+    return api.get("/categories/payment-methods/export", {
+      responseType: "blob",
     });
   },
   // Customers
@@ -583,7 +588,7 @@ export const categoriesApi = {
   // Loyalty API Proxy
   getProductByCode: (itemCode: string) => {
     return api.get(
-      `/categories/loyalty/products/code/${encodeURIComponent(itemCode)}`
+      `/categories/loyalty/products/code/${encodeURIComponent(itemCode)}`,
     );
   },
   getDepartmentByBranchCode: (branchcode: string) => {
@@ -591,8 +596,30 @@ export const categoriesApi = {
   },
   getPromotionByCode: (code: string) => {
     return api.get(
-      `/categories/loyalty/promotions/item/code/${encodeURIComponent(code)}`
+      `/categories/loyalty/promotions/item/code/${encodeURIComponent(code)}`,
     );
+  },
+};
+
+// Payment API
+export const paymentsApi = {
+  exportExcel: (params?: {
+    search?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    brand?: string;
+    fopSyscode?: string;
+  }) => {
+    const queryString = new URLSearchParams();
+    if (params?.search) queryString.append("search", params.search);
+    if (params?.dateFrom) queryString.append("dateFrom", params.dateFrom);
+    if (params?.dateTo) queryString.append("dateTo", params.dateTo);
+    if (params?.brand) queryString.append("brand", params.brand);
+    if (params?.fopSyscode) queryString.append("fopSyscode", params.fopSyscode);
+
+    return api.get(`/payments/export?${queryString.toString()}`, {
+      responseType: "blob",
+    });
   },
 };
 

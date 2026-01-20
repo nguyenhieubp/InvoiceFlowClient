@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import React, { useEffect, useState } from 'react';
-import { categoriesApi } from '@/lib/api';
-import { Toast } from '@/components/Toast';
+import React, { useEffect, useState } from "react";
+import { categoriesApi } from "@/lib/api";
+import { Toast } from "@/components/Toast";
 
 interface PaymentMethod {
   id?: string;
@@ -22,45 +22,48 @@ interface PaymentMethod {
 }
 
 const FIELD_LABELS: Record<keyof PaymentMethod, string> = {
-  id: 'Id',
-  externalId: 'Id (Hệ thống cũ)',
-  code: 'Mã',
-  description: 'Diễn giải',
-  systemCode: 'Mã hệ thống',
-  documentType: 'Loại chứng từ',
-  erp: 'ERP',
-  bankUnit: 'Đơn vị ngân hàng',
-  trangThai: 'Trạng thái',
-  ngayTao: 'Ngày tạo',
-  ngaySua: 'Ngày sửa',
-  nguoiTao: 'Người tạo',
-  nguoiSua: 'Người sửa',
-  maDoiTac: 'Mã đối tác',
+  id: "Id",
+  externalId: "Id (Hệ thống cũ)",
+  code: "Mã",
+  description: "Diễn giải",
+  systemCode: "Mã hệ thống",
+  documentType: "Loại chứng từ",
+  erp: "ERP",
+  bankUnit: "Đơn vị ngân hàng",
+  trangThai: "Trạng thái",
+  ngayTao: "Ngày tạo",
+  ngaySua: "Ngày sửa",
+  nguoiTao: "Người tạo",
+  nguoiSua: "Người sửa",
+  maDoiTac: "Mã đối tác",
 };
 
 // Các fields chính để hiển thị trong bảng (ẩn id UUID)
 const MAIN_COLUMNS: (keyof PaymentMethod)[] = [
-  'externalId',
-  'code',
-  'description',
-  'systemCode',
-  'documentType',
-  'erp',
-  'bankUnit',
-  'trangThai',
-  'maDoiTac',
+  "externalId",
+  "code",
+  "description",
+  "systemCode",
+  "documentType",
+  "erp",
+  "bankUnit",
+  "trangThai",
+  "maDoiTac",
 ];
 
 export default function PaymentMethodsPage() {
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedColumns, setSelectedColumns] = useState<(keyof PaymentMethod)[]>(
-    [...MAIN_COLUMNS]
-  );
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedColumns, setSelectedColumns] = useState<
+    (keyof PaymentMethod)[]
+  >([...MAIN_COLUMNS]);
   const [showColumnSelector, setShowColumnSelector] = useState(false);
-  const [columnSearchQuery, setColumnSearchQuery] = useState('');
-  const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
+  const [columnSearchQuery, setColumnSearchQuery] = useState("");
+  const [toast, setToast] = useState<{
+    type: "success" | "error" | "info";
+    message: string;
+  } | null>(null);
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 50,
@@ -70,6 +73,7 @@ export default function PaymentMethodsPage() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
+  const [exporting, setExporting] = useState(false);
   const [importResult, setImportResult] = useState<{
     total: number;
     processed?: number;
@@ -79,14 +83,16 @@ export default function PaymentMethodsPage() {
     errors: Array<{ row: number; error: string }>;
   } | null>(null);
   const [showFormModal, setShowFormModal] = useState(false);
-  const [editingPaymentMethod, setEditingPaymentMethod] = useState<PaymentMethod | null>(null);
+  const [editingPaymentMethod, setEditingPaymentMethod] =
+    useState<PaymentMethod | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [deletingPaymentMethod, setDeletingPaymentMethod] = useState<PaymentMethod | null>(null);
+  const [deletingPaymentMethod, setDeletingPaymentMethod] =
+    useState<PaymentMethod | null>(null);
   const [formData, setFormData] = useState<Partial<PaymentMethod>>({});
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  const showToast = (type: 'success' | 'error' | 'info', message: string) => {
+  const showToast = (type: "success" | "error" | "info", message: string) => {
     setToast({ type, message });
   };
 
@@ -97,7 +103,7 @@ export default function PaymentMethodsPage() {
   }, [toast]);
 
   // Debounce search query
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -128,32 +134,38 @@ export default function PaymentMethodsPage() {
         search: debouncedSearchQuery || undefined,
       });
       const data = response.data.data || response.data || [];
-      console.log('Payment methods loaded:', data);
+      console.log("Payment methods loaded:", data);
       if (data.length > 0) {
-        console.log('First item maDoiTac:', data[0].maDoiTac);
+        console.log("First item maDoiTac:", data[0].maDoiTac);
       }
       setPaymentMethods(data);
       setPagination((prev) => ({
         ...prev,
         total: response.data.total || data.length,
-        totalPages: response.data.totalPages || Math.ceil((response.data.total || data.length) / prev.limit),
+        totalPages:
+          response.data.totalPages ||
+          Math.ceil((response.data.total || data.length) / prev.limit),
       }));
     } catch (error: any) {
-      showToast('error', 'Lỗi khi tải danh sách phương thức thanh toán: ' + (error.response?.data?.message || error.message));
+      showToast(
+        "error",
+        "Lỗi khi tải danh sách phương thức thanh toán: " +
+          (error.response?.data?.message || error.message),
+      );
     } finally {
       setLoading(false);
     }
   };
 
   const toggleColumn = (field: keyof PaymentMethod) => {
-    setSelectedColumns(prev => {
+    setSelectedColumns((prev) => {
       const index = prev.indexOf(field);
       if (index > -1) {
-        return prev.filter(col => col !== field);
+        return prev.filter((col) => col !== field);
       } else {
         const allFields = Object.keys(FIELD_LABELS) as (keyof PaymentMethod)[];
         const fieldIndex = allFields.indexOf(field);
-        
+
         let insertIndex = prev.length;
         for (let i = 0; i < prev.length; i++) {
           const currentIndex = allFields.indexOf(prev[i]);
@@ -162,7 +174,7 @@ export default function PaymentMethodsPage() {
             break;
           }
         }
-        
+
         const newSelected = [...prev];
         newSelected.splice(insertIndex, 0, field);
         return newSelected;
@@ -171,19 +183,21 @@ export default function PaymentMethodsPage() {
   };
 
   const formatValue = (value: any): React.ReactNode => {
-    if (value === null || value === undefined || value === '') return (
-      <span className="text-gray-400 italic">-</span>
-    );
-    
-    if (typeof value === 'string') {
-      if (value.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/) || value.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    if (value === null || value === undefined || value === "")
+      return <span className="text-gray-400 italic">-</span>;
+
+    if (typeof value === "string") {
+      if (
+        value.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/) ||
+        value.match(/^\d{4}-\d{2}-\d{2}$/)
+      ) {
         try {
-          return new Date(value).toLocaleString('vi-VN', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
+          return new Date(value).toLocaleString("vi-VN", {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
           });
         } catch {
           return value;
@@ -196,14 +210,17 @@ export default function PaymentMethodsPage() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const validExtensions = ['.xlsx', '.xls', '.csv'];
-      const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
-      
+      const validExtensions = [".xlsx", ".xls", ".csv"];
+      const fileExtension = "." + file.name.split(".").pop()?.toLowerCase();
+
       if (!validExtensions.includes(fileExtension)) {
-        showToast('error', 'File không hợp lệ. Vui lòng chọn file Excel (.xlsx, .xls) hoặc CSV');
+        showToast(
+          "error",
+          "File không hợp lệ. Vui lòng chọn file Excel (.xlsx, .xls) hoặc CSV",
+        );
         return;
       }
-      
+
       setImportFile(file);
       setImportResult(null);
     }
@@ -211,19 +228,23 @@ export default function PaymentMethodsPage() {
 
   const handleImport = async () => {
     if (!importFile) {
-      showToast('error', 'Vui lòng chọn file để import');
+      showToast("error", "Vui lòng chọn file để import");
       return;
     }
 
     try {
       setImporting(true);
-      const response = await categoriesApi.importPaymentMethodsExcel(importFile);
+      const response =
+        await categoriesApi.importPaymentMethodsExcel(importFile);
       const result = response.data;
-      
+
       setImportResult(result);
-      
+
       if (result.success > 0) {
-        showToast('success', `Import thành công: ${result.success}/${result.total} bản ghi`);
+        showToast(
+          "success",
+          `Import thành công: ${result.success}/${result.total} bản ghi`,
+        );
         await loadPaymentMethods();
         setImportFile(null);
         setTimeout(() => {
@@ -231,19 +252,60 @@ export default function PaymentMethodsPage() {
           setImportResult(null);
         }, 3000);
       } else {
-        showToast('error', `Import thất bại. Không có bản ghi nào được import`);
+        showToast("error", `Import thất bại. Không có bản ghi nào được import`);
       }
     } catch (error: any) {
-      showToast('error', 'Lỗi khi import file: ' + (error.response?.data?.message || error.message));
+      showToast(
+        "error",
+        "Lỗi khi import file: " +
+          (error.response?.data?.message || error.message),
+      );
     } finally {
       setImporting(false);
+    }
+  };
+
+  const handleExport = async () => {
+    try {
+      setExporting(true);
+      const response = await categoriesApi.exportPaymentMethodsExcel();
+
+      // Create blob from response
+      const blob = new Blob([response.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      const fileName = `PaymentMethods_${new Date().toISOString().split("T")[0]}.xlsx`;
+      link.setAttribute("download", fileName);
+
+      // Trigger download
+      document.body.appendChild(link);
+      link.click();
+
+      // Cleanup
+      link.parentNode?.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      showToast("success", "Export dữ liệu thành công");
+    } catch (error: any) {
+      showToast(
+        "error",
+        "Lỗi khi export dữ liệu: " +
+          (error.response?.data?.message || error.message),
+      );
+    } finally {
+      setExporting(false);
     }
   };
 
   const handleCreate = () => {
     setEditingPaymentMethod(null);
     setFormData({
-      trangThai: 'active',
+      trangThai: "active",
     });
     setShowFormModal(true);
   };
@@ -265,12 +327,16 @@ export default function PaymentMethodsPage() {
     try {
       setDeleting(true);
       await categoriesApi.deletePaymentMethod(deletingPaymentMethod.id);
-      showToast('success', 'Xóa phương thức thanh toán thành công');
+      showToast("success", "Xóa phương thức thanh toán thành công");
       await loadPaymentMethods();
       setShowDeleteModal(false);
       setDeletingPaymentMethod(null);
     } catch (error: any) {
-      showToast('error', 'Lỗi khi xóa phương thức thanh toán: ' + (error.response?.data?.message || error.message));
+      showToast(
+        "error",
+        "Lỗi khi xóa phương thức thanh toán: " +
+          (error.response?.data?.message || error.message),
+      );
     } finally {
       setDeleting(false);
     }
@@ -280,18 +346,25 @@ export default function PaymentMethodsPage() {
     try {
       setSaving(true);
       if (editingPaymentMethod?.id) {
-        await categoriesApi.updatePaymentMethod(editingPaymentMethod.id, formData);
-        showToast('success', 'Cập nhật phương thức thanh toán thành công');
+        await categoriesApi.updatePaymentMethod(
+          editingPaymentMethod.id,
+          formData,
+        );
+        showToast("success", "Cập nhật phương thức thanh toán thành công");
       } else {
         await categoriesApi.createPaymentMethod(formData);
-        showToast('success', 'Tạo phương thức thanh toán thành công');
+        showToast("success", "Tạo phương thức thanh toán thành công");
       }
       await loadPaymentMethods();
       setShowFormModal(false);
       setEditingPaymentMethod(null);
       setFormData({});
     } catch (error: any) {
-      showToast('error', 'Lỗi khi lưu phương thức thanh toán: ' + (error.response?.data?.message || error.message));
+      showToast(
+        "error",
+        "Lỗi khi lưu phương thức thanh toán: " +
+          (error.response?.data?.message || error.message),
+      );
     } finally {
       setSaving(false);
     }
@@ -307,7 +380,13 @@ export default function PaymentMethodsPage() {
     <div className="min-h-screen bg-white relative overflow-auto">
       {/* Toast notifications */}
       <div className="fixed top-4 right-4 z-50 space-y-3">
-        {toast && <Toast type={toast.type} message={toast.message} onClose={() => setToast(null)} />}
+        {toast && (
+          <Toast
+            type={toast.type}
+            message={toast.message}
+            onClose={() => setToast(null)}
+          />
+        )}
       </div>
 
       {/* Overlay khi đang import */}
@@ -318,8 +397,18 @@ export default function PaymentMethodsPage() {
               <div className="relative mb-6">
                 <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-100 border-t-blue-600"></div>
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <svg className="w-8 h-8 text-blue-600 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                  <svg
+                    className="w-8 h-8 text-blue-600 animate-pulse"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                    />
                   </svg>
                 </div>
               </div>
@@ -327,7 +416,8 @@ export default function PaymentMethodsPage() {
                 Đang import dữ liệu từ Excel
               </h3>
               <p className="text-sm text-gray-600 text-center mb-4">
-                Vui lòng đợi trong giây lát, quá trình này có thể mất vài phút tùy thuộc vào số lượng dữ liệu...
+                Vui lòng đợi trong giây lát, quá trình này có thể mất vài phút
+                tùy thuộc vào số lượng dữ liệu...
               </p>
               <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
                 <div className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full animate-progress"></div>
@@ -342,14 +432,26 @@ export default function PaymentMethodsPage() {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4">
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between flex-wrap gap-3">
-              <h1 className="text-2xl font-bold text-gray-900">Danh mục phương thức thanh toán</h1>
+              <h1 className="text-2xl font-bold text-gray-900">
+                Danh mục phương thức thanh toán
+              </h1>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setShowColumnSelector(!showColumnSelector)}
                   className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors inline-flex items-center gap-2"
                 >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
+                    />
                   </svg>
                   Chọn cột hiển thị
                 </button>
@@ -357,17 +459,79 @@ export default function PaymentMethodsPage() {
                   onClick={() => setShowImportModal(true)}
                   className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors inline-flex items-center gap-2"
                 >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                    />
                   </svg>
                   Import Excel
+                </button>
+                <button
+                  onClick={handleExport}
+                  disabled={exporting}
+                  className="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors inline-flex items-center gap-2 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                >
+                  {exporting ? (
+                    <svg
+                      className="w-4 h-4 animate-spin"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                  ) : (
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                      />
+                    </svg>
+                  )}
+                  {exporting ? "Đang export..." : "Export Excel"}
                 </button>
                 <button
                   onClick={handleCreate}
                   className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors inline-flex items-center gap-2"
                 >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 4v16m8-8H4"
+                    />
                   </svg>
                   Thêm mới
                 </button>
@@ -378,7 +542,9 @@ export default function PaymentMethodsPage() {
             {showColumnSelector && (
               <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold text-gray-700">Chọn cột hiển thị</h3>
+                  <h3 className="text-sm font-semibold text-gray-700">
+                    Chọn cột hiển thị
+                  </h3>
                   <input
                     type="text"
                     placeholder="Tìm kiếm cột..."
@@ -389,20 +555,28 @@ export default function PaymentMethodsPage() {
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
                   {(Object.keys(FIELD_LABELS) as (keyof PaymentMethod)[])
-                    .filter(field => field !== 'id')
-                    .filter(field => 
-                      columnSearchQuery === '' || 
-                      FIELD_LABELS[field].toLowerCase().includes(columnSearchQuery.toLowerCase())
+                    .filter((field) => field !== "id")
+                    .filter(
+                      (field) =>
+                        columnSearchQuery === "" ||
+                        FIELD_LABELS[field]
+                          .toLowerCase()
+                          .includes(columnSearchQuery.toLowerCase()),
                     )
                     .map((field) => (
-                      <label key={field} className="flex items-center gap-2 cursor-pointer">
+                      <label
+                        key={field}
+                        className="flex items-center gap-2 cursor-pointer"
+                      >
                         <input
                           type="checkbox"
                           checked={selectedColumns.includes(field)}
                           onChange={() => toggleColumn(field)}
                           className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                         />
-                        <span className="text-sm text-gray-700">{FIELD_LABELS[field]}</span>
+                        <span className="text-sm text-gray-700">
+                          {FIELD_LABELS[field]}
+                        </span>
                       </label>
                     ))}
                 </div>
@@ -412,8 +586,18 @@ export default function PaymentMethodsPage() {
             {/* Search */}
             <div className="flex items-center gap-2">
               <div className="flex-1 relative">
-                <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                <svg
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
                 </svg>
                 <input
                   type="text"
@@ -459,9 +643,15 @@ export default function PaymentMethodsPage() {
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {paymentMethods.map((paymentMethod) => (
-                      <tr key={paymentMethod.id} className="hover:bg-gray-50 transition-colors">
+                      <tr
+                        key={paymentMethod.id}
+                        className="hover:bg-gray-50 transition-colors"
+                      >
                         {visibleColumns.map((field) => (
-                          <td key={field} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          <td
+                            key={field}
+                            className="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
+                          >
                             {formatValue(paymentMethod[field])}
                           </td>
                         ))}
@@ -472,8 +662,18 @@ export default function PaymentMethodsPage() {
                               className="text-blue-600 hover:text-blue-900 transition-colors"
                               title="Sửa"
                             >
-                              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              <svg
+                                className="w-5 h-5"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                />
                               </svg>
                             </button>
                             <button
@@ -481,8 +681,18 @@ export default function PaymentMethodsPage() {
                               className="text-red-600 hover:text-red-900 transition-colors"
                               title="Xóa"
                             >
-                              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              <svg
+                                className="w-5 h-5"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                />
                               </svg>
                             </button>
                           </div>
@@ -496,18 +706,29 @@ export default function PaymentMethodsPage() {
               {pagination.totalPages > 1 && (
                 <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
                   <div className="text-sm text-gray-700">
-                    Trang {pagination.page} / {pagination.totalPages} (Tổng {pagination.total} bản ghi)
+                    Trang {pagination.page} / {pagination.totalPages} (Tổng{" "}
+                    {pagination.total} bản ghi)
                   </div>
                   <div className="flex gap-2">
                     <button
-                      onClick={() => setPagination({ ...pagination, page: pagination.page - 1 })}
+                      onClick={() =>
+                        setPagination({
+                          ...pagination,
+                          page: pagination.page - 1,
+                        })
+                      }
                       disabled={pagination.page === 1}
                       className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Trước
                     </button>
                     <button
-                      onClick={() => setPagination({ ...pagination, page: pagination.page + 1 })}
+                      onClick={() =>
+                        setPagination({
+                          ...pagination,
+                          page: pagination.page + 1,
+                        })
+                      }
                       disabled={pagination.page >= pagination.totalPages}
                       className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
@@ -527,7 +748,9 @@ export default function PaymentMethodsPage() {
           <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-gray-900">Import từ Excel</h2>
+                <h2 className="text-xl font-bold text-gray-900">
+                  Import từ Excel
+                </h2>
                 <button
                   onClick={() => {
                     setShowImportModal(false);
@@ -536,8 +759,18 @@ export default function PaymentMethodsPage() {
                   }}
                   className="text-gray-400 hover:text-gray-600 transition-colors"
                 >
-                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  <svg
+                    className="w-6 h-6"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
                   </svg>
                 </button>
               </div>
@@ -553,35 +786,69 @@ export default function PaymentMethodsPage() {
                   className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                 />
                 <p className="mt-2 text-xs text-gray-500">
-                  File Excel phải có các cột: <strong>Id</strong>, <strong>Mã</strong>, <strong>Diễn giải</strong>, <strong>Mã hệ thống</strong>, <strong>Loại chứng từ</strong>, <strong>ERP</strong>, <strong>Đơn vị ngân hàng</strong>, <strong>Mã đối tác</strong>
+                  File Excel phải có các cột: <strong>Id</strong>,{" "}
+                  <strong>Mã</strong>, <strong>Diễn giải</strong>,{" "}
+                  <strong>Mã hệ thống</strong>, <strong>Loại chứng từ</strong>,{" "}
+                  <strong>ERP</strong>, <strong>Đơn vị ngân hàng</strong>,{" "}
+                  <strong>Mã đối tác</strong>
                 </p>
               </div>
 
               {importResult && (
-                <div className={`p-4 rounded-lg mb-4 ${
-                  importResult.success > 0 ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'
-                }`}>
+                <div
+                  className={`p-4 rounded-lg mb-4 ${
+                    importResult.success > 0
+                      ? "bg-green-50 border border-green-200"
+                      : "bg-red-50 border border-red-200"
+                  }`}
+                >
                   <div className="flex items-center gap-2 mb-2">
                     {importResult.success > 0 ? (
-                      <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      <svg
+                        className="w-5 h-5 text-green-600"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
                       </svg>
                     ) : (
-                      <svg className="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      <svg
+                        className="w-5 h-5 text-red-600"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
                       </svg>
                     )}
                     <div className="flex-1">
-                      <span className={`font-semibold text-lg ${importResult.success > 0 ? 'text-green-800' : 'text-red-800'}`}>
-                        {importResult.success > 0 
+                      <span
+                        className={`font-semibold text-lg ${importResult.success > 0 ? "text-green-800" : "text-red-800"}`}
+                      >
+                        {importResult.success > 0
                           ? `Import thành công: ${importResult.success}/${importResult.processed || importResult.total} bản ghi`
                           : `Import thất bại: ${importResult.failed}/${importResult.processed || importResult.total} bản ghi`}
                       </span>
-                      {importResult.processed && importResult.processed < importResult.total && (
-                        <div className="text-sm text-gray-600 mt-1">
-                          Tổng số dòng trong file: {importResult.total} | Đã xử lý: {importResult.processed} | Dòng trống bỏ qua: {importResult.emptyRows || (importResult.total - importResult.processed)}
-                        </div>
-                      )}
+                      {importResult.processed &&
+                        importResult.processed < importResult.total && (
+                          <div className="text-sm text-gray-600 mt-1">
+                            Tổng số dòng trong file: {importResult.total} | Đã
+                            xử lý: {importResult.processed} | Dòng trống bỏ qua:{" "}
+                            {importResult.emptyRows ||
+                              importResult.total - importResult.processed}
+                          </div>
+                        )}
                     </div>
                   </div>
                   {importResult.failed > 0 && importResult.success > 0 && (
@@ -591,7 +858,9 @@ export default function PaymentMethodsPage() {
                   )}
                   {importResult.errors && importResult.errors.length > 0 && (
                     <div className="mt-2 max-h-40 overflow-y-auto">
-                      <p className="text-xs font-semibold text-gray-700 mb-1">Chi tiết lỗi:</p>
+                      <p className="text-xs font-semibold text-gray-700 mb-1">
+                        Chi tiết lỗi:
+                      </p>
                       {importResult.errors.map((error, idx) => (
                         <div key={idx} className="text-xs text-gray-600 mb-1">
                           Dòng {error.row}: {error.error}
@@ -618,7 +887,7 @@ export default function PaymentMethodsPage() {
                   disabled={!importFile || importing}
                   className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
                 >
-                  {importing ? 'Đang import...' : 'Import'}
+                  {importing ? "Đang import..." : "Import"}
                 </button>
               </div>
             </div>
@@ -633,7 +902,9 @@ export default function PaymentMethodsPage() {
             <div className="p-4 sm:p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg sm:text-xl font-bold text-gray-900">
-                  {editingPaymentMethod ? 'Sửa phương thức thanh toán' : 'Thêm phương thức thanh toán mới'}
+                  {editingPaymentMethod
+                    ? "Sửa phương thức thanh toán"
+                    : "Thêm phương thức thanh toán mới"}
                 </h2>
                 <button
                   onClick={() => {
@@ -643,8 +914,18 @@ export default function PaymentMethodsPage() {
                   }}
                   className="text-gray-400 hover:text-gray-600 transition-colors"
                 >
-                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  <svg
+                    className="w-6 h-6"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
                   </svg>
                 </button>
               </div>
@@ -656,8 +937,10 @@ export default function PaymentMethodsPage() {
                   </label>
                   <input
                     type="text"
-                    value={formData.externalId || ''}
-                    onChange={(e) => updateFormField('externalId', e.target.value)}
+                    value={formData.externalId || ""}
+                    onChange={(e) =>
+                      updateFormField("externalId", e.target.value)
+                    }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="VD: 108505"
                   />
@@ -669,8 +952,8 @@ export default function PaymentMethodsPage() {
                   </label>
                   <input
                     type="text"
-                    value={formData.code || ''}
-                    onChange={(e) => updateFormField('code', e.target.value)}
+                    value={formData.code || ""}
+                    onChange={(e) => updateFormField("code", e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     required
                   />
@@ -682,8 +965,10 @@ export default function PaymentMethodsPage() {
                   </label>
                   <input
                     type="text"
-                    value={formData.description || ''}
-                    onChange={(e) => updateFormField('description', e.target.value)}
+                    value={formData.description || ""}
+                    onChange={(e) =>
+                      updateFormField("description", e.target.value)
+                    }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -694,8 +979,10 @@ export default function PaymentMethodsPage() {
                   </label>
                   <input
                     type="text"
-                    value={formData.systemCode || ''}
-                    onChange={(e) => updateFormField('systemCode', e.target.value)}
+                    value={formData.systemCode || ""}
+                    onChange={(e) =>
+                      updateFormField("systemCode", e.target.value)
+                    }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -706,8 +993,10 @@ export default function PaymentMethodsPage() {
                   </label>
                   <input
                     type="text"
-                    value={formData.documentType || ''}
-                    onChange={(e) => updateFormField('documentType', e.target.value)}
+                    value={formData.documentType || ""}
+                    onChange={(e) =>
+                      updateFormField("documentType", e.target.value)
+                    }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -718,8 +1007,8 @@ export default function PaymentMethodsPage() {
                   </label>
                   <input
                     type="text"
-                    value={formData.erp || ''}
-                    onChange={(e) => updateFormField('erp', e.target.value)}
+                    value={formData.erp || ""}
+                    onChange={(e) => updateFormField("erp", e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -730,8 +1019,10 @@ export default function PaymentMethodsPage() {
                   </label>
                   <input
                     type="text"
-                    value={formData.bankUnit || ''}
-                    onChange={(e) => updateFormField('bankUnit', e.target.value)}
+                    value={formData.bankUnit || ""}
+                    onChange={(e) =>
+                      updateFormField("bankUnit", e.target.value)
+                    }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -742,8 +1033,10 @@ export default function PaymentMethodsPage() {
                   </label>
                   <input
                     type="text"
-                    value={formData.maDoiTac || ''}
-                    onChange={(e) => updateFormField('maDoiTac', e.target.value)}
+                    value={formData.maDoiTac || ""}
+                    onChange={(e) =>
+                      updateFormField("maDoiTac", e.target.value)
+                    }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -753,8 +1046,10 @@ export default function PaymentMethodsPage() {
                     Trạng thái
                   </label>
                   <select
-                    value={formData.trangThai || 'active'}
-                    onChange={(e) => updateFormField('trangThai', e.target.value)}
+                    value={formData.trangThai || "active"}
+                    onChange={(e) =>
+                      updateFormField("trangThai", e.target.value)
+                    }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="active">Active</option>
@@ -779,7 +1074,7 @@ export default function PaymentMethodsPage() {
                   disabled={saving || !formData.code}
                   className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
                 >
-                  {saving ? 'Đang lưu...' : 'Lưu'}
+                  {saving ? "Đang lưu..." : "Lưu"}
                 </button>
               </div>
             </div>
@@ -794,14 +1089,27 @@ export default function PaymentMethodsPage() {
             <div className="p-6">
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 bg-red-100 rounded-lg">
-                  <svg className="w-6 h-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  <svg
+                    className="w-6 h-6 text-red-600"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                    />
                   </svg>
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-gray-900">Xác nhận xóa</h3>
+                  <h3 className="text-lg font-bold text-gray-900">
+                    Xác nhận xóa
+                  </h3>
                   <p className="text-sm text-gray-600 mt-1">
-                    Bạn có chắc chắn muốn xóa phương thức thanh toán &quot;{deletingPaymentMethod?.code}&quot;?
+                    Bạn có chắc chắn muốn xóa phương thức thanh toán &quot;
+                    {deletingPaymentMethod?.code}&quot;?
                   </p>
                 </div>
               </div>
@@ -821,7 +1129,7 @@ export default function PaymentMethodsPage() {
                   disabled={deleting}
                   className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
                 >
-                  {deleting ? 'Đang xóa...' : 'Xóa'}
+                  {deleting ? "Đang xóa..." : "Xóa"}
                 </button>
               </div>
             </div>
@@ -831,4 +1139,3 @@ export default function PaymentMethodsPage() {
     </div>
   );
 }
-

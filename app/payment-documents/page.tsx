@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { api } from "@/lib/api";
+import { api, paymentsApi } from "@/lib/api";
+import { Toast } from "@/components/Toast";
 
 interface PaymentData {
   // From daily_cashio
@@ -59,6 +60,14 @@ export default function PaymentDocumentsPage() {
     total: 0,
     totalPages: 0,
   });
+  const [toast, setToast] = useState<{
+    type: "success" | "error" | "info";
+    message: string;
+  } | null>(null);
+
+  const showToast = (type: "success" | "error" | "info", message: string) => {
+    setToast({ type, message });
+  };
 
   // Search states
   const [searchQuery, setSearchQuery] = useState(""); // General search
@@ -69,6 +78,7 @@ export default function PaymentDocumentsPage() {
   const [company, setCompany] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [exporting, setExporting] = useState(false);
 
   // Active filters (committed on Search click)
   const [activeFilters, setActiveFilters] = useState({
@@ -89,6 +99,49 @@ export default function PaymentDocumentsPage() {
       dateTo,
     });
     setPagination((prev) => ({ ...prev, page: 1 }));
+  };
+
+  const handleExport = async () => {
+    try {
+      setExporting(true);
+      const response = await paymentsApi.exportExcel({
+        search: activeFilters.search || undefined,
+        fopSyscode: activeFilters.fopSyscode || undefined,
+        brand: activeFilters.company || undefined,
+        dateFrom: activeFilters.dateFrom || undefined,
+        dateTo: activeFilters.dateTo || undefined,
+      });
+
+      // Create blob from response
+      const blob = new Blob([response.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      const fileName = `PaymentDocuments_${new Date().toISOString().split("T")[0]}.xlsx`;
+      link.setAttribute("download", fileName);
+
+      // Trigger download
+      document.body.appendChild(link);
+      link.click();
+
+      // Cleanup
+      link.parentNode?.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      showToast("success", "Export dữ liệu thành công");
+    } catch (error: any) {
+      showToast(
+        "error",
+        "Lỗi khi export dữ liệu: " +
+          (error.response?.data?.message || error.message),
+      );
+    } finally {
+      setExporting(false);
+    }
   };
 
   useEffect(() => {
@@ -155,7 +208,17 @@ export default function PaymentDocumentsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gray-50 p-6 relative">
+      {/* Toast notifications */}
+      <div className="fixed top-4 right-4 z-50 space-y-3">
+        {toast && (
+          <Toast
+            type={toast.type}
+            message={toast.message}
+            onClose={() => setToast(null)}
+          />
+        )}
+      </div>
       <div className="max-w-[1800px] mx-auto">
         {/* Header */}
         <div className="mb-6">
@@ -288,6 +351,49 @@ export default function PaymentDocumentsPage() {
                 className="px-6 py-2 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition-colors duration-200"
               >
                 Xóa bộ lọc
+              </button>
+              <button
+                onClick={handleExport}
+                disabled={exporting}
+                className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors duration-200 flex items-center justify-center gap-2 disabled:bg-gray-400 disabled:cursor-not-allowed"
+              >
+                {exporting ? (
+                  <svg
+                    className="w-5 h-5 animate-spin"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                ) : (
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
+                  </svg>
+                )}
+                Export Excel
               </button>
             </div>
           </div>
