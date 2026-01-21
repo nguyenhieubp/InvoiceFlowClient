@@ -33,14 +33,36 @@ export default function OrdersPage() {
     dateFrom?: string;
     dateTo?: string;
     typeSale?: string;
-  }>({});
+  }>(() => {
+    // Default date = today
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = (now.getMonth() + 1).toString().padStart(2, "0");
+    const day = now.getDate().toString().padStart(2, "0");
+    const today = `${year}-${month}-${day}`;
+    return {
+      dateFrom: today,
+      dateTo: today,
+    };
+  });
   // Filter thực tế (trigger API)
   const [filter, setFilter] = useState<{
     brand?: string;
     dateFrom?: string;
     dateTo?: string;
     typeSale?: string;
-  }>({});
+  }>(() => {
+    // Default date = today
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = (now.getMonth() + 1).toString().padStart(2, "0");
+    const day = now.getDate().toString().padStart(2, "0");
+    const today = `${year}-${month}-${day}`;
+    return {
+      dateFrom: today,
+      dateTo: today,
+    };
+  });
   const [searchInputValue, setSearchInputValue] = useState(""); // Giá trị trong input (không trigger API)
   const [searchQuery, setSearchQuery] = useState(""); // Giá trị search thực tế (trigger API)
   const [typeSaleInput, setTypeSaleInput] = useState<string>("ALL"); // Giá trị input của typeSale
@@ -208,6 +230,22 @@ export default function OrdersPage() {
 
   // Hàm xử lý search/filter khi click nút Tìm kiếm
   const handleSearch = () => {
+    // Validate date range: không được quá 31 ngày
+    if (filterInput.dateFrom && filterInput.dateTo) {
+      const fromDate = new Date(filterInput.dateFrom);
+      const toDate = new Date(filterInput.dateTo);
+      const diffTime = Math.abs(toDate.getTime() - fromDate.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      if (diffDays > 31) {
+        showToast(
+          "error",
+          "Khoảng thời gian tìm kiếm không được vượt quá 31 ngày (1 tháng)",
+        );
+        return;
+      }
+    }
+
     setSearchQuery(searchInputValue);
     setFilter({ ...filterInput }); // Áp dụng filter input vào filter thực tế
     setPagination((prev) => ({ ...prev, page: 1 }));
