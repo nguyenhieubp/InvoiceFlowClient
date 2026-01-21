@@ -285,6 +285,27 @@ export default function StockTransferPage() {
     }
   };
 
+  const handleRetryMaterialCode = async (soCode: string) => {
+    try {
+      showToast("info", `Đang retry material code cho ${soCode}...`);
+      const response = await syncApi.retryStockTransferMaterialCode(soCode);
+      if (response.data.success) {
+        showToast(
+          "success",
+          response.data.message || "Cập nhật material code thành công",
+        );
+        loadStockTransfers();
+      } else {
+        showToast("error", response.data.message || "Không thành công");
+      }
+    } catch (error: any) {
+      showToast(
+        "error",
+        error.response?.data?.message || error.message || "Lỗi khi retry",
+      );
+    }
+  };
+
   const handleDoubleClick = async (stockTransfer: StockTransfer) => {
     // Kiểm tra doctype
     if (stockTransfer.doctype === "STOCK_TRANSFER") {
@@ -822,7 +843,32 @@ export default function StockTransferPage() {
                             <td
                               className={`px-2 py-2.5 whitespace-nowrap text-xs ${textColor} font-mono`}
                             >
-                              {st.soCode || "-"}
+                              <div className="flex items-center gap-1 justify-between">
+                                <span>{st.soCode || "-"}</span>
+                                {st.soCode && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleRetryMaterialCode(st.soCode!);
+                                    }}
+                                    className="text-blue-500 hover:text-blue-700 p-1 rounded hover:bg-blue-50 transition-colors"
+                                    title="Cập nhật Material Code từ Loyalty"
+                                  >
+                                    <svg
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      viewBox="0 0 20 20"
+                                      fill="currentColor"
+                                      className="w-4 h-4"
+                                    >
+                                      <path
+                                        fillRule="evenodd"
+                                        d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
+                                        clipRule="evenodd"
+                                      />
+                                    </svg>
+                                  </button>
+                                )}
+                              </div>
                             </td>
                             <td
                               className={`px-2 py-2.5 whitespace-nowrap text-xs ${textColor} font-mono`}

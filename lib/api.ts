@@ -150,6 +150,10 @@ export const syncApi = {
   ) => {
     return api.post("/sync/stock-transfer/range", { dateFrom, dateTo, brand });
   },
+  // Retry material code for stock transfer
+  retryStockTransferMaterialCode: (soCode: string) => {
+    return api.post("/sync/stock-transfer/retry", { soCode });
+  },
   // Sync báo cáo nộp quỹ cuối ca
   syncShiftEndCash: (date: string, brand?: string) => {
     return api.post("/sync/shift-end-cash", { date, brand });
