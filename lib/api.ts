@@ -308,6 +308,16 @@ export const stockTransferApi = {
   processWarehouse: (id: string) => {
     return api.post(`/sales/stock-transfer/${id}/warehouse`);
   },
+  getMissingMaterial: (params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+  }) => {
+    return api.get("/stock-transfers/missing-material", { params });
+  },
+  updateMaterialCode: (id: string, materialCode: string) => {
+    return api.put(`/stock-transfers/${id}`, { materialCode });
+  },
 };
 
 // Cashio API
@@ -703,4 +713,563 @@ export const fastApiInvoicesApi = {
   }) => {
     return api.post("/fast-api-invoices/sync-by-date-range", data);
   },
+  getInvoiceDetails: (id: string) => {
+    return api.get(`/fast-api-invoices/${id}/details`);
+  },
+  getInvoiceDetailsByDocCode: (docCode: string) => {
+    return api.get(`/fast-api-invoices/doc-code/${docCode}/details`);
+  },
+  getInvoiceDetailsByDocCodeAndMaDvcs: (docCode: string, maDvcs: string) => {
+    return api.get(
+      `/fast-api-invoices/doc-code/${docCode}/ma-dvcs/${maDvcs}/details`,
+    );
+  },
+  getInvoiceDetailsByDocCodeAndMaDvcsAndMaKh: (
+    docCode: string,
+    maDvcs: string,
+    maKh: string,
+  ) => {
+    return api.get(
+      `/fast-api-invoices/doc-code/${docCode}/ma-dvcs/${maDvcs}/ma-kh/${maKh}/details`,
+    );
+  },
+  getInvoiceDetailsByDocCodeAndMaDvcsAndMaKhAndTenKh: (
+    docCode: string,
+    maDvcs: string,
+    maKh: string,
+    tenKh: string,
+  ) => {
+    return api.get(
+      `/fast-api-invoices/doc-code/${docCode}/ma-dvcs/${maDvcs}/ma-kh/${maKh}/ten-kh/${tenKh}/details`,
+    );
+  },
+  getInvoiceDetailsByDocCodeAndMaDvcsAndMaKhAndTenKhAndStatus: (
+    docCode: string,
+    maDvcs: string,
+    maKh: string,
+    tenKh: string,
+    status: number,
+  ) => {
+    return api.get(
+      `/fast-api-invoices/doc-code/${docCode}/ma-dvcs/${maDvcs}/ma-kh/${maKh}/ten-kh/${tenKh}/status/${status}/details`,
+    );
+  },
+  getInvoiceDetailsByDocCodeAndMaDvcsAndMaKhAndTenKhAndStatusAndStartDate: (
+    docCode: string,
+    maDvcs: string,
+    maKh: string,
+    tenKh: string,
+    status: number,
+    startDate: string,
+  ) => {
+    return api.get(
+      `/fast-api-invoices/doc-code/${docCode}/ma-dvcs/${maDvcs}/ma-kh/${maKh}/ten-kh/${tenKh}/status/${status}/start-date/${startDate}/details`,
+    );
+  },
+  getInvoiceDetailsByDocCodeAndMaDvcsAndMaKhAndTenKhAndStatusAndStartDateAndEndDate:
+    (
+      docCode: string,
+      maDvcs: string,
+      maKh: string,
+      tenKh: string,
+      status: number,
+      startDate: string,
+      endDate: string,
+    ) => {
+      return api.get(
+        `/fast-api-invoices/doc-code/${docCode}/ma-dvcs/${maDvcs}/ma-kh/${maKh}/ten-kh/${tenKh}/status/${status}/start-date/${startDate}/end-date/${endDate}/details`,
+      );
+    },
+  getInvoiceDetailsByDocCodeAndMaDvcsAndMaKhAndTenKhAndStatusAndStartDateAndEndDateAndPage:
+    (
+      docCode: string,
+      maDvcs: string,
+      maKh: string,
+      tenKh: string,
+      status: number,
+      startDate: string,
+      endDate: string,
+      page: number,
+    ) => {
+      return api.get(
+        `/fast-api-invoices/doc-code/${docCode}/ma-dvcs/${maDvcs}/ma-kh/${maKh}/ten-kh/${tenKh}/status/${status}/start-date/${startDate}/end-date/${endDate}/page/${page}/details`,
+      );
+    },
+  getInvoiceDetailsByDocCodeAndMaDvcsAndMaKhAndTenKhAndStatusAndStartDateAndEndDateAndPageAndLimit:
+    (
+      docCode: string,
+      maDvcs: string,
+      maKh: string,
+      tenKh: string,
+      status: number,
+      startDate: string,
+      endDate: string,
+      page: number,
+      limit: number,
+    ) => {
+      return api.get(
+        `/fast-api-invoices/doc-code/${docCode}/ma-dvcs/${maDvcs}/ma-kh/${maKh}/ten-kh/${tenKh}/status/${status}/start-date/${startDate}/end-date/${endDate}/page/${page}/limit/${limit}/details`,
+      );
+    },
+  getInvoiceDetailsByDocCodeAndMaDvcsAndMaKhAndTenKhAndStatusAndStartDateAndEndDateAndPageAndLimitAndSearch:
+    (
+      docCode: string,
+      maDvcs: string,
+      maKh: string,
+      tenKh: string,
+      status: number,
+      startDate: string,
+      endDate: string,
+      page: number,
+      limit: number,
+      search: string,
+    ) => {
+      return api.get(
+        `/fast-api-invoices/doc-code/${docCode}/ma-dvcs/${maDvcs}/ma-kh/${maKh}/ten-kh/${tenKh}/status/${status}/start-date/${startDate}/end-date/${endDate}/page/${page}/limit/${limit}/search/${search}/details`,
+      );
+    },
+  getInvoiceDetailsByDocCodeAndMaDvcsAndMaKhAndTenKhAndStatusAndStartDateAndEndDateAndPageAndLimitAndSearchAndSortBy:
+    (
+      docCode: string,
+      maDvcs: string,
+      maKh: string,
+      tenKh: string,
+      status: number,
+      startDate: string,
+      endDate: string,
+      page: number,
+      limit: number,
+      search: string,
+      sortBy: string,
+    ) => {
+      return api.get(
+        `/fast-api-invoices/doc-code/${docCode}/ma-dvcs/${maDvcs}/ma-kh/${maKh}/ten-kh/${tenKh}/status/${status}/start-date/${startDate}/end-date/${endDate}/page/${page}/limit/${limit}/search/${search}/sort-by/${sortBy}/details`,
+      );
+    },
+  getInvoiceDetailsByDocCodeAndMaDvcsAndMaKhAndTenKhAndStatusAndStartDateAndEndDateAndPageAndLimitAndSearchAndSortByAndSortOrder:
+    (
+      docCode: string,
+      maDvcs: string,
+      maKh: string,
+      tenKh: string,
+      status: number,
+      startDate: string,
+      endDate: string,
+      page: number,
+      limit: number,
+      search: string,
+      sortBy: string,
+      sortOrder: string,
+    ) => {
+      return api.get(
+        `/fast-api-invoices/doc-code/${docCode}/ma-dvcs/${maDvcs}/ma-kh/${maKh}/ten-kh/${tenKh}/status/${status}/start-date/${startDate}/end-date/${endDate}/page/${page}/limit/${limit}/search/${search}/sort-by/${sortBy}/sort-order/${sortOrder}/details`,
+      );
+    },
+  getInvoiceDetailsByDocCodeAndMaDvcsAndMaKhAndTenKhAndStatusAndStartDateAndEndDateAndPageAndLimitAndSearchAndSortByAndSortOrderAndFields:
+    (
+      docCode: string,
+      maDvcs: string,
+      maKh: string,
+      tenKh: string,
+      status: number,
+      startDate: string,
+      endDate: string,
+      page: number,
+      limit: number,
+      search: string,
+      sortBy: string,
+      sortOrder: string,
+      fields: string,
+    ) => {
+      return api.get(
+        `/fast-api-invoices/doc-code/${docCode}/ma-dvcs/${maDvcs}/ma-kh/${maKh}/ten-kh/${tenKh}/status/${status}/start-date/${startDate}/end-date/${endDate}/page/${page}/limit/${limit}/search/${search}/sort-by/${sortBy}/sort-order/${sortOrder}/fields/${fields}/details`,
+      );
+    },
+  getInvoiceDetailsByDocCodeAndMaDvcsAndMaKhAndTenKhAndStatusAndStartDateAndEndDateAndPageAndLimitAndSearchAndSortByAndSortOrderAndFieldsAndExpand:
+    (
+      docCode: string,
+      maDvcs: string,
+      maKh: string,
+      tenKh: string,
+      status: number,
+      startDate: string,
+      endDate: string,
+      page: number,
+      limit: number,
+      search: string,
+      sortBy: string,
+      sortOrder: string,
+      fields: string,
+      expand: string,
+    ) => {
+      return api.get(
+        `/fast-api-invoices/doc-code/${docCode}/ma-dvcs/${maDvcs}/ma-kh/${maKh}/ten-kh/${tenKh}/status/${status}/start-date/${startDate}/end-date/${endDate}/page/${page}/limit/${limit}/search/${search}/sort-by/${sortBy}/sort-order/${sortOrder}/fields/${fields}/expand/${expand}/details`,
+      );
+    },
+  getInvoiceDetailsByDocCodeAndMaDvcsAndMaKhAndTenKhAndStatusAndStartDateAndEndDateAndPageAndLimitAndSearchAndSortByAndSortOrderAndFieldsAndExpandAndSelect:
+    (
+      docCode: string,
+      maDvcs: string,
+      maKh: string,
+      tenKh: string,
+      status: number,
+      startDate: string,
+      endDate: string,
+      page: number,
+      limit: number,
+      search: string,
+      sortBy: string,
+      sortOrder: string,
+      fields: string,
+      expand: string,
+      select: string,
+    ) => {
+      return api.get(
+        `/fast-api-invoices/doc-code/${docCode}/ma-dvcs/${maDvcs}/ma-kh/${maKh}/ten-kh/${tenKh}/status/${status}/start-date/${startDate}/end-date/${endDate}/page/${page}/limit/${limit}/search/${search}/sort-by/${sortBy}/sort-order/${sortOrder}/fields/${fields}/expand/${expand}/select/${select}/details`,
+      );
+    },
+  getInvoiceDetailsByDocCodeAndMaDvcsAndMaKhAndTenKhAndStatusAndStartDateAndEndDateAndPageAndLimitAndSearchAndSortByAndSortOrderAndFieldsAndExpandAndSelectAndFilter:
+    (
+      docCode: string,
+      maDvcs: string,
+      maKh: string,
+      tenKh: string,
+      status: number,
+      startDate: string,
+      endDate: string,
+      page: number,
+      limit: number,
+      search: string,
+      sortBy: string,
+      sortOrder: string,
+      fields: string,
+      expand: string,
+      select: string,
+      filter: string,
+    ) => {
+      return api.get(
+        `/fast-api-invoices/doc-code/${docCode}/ma-dvcs/${maDvcs}/ma-kh/${maKh}/ten-kh/${tenKh}/status/${status}/start-date/${startDate}/end-date/${endDate}/page/${page}/limit/${limit}/search/${search}/sort-by/${sortBy}/sort-order/${sortOrder}/fields/${fields}/expand/${expand}/select/${select}/filter/${filter}/details`,
+      );
+    },
+  getInvoiceDetailsByDocCodeAndMaDvcsAndMaKhAndTenKhAndStatusAndStartDateAndEndDateAndPageAndLimitAndSearchAndSortByAndSortOrderAndFieldsAndExpandAndSelectAndFilterAndGroupBy:
+    (
+      docCode: string,
+      maDvcs: string,
+      maKh: string,
+      tenKh: string,
+      status: number,
+      startDate: string,
+      endDate: string,
+      page: number,
+      limit: number,
+      search: string,
+      sortBy: string,
+      sortOrder: string,
+      fields: string,
+      expand: string,
+      select: string,
+      filter: string,
+      groupBy: string,
+    ) => {
+      return api.get(
+        `/fast-api-invoices/doc-code/${docCode}/ma-dvcs/${maDvcs}/ma-kh/${maKh}/ten-kh/${tenKh}/status/${status}/start-date/${startDate}/end-date/${endDate}/page/${page}/limit/${limit}/search/${search}/sort-by/${sortBy}/sort-order/${sortOrder}/fields/${fields}/expand/${expand}/select/${select}/filter/${filter}/group-by/${groupBy}/details`,
+      );
+    },
+  getInvoiceDetailsByDocCodeAndMaDvcsAndMaKhAndTenKhAndStatusAndStartDateAndEndDateAndPageAndLimitAndSearchAndSortByAndSortOrderAndFieldsAndExpandAndSelectAndFilterAndGroupByAndAggregate:
+    (
+      docCode: string,
+      maDvcs: string,
+      maKh: string,
+      tenKh: string,
+      status: number,
+      startDate: string,
+      endDate: string,
+      page: number,
+      limit: number,
+      search: string,
+      sortBy: string,
+      sortOrder: string,
+      fields: string,
+      expand: string,
+      select: string,
+      filter: string,
+      groupBy: string,
+      aggregate: string,
+    ) => {
+      return api.get(
+        `/fast-api-invoices/doc-code/${docCode}/ma-dvcs/${maDvcs}/ma-kh/${maKh}/ten-kh/${tenKh}/status/${status}/start-date/${startDate}/end-date/${endDate}/page/${page}/limit/${limit}/search/${search}/sort-by/${sortBy}/sort-order/${sortOrder}/fields/${fields}/expand/${expand}/select/${select}/filter/${filter}/group-by/${groupBy}/aggregate/${aggregate}/details`,
+      );
+    },
+  getInvoiceDetailsByDocCodeAndMaDvcsAndMaKhAndTenKhAndStatusAndStartDateAndEndDateAndPageAndLimitAndSearchAndSortByAndSortOrderAndFieldsAndExpandAndSelectAndFilterAndGroupByAndAggregateAndCount:
+    (
+      docCode: string,
+      maDvcs: string,
+      maKh: string,
+      tenKh: string,
+      status: number,
+      startDate: string,
+      endDate: string,
+      page: number,
+      limit: number,
+      search: string,
+      sortBy: string,
+      sortOrder: string,
+      fields: string,
+      expand: string,
+      select: string,
+      filter: string,
+      groupBy: string,
+      aggregate: string,
+      count: boolean,
+    ) => {
+      return api.get(
+        `/fast-api-invoices/doc-code/${docCode}/ma-dvcs/${maDvcs}/ma-kh/${maKh}/ten-kh/${tenKh}/status/${status}/start-date/${startDate}/end-date/${endDate}/page/${page}/limit/${limit}/search/${search}/sort-by/${sortBy}/sort-order/${sortOrder}/fields/${fields}/expand/${expand}/select/${select}/filter/${filter}/group-by/${groupBy}/aggregate/${aggregate}/count/${count}/details`,
+      );
+    },
+  getInvoiceDetailsByDocCodeAndMaDvcsAndMaKhAndTenKhAndStatusAndStartDateAndEndDateAndPageAndLimitAndSearchAndSortByAndSortOrderAndFieldsAndExpandAndSelectAndFilterAndGroupByAndAggregateAndCountAndDistinct:
+    (
+      docCode: string,
+      maDvcs: string,
+      maKh: string,
+      tenKh: string,
+      status: number,
+      startDate: string,
+      endDate: string,
+      page: number,
+      limit: number,
+      search: string,
+      sortBy: string,
+      sortOrder: string,
+      fields: string,
+      expand: string,
+      select: string,
+      filter: string,
+      groupBy: string,
+      aggregate: string,
+      count: boolean,
+      distinct: boolean,
+    ) => {
+      return api.get(
+        `/fast-api-invoices/doc-code/${docCode}/ma-dvcs/${maDvcs}/ma-kh/${maKh}/ten-kh/${tenKh}/status/${status}/start-date/${startDate}/end-date/${endDate}/page/${page}/limit/${limit}/search/${search}/sort-by/${sortBy}/sort-order/${sortOrder}/fields/${fields}/expand/${expand}/select/${select}/filter/${filter}/group-by/${groupBy}/aggregate/${aggregate}/count/${count}/distinct/${distinct}/details`,
+      );
+    },
+  getInvoiceDetailsByDocCodeAndMaDvcsAndMaKhAndTenKhAndStatusAndStartDateAndEndDateAndPageAndLimitAndSearchAndSortByAndSortOrderAndFieldsAndExpandAndSelectAndFilterAndGroupByAndAggregateAndCountAndDistinctAndFormat:
+    (
+      docCode: string,
+      maDvcs: string,
+      maKh: string,
+      tenKh: string,
+      status: number,
+      startDate: string,
+      endDate: string,
+      page: number,
+      limit: number,
+      search: string,
+      sortBy: string,
+      sortOrder: string,
+      fields: string,
+      expand: string,
+      select: string,
+      filter: string,
+      groupBy: string,
+      aggregate: string,
+      count: boolean,
+      distinct: boolean,
+      format: string,
+    ) => {
+      return api.get(
+        `/fast-api-invoices/doc-code/${docCode}/ma-dvcs/${maDvcs}/ma-kh/${maKh}/ten-kh/${tenKh}/status/${status}/start-date/${startDate}/end-date/${endDate}/page/${page}/limit/${limit}/search/${search}/sort-by/${sortBy}/sort-order/${sortOrder}/fields/${fields}/expand/${expand}/select/${select}/filter/${filter}/group-by/${groupBy}/aggregate/${aggregate}/count/${count}/distinct/${distinct}/format/${format}/details`,
+      );
+    },
+  getInvoiceDetailsByDocCodeAndMaDvcsAndMaKhAndTenKhAndStatusAndStartDateAndEndDateAndPageAndLimitAndSearchAndSortByAndSortOrderAndFieldsAndExpandAndSelectAndFilterAndGroupByAndAggregateAndCountAndDistinctAndFormatAndCallback:
+    (
+      docCode: string,
+      maDvcs: string,
+      maKh: string,
+      tenKh: string,
+      status: number,
+      startDate: string,
+      endDate: string,
+      page: number,
+      limit: number,
+      search: string,
+      sortBy: string,
+      sortOrder: string,
+      fields: string,
+      expand: string,
+      select: string,
+      filter: string,
+      groupBy: string,
+      aggregate: string,
+      count: boolean,
+      distinct: boolean,
+      format: string,
+      callback: string,
+    ) => {
+      return api.get(
+        `/fast-api-invoices/doc-code/${docCode}/ma-dvcs/${maDvcs}/ma-kh/${maKh}/ten-kh/${tenKh}/status/${status}/start-date/${startDate}/end-date/${endDate}/page/${page}/limit/${limit}/search/${search}/sort-by/${sortBy}/sort-order/${sortOrder}/fields/${fields}/expand/${expand}/select/${select}/filter/${filter}/group-by/${groupBy}/aggregate/${aggregate}/count/${count}/distinct/${distinct}/format/${format}/callback/${callback}/details`,
+      );
+    },
+  getInvoiceDetailsByDocCodeAndMaDvcsAndMaKhAndTenKhAndStatusAndStartDateAndEndDateAndPageAndLimitAndSearchAndSortByAndSortOrderAndFieldsAndExpandAndSelectAndFilterAndGroupByAndAggregateAndCountAndDistinctAndFormatAndCallbackAndSkip:
+    (
+      docCode: string,
+      maDvcs: string,
+      maKh: string,
+      tenKh: string,
+      status: number,
+      startDate: string,
+      endDate: string,
+      page: number,
+      limit: number,
+      search: string,
+      sortBy: string,
+      sortOrder: string,
+      fields: string,
+      expand: string,
+      select: string,
+      filter: string,
+      groupBy: string,
+      aggregate: string,
+      count: boolean,
+      distinct: boolean,
+      format: string,
+      callback: string,
+      skip: number,
+    ) => {
+      return api.get(
+        `/fast-api-invoices/doc-code/${docCode}/ma-dvcs/${maDvcs}/ma-kh/${maKh}/ten-kh/${tenKh}/status/${status}/start-date/${startDate}/end-date/${endDate}/page/${page}/limit/${limit}/search/${search}/sort-by/${sortBy}/sort-order/${sortOrder}/fields/${fields}/expand/${expand}/select/${select}/filter/${filter}/group-by/${groupBy}/aggregate/${aggregate}/count/${count}/distinct/${distinct}/format/${format}/callback/${callback}/skip/${skip}/details`,
+      );
+    },
+  getInvoiceDetailsByDocCodeAndMaDvcsAndMaKhAndTenKhAndStatusAndStartDateAndEndDateAndPageAndLimitAndSearchAndSortByAndSortOrderAndFieldsAndExpandAndSelectAndFilterAndGroupByAndAggregateAndCountAndDistinctAndFormatAndCallbackAndSkipAndTop:
+    (
+      docCode: string,
+      maDvcs: string,
+      maKh: string,
+      tenKh: string,
+      status: number,
+      startDate: string,
+      endDate: string,
+      page: number,
+      limit: number,
+      search: string,
+      sortBy: string,
+      sortOrder: string,
+      fields: string,
+      expand: string,
+      select: string,
+      filter: string,
+      groupBy: string,
+      aggregate: string,
+      count: boolean,
+      distinct: boolean,
+      format: string,
+      callback: string,
+      skip: number,
+      top: number,
+    ) => {
+      return api.get(
+        `/fast-api-invoices/doc-code/${docCode}/ma-dvcs/${maDvcs}/ma-kh/${maKh}/ten-kh/${tenKh}/status/${status}/start-date/${startDate}/end-date/${endDate}/page/${page}/limit/${limit}/search/${search}/sort-by/${sortBy}/sort-order/${sortOrder}/fields/${fields}/expand/${expand}/select/${select}/filter/${filter}/group-by/${groupBy}/aggregate/${aggregate}/count/${count}/distinct/${distinct}/format/${format}/callback/${callback}/skip/${skip}/top/${top}/details`,
+      );
+    },
+  getInvoiceDetailsByDocCodeAndMaDvcsAndMaKhAndTenKhAndStatusAndStartDateAndEndDateAndPageAndLimitAndSearchAndSortByAndSortOrderAndFieldsAndExpandAndSelectAndFilterAndGroupByAndAggregateAndCountAndDistinctAndFormatAndCallbackAndSkipAndTopAndInlinecount:
+    (
+      docCode: string,
+      maDvcs: string,
+      maKh: string,
+      tenKh: string,
+      status: number,
+      startDate: string,
+      endDate: string,
+      page: number,
+      limit: number,
+      search: string,
+      sortBy: string,
+      sortOrder: string,
+      fields: string,
+      expand: string,
+      select: string,
+      filter: string,
+      groupBy: string,
+      aggregate: string,
+      count: boolean,
+      distinct: boolean,
+      format: string,
+      callback: string,
+      skip: number,
+      top: number,
+      inlinecount: string,
+    ) => {
+      return api.get(
+        `/fast-api-invoices/doc-code/${docCode}/ma-dvcs/${maDvcs}/ma-kh/${maKh}/ten-kh/${tenKh}/status/${status}/start-date/${startDate}/end-date/${endDate}/page/${page}/limit/${limit}/search/${search}/sort-by/${sortBy}/sort-order/${sortOrder}/fields/${fields}/expand/${expand}/select/${select}/filter/${filter}/group-by/${groupBy}/aggregate/${aggregate}/count/${count}/distinct/${distinct}/format/${format}/callback/${callback}/skip/${skip}/top/${top}/inlinecount/${inlinecount}/details`,
+      );
+    },
+  getInvoiceDetailsByDocCodeAndMaDvcsAndMaKhAndTenKhAndStatusAndStartDateAndEndDateAndPageAndLimitAndSearchAndSortByAndSortOrderAndFieldsAndExpandAndSelectAndFilterAndGroupByAndAggregateAndCountAndDistinctAndFormatAndCallbackAndSkipAndTopAndInlinecountAndOrderBy:
+    (
+      docCode: string,
+      maDvcs: string,
+      maKh: string,
+      tenKh: string,
+      status: number,
+      startDate: string,
+      endDate: string,
+      page: number,
+      limit: number,
+      search: string,
+      sortBy: string,
+      sortOrder: string,
+      fields: string,
+      expand: string,
+      select: string,
+      filter: string,
+      groupBy: string,
+      aggregate: string,
+      count: boolean,
+      distinct: boolean,
+      format: string,
+      callback: string,
+      skip: number,
+      top: number,
+      inlinecount: string,
+      orderBy: string,
+    ) => {
+      return api.get(
+        `/fast-api-invoices/doc-code/${docCode}/ma-dvcs/${maDvcs}/ma-kh/${maKh}/ten-kh/${tenKh}/status/${status}/start-date/${startDate}/end-date/${endDate}/page/${page}/limit/${limit}/search/${search}/sort-by/${sortBy}/sort-order/${sortOrder}/fields/${fields}/expand/${expand}/select/${select}/filter/${filter}/group-by/${groupBy}/aggregate/${aggregate}/count/${count}/distinct/${distinct}/format/${format}/callback/${callback}/skip/${skip}/top/${top}/inlinecount/${inlinecount}/order-by/${orderBy}/details`,
+      );
+    },
+  getInvoiceDetailsByDocCodeAndMaDvcsAndMaKhAndTenKhAndStatusAndStartDateAndEndDateAndPageAndLimitAndSearchAndSortByAndSortOrderAndFieldsAndExpandAndSelectAndFilterAndGroupByAndAggregateAndCountAndDistinctAndFormatAndCallbackAndSkipAndTopAndInlinecountAndOrderByAndCustom:
+    (
+      docCode: string,
+      maDvcs: string,
+      maKh: string,
+      tenKh: string,
+      status: number,
+      startDate: string,
+      endDate: string,
+      page: number,
+      limit: number,
+      search: string,
+      sortBy: string,
+      sortOrder: string,
+      fields: string,
+      expand: string,
+      select: string,
+      filter: string,
+      groupBy: string,
+      aggregate: string,
+      count: boolean,
+      distinct: boolean,
+      format: string,
+      callback: string,
+      skip: number,
+      top: number,
+      inlinecount: string,
+      orderBy: string,
+      custom: string,
+    ) => {
+      return api.get(
+        `/fast-api-invoices/doc-code/${docCode}/ma-dvcs/${maDvcs}/ma-kh/${maKh}/ten-kh/${tenKh}/status/${status}/start-date/${startDate}/end-date/${endDate}/page/${page}/limit/${limit}/search/${search}/sort-by/${sortBy}/sort-order/${sortOrder}/fields/${fields}/expand/${expand}/select/${select}/filter/${filter}/group-by/${groupBy}/aggregate/${aggregate}/count/${count}/distinct/${distinct}/format/${format}/callback/${callback}/skip/${skip}/top/${top}/inlinecount/${inlinecount}/order-by/${orderBy}/custom/${custom}/details`,
+      );
+    },
 };
+
+// Stock Transfer API
