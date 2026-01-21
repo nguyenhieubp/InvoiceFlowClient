@@ -200,7 +200,7 @@ export default function VoucherIssuePage() {
     } catch (error: any) {
       showToast(
         "error",
-        error.response?.data?.message || error.message || "Lỗi khi tải dữ liệu"
+        error.response?.data?.message || error.message || "Lỗi khi tải dữ liệu",
       );
     } finally {
       setLoading(false);
@@ -370,152 +370,106 @@ export default function VoucherIssuePage() {
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                        API ID
+                        ID nội bộ (UUID) system
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                        Mã Voucher
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap bg-blue-50">
-                        Serial
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap bg-blue-50">
-                        Console Code
+                        Link chỉnh sửa
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                        Mô tả
+                        Mã Ecode / CTKM
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                        Sản phẩm
+                        Trạng thái chương trình
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                        Sản phẩm trả Ecode
+                        Ngày chứng từ
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                        Giá trị
+                        Brand / Ngành áp dụng
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                        Nhãn hàng
+                        Phạm vi chi nhánh
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                        Ngày phát hành
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap bg-green-50">
-                        Ngày HL (Line)
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap bg-green-50">
-                        Ngày HH (Line)
+                        Mã sản phẩm áp dụng
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                        Trạng thái
-                      </th>
-                      {/* Additional Fields */}
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                        Mã Nhãn Hàng
+                        Tên voucher / SP
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                        Loại Chi Nhánh
+                        Mã voucher trả
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                        Phần trăm
+                        Hình thức bán
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                        Giá trị tối đa
+                        Giá trị tiền
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                        Loại bán
+                        Phần trăm CK
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                        Bật Precost
+                        Giá trị CK tối đa
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                        Phí NCC
+                        NCC hỗ trợ
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                        Ngày BĐ (H)
+                        Ngày bắt đầu hiệu lực
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                        Ngày KT (H)
+                        Ngày kết thúc hiệu lực
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                        Số ngày HL
+                        Số ngày hiệu lực từ SO
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                        Check Sở Hữu
+                        Kiểm tra sở hữu KH
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                        Cho Hoàn Tiền
+                        Cho hoàn tiền dư
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                        KM Nhân Viên
+                        Thưởng NV sale
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                        Thưởng Sales
+                        Không cộng điểm sale
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                        % Đơn Hàng
+                        Mô tả CTKM
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                        Phạm Vi Tính Tổng
+                        Giá vốn kế toán
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                        Cost GL
+                        Kiểu chọn SP
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                        Mua Hàng Theo Ngày
+                        Áp dụng KOL
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                        Tùy Chọn Mua Hàng
+                        Áp dụng marketing
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                        Tắt Thưởng Sales
+                        Áp cho đơn KM
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                        Tắt Thưởng
+                        Mã chiến dịch
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                        Cho MKT KOL
+                        Giới hạn sử dụng
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                        Cho MKT KM
+                        Loại voucher
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                        Áp Dụng Đơn KM
+                        Áp CK BB
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                        Mã Chiến Dịch
+                        Trạng thái khóa
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                        SL Max/KH
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                        Đã Khóa
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                        Thời Gian Nhập
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                        Người Nhập
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                        Loại Vật Tư
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                        Áp Dụng WSO
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                        Đối Tác
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                        Đồng Bộ Từ
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                        Đồng Bộ Đến
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                        Ngày Tạo
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                        Ngày Cập Nhật
+                        Ngày nhập dữ liệu
                       </th>
                     </tr>
                   </thead>
@@ -523,7 +477,7 @@ export default function VoucherIssuePage() {
                     {voucherIssueList.length === 0 ? (
                       <tr>
                         <td
-                          colSpan={48}
+                          colSpan={34}
                           className="px-4 py-8 text-center text-gray-500"
                         >
                           Không có dữ liệu
@@ -536,76 +490,52 @@ export default function VoucherIssuePage() {
                             key={voucher.id}
                             className="hover:bg-gray-50 text-sm"
                           >
-                            <td className="px-4 py-3 whitespace-nowrap text-gray-900">
-                              {voucher.api_id}
+                            <td className="px-4 py-3 whitespace-nowrap text-gray-900 text-xs">
+                              {voucher.id}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-blue-600 hover:text-blue-800 cursor-pointer">
+                              Edit
                             </td>
                             <td className="px-4 py-3 whitespace-nowrap text-gray-900 font-medium">
                               {voucher.code || "-"}
                             </td>
-                            <td className="px-4 py-3 whitespace-nowrap bg-blue-50 font-bold text-blue-800 text-base font-mono">
-                              {voucher.serial || "-"}
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap text-gray-700 bg-blue-50/30">
-                              {voucher.console_code || "-"}
-                            </td>
-                            <td
-                              className="px-4 py-3 text-gray-900 max-w-xs truncate"
-                              title={voucher.description || ""}
-                            >
-                              {voucher.description || "-"}
-                            </td>
-                            <td
-                              className="px-4 py-3 text-gray-900 max-w-xs truncate"
-                              title={voucher.voucher_item_name || ""}
-                            >
-                              {voucher.voucher_item_code} <br />
-                              <span className="text-xs text-gray-500">
-                                {voucher.voucher_item_name}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-gray-900 border-l border-gray-100">
-                              {voucher.ecode_item_code || "-"}
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap text-gray-900 font-semibold">
-                              {formatCurrency(voucher.val)}
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap text-gray-900 font-semibold">
-                              {voucher.brand}
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap text-gray-900">
-                              {formatDateTime(voucher.docdate)}
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap text-gray-900 bg-green-50/30">
-                              {formatDate(voucher.valid_fromdate_detail) || (
-                                <span className="text-gray-400 text-xs">
-                                  chung: {formatDate(voucher.valid_fromdate)}
-                                </span>
-                              )}
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap text-gray-900 bg-green-50/30">
-                              {formatDate(voucher.valid_todate_detail) || (
-                                <span className="text-gray-400 text-xs">
-                                  chung: {formatDate(voucher.valid_todate)}
-                                </span>
-                              )}
-                            </td>
                             <td className="px-4 py-3 whitespace-nowrap text-sm">
                               <span
                                 className={`px-2 py-1 rounded-full text-xs ${
-                                  voucher.is_locked === "Y"
-                                    ? "bg-red-100 text-red-800"
-                                    : "bg-green-100 text-green-800"
+                                  voucher.status_lov === "ACTIVE"
+                                    ? "bg-green-100 text-green-800"
+                                    : "bg-gray-100 text-gray-800"
                                 }`}
                               >
                                 {voucher.status_lov || "-"}
                               </span>
                             </td>
-                            {/* Additional Fields Data */}
-                            <td className="px-4 py-3 whitespace-nowrap text-gray-500">
-                              {voucher.brand_code}
+                            <td className="px-4 py-3 whitespace-nowrap text-gray-900">
+                              {formatDate(voucher.docdate)}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-gray-900">
+                              {voucher.brand}
                             </td>
                             <td className="px-4 py-3 whitespace-nowrap text-gray-500">
                               {voucher.apply_for_branch_types}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-gray-900">
+                              {voucher.ecode_item_code || "-"}
+                            </td>
+                            <td
+                              className="px-4 py-3 text-gray-900 max-w-xs truncate"
+                              title={voucher.voucher_item_name || ""}
+                            >
+                              {voucher.voucher_item_name || "-"}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-gray-900">
+                              {voucher.voucher_item_code || "-"}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-gray-500">
+                              {voucher.saletype}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-gray-900 font-semibold">
+                              {formatCurrency(voucher.val)}
                             </td>
                             <td className="px-4 py-3 whitespace-nowrap text-gray-500">
                               {voucher.percent}
@@ -614,18 +544,12 @@ export default function VoucherIssuePage() {
                               {formatCurrency(voucher.max_value)}
                             </td>
                             <td className="px-4 py-3 whitespace-nowrap text-gray-500">
-                              {voucher.saletype}
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap text-gray-500">
-                              {voucher.enable_precost}
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap text-gray-500">
                               {formatCurrency(voucher.supplier_support_fee)}
                             </td>
-                            <td className="px-4 py-3 whitespace-nowrap text-gray-500">
+                            <td className="px-4 py-3 whitespace-nowrap text-gray-900">
                               {formatDateTime(voucher.valid_fromdate)}
                             </td>
-                            <td className="px-4 py-3 whitespace-nowrap text-gray-500">
+                            <td className="px-4 py-3 whitespace-nowrap text-gray-900">
                               {formatDateTime(voucher.valid_todate)}
                             </td>
                             <td className="px-4 py-3 whitespace-nowrap text-gray-500">
@@ -638,31 +562,22 @@ export default function VoucherIssuePage() {
                               {voucher.allow_cashback}
                             </td>
                             <td className="px-4 py-3 whitespace-nowrap text-gray-500">
-                              {voucher.prom_for_employee}
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap text-gray-500">
                               {voucher.bonus_for_sale_employee}
                             </td>
                             <td className="px-4 py-3 whitespace-nowrap text-gray-500">
-                              {voucher.so_percent}
+                              {voucher.disable_bonus_point_for_sale}
                             </td>
-                            <td className="px-4 py-3 whitespace-nowrap text-gray-500">
-                              {voucher.r_total_scope}
+                            <td
+                              className="px-4 py-3 text-gray-900 max-w-xs truncate"
+                              title={voucher.description || ""}
+                            >
+                              {voucher.description || "-"}
                             </td>
                             <td className="px-4 py-3 whitespace-nowrap text-gray-500">
                               {formatCurrency(voucher.cost_for_gl)}
                             </td>
                             <td className="px-4 py-3 whitespace-nowrap text-gray-500">
-                              {voucher.buy_items_by_date_range}
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap text-gray-500">
                               {voucher.buy_items_option_name}
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap text-gray-500">
-                              {voucher.disable_bonus_point_for_sale}
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap text-gray-500">
-                              {voucher.disable_bonus_point}
                             </td>
                             <td className="px-4 py-3 whitespace-nowrap text-gray-500">
                               {voucher.for_mkt_kol}
@@ -680,34 +595,24 @@ export default function VoucherIssuePage() {
                               {voucher.sl_max_sudung_cho_1_kh}
                             </td>
                             <td className="px-4 py-3 whitespace-nowrap text-gray-500">
-                              {voucher.is_locked}
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap text-gray-500">
-                              {formatDateTime(voucher.enteredat)}
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap text-gray-500">
-                              {voucher.enteredby}
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap text-gray-500">
                               {voucher.material_type}
                             </td>
                             <td className="px-4 py-3 whitespace-nowrap text-gray-500">
-                              {voucher.applyfor_wso}
+                              {voucher.enable_precost}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm">
+                              <span
+                                className={`px-2 py-1 rounded-full text-xs ${
+                                  voucher.is_locked === "Y"
+                                    ? "bg-red-100 text-red-800"
+                                    : "bg-green-100 text-green-800"
+                                }`}
+                              >
+                                {voucher.is_locked || "-"}
+                              </span>
                             </td>
                             <td className="px-4 py-3 whitespace-nowrap text-gray-500">
-                              {voucher.partnership}
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap text-gray-500">
-                              {voucher.sync_date_from}
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap text-gray-500">
-                              {voucher.sync_date_to}
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap text-gray-500">
-                              {formatDateTime(voucher.createdAt)}
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap text-gray-500">
-                              {formatDateTime(voucher.updatedAt)}
+                              {formatDateTime(voucher.enteredat)}
                             </td>
                           </tr>
                         );
@@ -723,7 +628,7 @@ export default function VoucherIssuePage() {
                   Hiển thị {(pagination.page - 1) * pagination.limit + 1} -{" "}
                   {Math.min(
                     pagination.page * pagination.limit,
-                    pagination.total
+                    pagination.total,
                   )}{" "}
                   của {pagination.total}
                 </div>

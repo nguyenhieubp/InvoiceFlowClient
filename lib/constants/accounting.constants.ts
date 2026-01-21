@@ -7,11 +7,10 @@
  * Mã thuế
  * Tax Code
  */
-export const TAX_CODE = '00';
+export const TAX_CODE = "00";
 
 /**
  * Tài khoản nợ
  * Debit Account
  */
-export const DEBIT_ACCOUNT = '131111';
-
+export const DEBIT_ACCOUNT = "131111";
