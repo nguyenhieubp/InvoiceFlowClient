@@ -301,13 +301,6 @@ export const stockTransferApi = {
   }) => {
     return api.get("/sync/stock-transfers", { params });
   },
-  getIncorrect: (params?: {
-    page?: number;
-    limit?: number;
-    search?: string;
-  }) => {
-    return api.get("/sales/stock-transfer/incorrect", { params });
-  },
   processWarehouse: (id: string) => {
     return api.post(`/sales/stock-transfer/${id}/warehouse`);
   },
