@@ -391,7 +391,7 @@ export default function VoucherIssuePage() {
                         Phạm vi chi nhánh
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                        Mã sản phẩm áp dụng
+                        Sản phẩm trả Ecode
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
                         Tên voucher / SP
