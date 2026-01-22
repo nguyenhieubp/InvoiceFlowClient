@@ -105,7 +105,19 @@ export default function MissingMaterialPage() {
   const [data, setData] = useState<any[]>([]);
   const [meta, setMeta] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+
+  // Input states
   const [search, setSearch] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+
+  // Applied filters (trigger fetch)
+  const [appliedFilters, setAppliedFilters] = useState({
+    search: "",
+    dateFrom: "",
+    dateTo: "",
+  });
+
   const [page, setPage] = useState(1);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editMaterialCode, setEditMaterialCode] = useState("");
@@ -116,24 +128,34 @@ export default function MissingMaterialPage() {
       const response = await stockTransferApi.getMissingMaterial({
         page,
         limit: 10,
-        search,
+        search: appliedFilters.search,
+        dateFrom: appliedFilters.dateFrom,
+        dateTo: appliedFilters.dateTo,
       });
       setData(response.data.items);
       setMeta(response.data.meta);
     } catch (error) {
       console.error("Failed to fetch data", error);
-      // alert('Lỗi tải dữ liệu');
     } finally {
       setLoading(false);
     }
   };
 
+  // Trigger fetch only when page or appliedFilters change
   useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchData();
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [page, search]);
+    fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, appliedFilters]);
+
+  // Handle Search Button Click
+  const handleSearch = () => {
+    setPage(1); // Reset to page 1
+    setAppliedFilters({
+      search,
+      dateFrom,
+      dateTo,
+    });
+  };
 
   const handleEdit = (item: any) => {
     setEditingId(item.id);
@@ -192,6 +214,30 @@ export default function MissingMaterialPage() {
               className="w-full pl-10 pr-4 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
             />
           </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600">Từ ngày:</span>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600">Đến ngày:</span>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+            />
+          </div>
+          <button
+            onClick={handleSearch}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors text-sm font-medium whitespace-nowrap"
+          >
+            Tìm kiếm
+          </button>
         </div>
       </div>
 

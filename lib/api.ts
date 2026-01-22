@@ -312,6 +312,8 @@ export const stockTransferApi = {
     page?: number;
     limit?: number;
     search?: string;
+    dateFrom?: string;
+    dateTo?: string;
   }) => {
     return api.get("/stock-transfers/missing-material", { params });
   },
