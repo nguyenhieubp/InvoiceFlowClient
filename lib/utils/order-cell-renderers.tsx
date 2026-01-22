@@ -385,11 +385,15 @@ export const renderCellValue = (
       );
 
     case "chietKhauMuaHangGiamGia": {
-      const val = (sale?.other_discamt ?? sale?.chietKhauMuaHangGiamGia) as any;
-      if (!val || Number(val) === 0 || val === "0" || val === "-") {
+      const rawVal = sale?.other_discamt ?? sale?.chietKhauMuaHangGiamGia;
+      const val =
+        typeof rawVal === "object" ? JSON.stringify(rawVal) : String(rawVal);
+
+      if (!val || val === "0" || val === "-") {
         return <span className="text-gray-400 italic">-</span>;
       }
-      return formatNumber(val);
+
+      return <div className={`text-sm ${textClass}`}>{val}</div>;
     }
 
     case "muaHangCkVip": {
