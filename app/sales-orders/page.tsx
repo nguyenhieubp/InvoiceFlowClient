@@ -12,7 +12,7 @@ import {
 import { normalizeOrderData } from "@/lib/utils/order-mapper.utils";
 import { renderCellValue } from "@/lib/utils/order-cell-renderers";
 
-export default function OrdersPage() {
+export default function SalesOrdersPage() {
   const [allOrders, setAllOrders] = useState<Order[]>([]);
   const [displayedOrders, setDisplayedOrders] = useState<Order[]>([]);
   const [enrichedDisplayedOrders, setEnrichedDisplayedOrders] = useState<
@@ -145,7 +145,7 @@ export default function OrdersPage() {
       // Nếu có search query, gửi lên backend để search trực tiếp trên database
       // Khi có search query, gửi dateFrom/dateTo để search trong date range
       // Khi không có search query, có thể dùng date (single day) để lấy từ Zappy API
-      const response = await salesApi.getAllOrders({
+      const response = await salesApi.getAllAggregated({
         typeSale: filter.typeSale,
         brand: filter.brand,
         page: pagination.page,
@@ -306,6 +306,7 @@ export default function OrdersPage() {
       const response = await salesApi.createInvoiceViaFastApi(
         order.docCode,
         true,
+        true, // onlySalesOrder = true
       );
       const result = response.data;
 
@@ -422,9 +423,7 @@ export default function OrdersPage() {
           <div className="flex flex-col gap-4">
             {/* Title and Actions */}
             <div className="flex items-center justify-between flex-wrap gap-3">
-              <h1 className="text-2xl font-bold text-gray-900">
-                Hóa đơn bán hàng
-              </h1>
+              <h1 className="text-2xl font-bold text-gray-900">Đơn hàng bán</h1>
               <div className="flex items-center gap-2 flex-wrap">
                 {/* Sync from Zappy */}
                 <div className="flex items-center gap-2">

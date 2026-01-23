@@ -45,7 +45,6 @@ export const salesApi = {
     typeSale?: string;
   }) => {
     // Convert boolean values to strings for query params
-    console.log("==================", params);
     const queryParams: any = { ...params };
     if (queryParams.statusAsys !== undefined) {
       queryParams.statusAsys = queryParams.statusAsys.toString();
@@ -58,12 +57,42 @@ export const salesApi = {
     }
     return api.get("/sales", { params: queryParams });
   },
+  getAllAggregated: (params?: {
+    brand?: string;
+    processed?: boolean;
+    page?: number;
+    limit?: number;
+    date?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    search?: string;
+    statusAsys?: boolean;
+    typeSale?: string;
+  }) => {
+    // Convert boolean values to strings for query params
+    const queryParams: any = { ...params };
+    if (queryParams.statusAsys !== undefined) {
+      queryParams.statusAsys = queryParams.statusAsys.toString();
+    }
+    if (queryParams.processed !== undefined) {
+      queryParams.processed = queryParams.processed.toString();
+    }
+    if (queryParams.typeSale !== undefined) {
+      queryParams.typeSale = queryParams.typeSale.toString();
+    }
+    return api.get("/sales/aggregated", { params: queryParams });
+  },
   syncFromZappy: (date: string) => {
     return api.post("/sales/sync-from-zappy", { date });
   },
-  createInvoiceViaFastApi: (docCode: string, forceRetry?: boolean) => {
+  createInvoiceViaFastApi: (
+    docCode: string,
+    forceRetry?: boolean,
+    onlySalesOrder?: boolean,
+  ) => {
     return api.post(`/sales/order/${docCode}/create-invoice-fast`, {
       forceRetry: forceRetry || false,
+      onlySalesOrder: onlySalesOrder || false,
     });
   },
   createMultipleInvoicesViaFastApi: (docCodes: string[]) => {
