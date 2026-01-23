@@ -495,7 +495,6 @@ export const renderCellValue = (
     }
 
     case "voucherDp1": {
-      debugger;
       // Sử dụng giá trị từ backend
       if (sale?.voucherDp1) {
         return <div className={`text-sm ${textClass}`}>{sale.voucherDp1}</div>;
