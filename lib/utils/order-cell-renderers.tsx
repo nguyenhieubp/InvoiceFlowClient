@@ -389,7 +389,7 @@ export const renderCellValue = (
       const val =
         typeof rawVal === "object" ? JSON.stringify(rawVal) : String(rawVal);
 
-      if (!val || val === "0" || val === "-") {
+      if (!val || val === "0" || val === "-" || val === "null") {
         return <span className="text-gray-400 italic">-</span>;
       }
 

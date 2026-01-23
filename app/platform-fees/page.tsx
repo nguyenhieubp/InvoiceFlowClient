@@ -1,11 +1,16 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { orderFeesApi } from '@/lib/api';
-import Link from 'next/link';
-import { format } from 'date-fns';
+import { useState, useEffect } from "react";
+import { orderFeesApi } from "@/lib/api";
+import Link from "next/link";
+import { format, subDays } from "date-fns";
 
 export default function PlatformFeesPage() {
+  const formatCurrency = (value: number | string | undefined) => {
+    if (value === undefined || value === null) return "-";
+    return Number(value).toString();
+  };
+
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [pagination, setPagination] = useState({
@@ -14,10 +19,18 @@ export default function PlatformFeesPage() {
     total: 0,
     totalPages: 0,
   });
-  const [brandFilter, setBrandFilter] = useState('');
-  const [search, setSearch] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [brandFilter, setBrandFilter] = useState("menard");
+  const [search, setSearch] = useState("");
+  const [startDate, setStartDate] = useState(
+    format(subDays(new Date(), 30), "yyyy-MM-dd"),
+  );
+  const [endDate, setEndDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [queryParams, setQueryParams] = useState({
+    brand: "menard",
+    search: "",
+    startDate: format(subDays(new Date(), 30), "yyyy-MM-dd"),
+    endDate: format(new Date(), "yyyy-MM-dd"),
+  });
 
   const fetchData = async () => {
     setLoading(true);
@@ -25,10 +38,10 @@ export default function PlatformFeesPage() {
       const response = await orderFeesApi.getAll({
         page: pagination.page,
         limit: pagination.limit,
-        brand: brandFilter || undefined,
-        search: search || undefined,
-        startDate: startDate || undefined,
-        endDate: endDate || undefined,
+        brand: queryParams.brand || undefined,
+        search: queryParams.search || undefined,
+        startDate: queryParams.startDate || undefined,
+        endDate: queryParams.endDate || undefined,
       });
       setData(response.data.data);
       setPagination((prev) => ({
@@ -36,7 +49,7 @@ export default function PlatformFeesPage() {
         ...response.data.meta,
       }));
     } catch (error) {
-      console.error('Error fetching order fees:', error);
+      console.error("Error fetching order fees:", error);
     } finally {
       setLoading(false);
     }
@@ -44,12 +57,17 @@ export default function PlatformFeesPage() {
 
   useEffect(() => {
     fetchData();
-  }, [pagination.page, brandFilter, startDate, endDate]);
+  }, [pagination.page, queryParams]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setPagination((prev) => ({ ...prev, page: 1 }));
-    fetchData();
+    setQueryParams({
+      brand: brandFilter,
+      search: search,
+      startDate: startDate,
+      endDate: endDate,
+    });
   };
 
   const handlePageChange = (newPage: number) => {
@@ -99,7 +117,6 @@ export default function PlatformFeesPage() {
               value={brandFilter}
               onChange={(e) => {
                 setBrandFilter(e.target.value);
-                setPagination((prev) => ({ ...prev, page: 1 }));
               }}
               className="border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
@@ -116,7 +133,6 @@ export default function PlatformFeesPage() {
               value={startDate}
               onChange={(e) => {
                 setStartDate(e.target.value);
-                setPagination((prev) => ({ ...prev, page: 1 }));
               }}
               className="border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
@@ -129,7 +145,6 @@ export default function PlatformFeesPage() {
               value={endDate}
               onChange={(e) => {
                 setEndDate(e.target.value);
-                setPagination((prev) => ({ ...prev, page: 1 }));
               }}
               className="border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
@@ -160,7 +175,12 @@ export default function PlatformFeesPage() {
                 <th className="px-6 py-4">Brand</th>
                 <th className="px-6 py-4">Sàn</th>
                 <th className="px-6 py-4">ERP Order Code</th>
-                <th className="px-6 py-4">Raw Data</th>
+                <th className="px-6 py-4">Order Code</th>
+                <th className="px-6 py-4 text-right">Voucher Shop</th>
+                <th className="px-6 py-4 text-right">Phí cố định</th>
+                <th className="px-6 py-4 text-right">Phí dịch vụ</th>
+                <th className="px-6 py-4 text-right">Phí thanh toán</th>
+
                 <th className="px-6 py-4">Ngày tạo đơn</th>
                 <th className="px-6 py-4">Ngày đồng bộ</th>
               </tr>
@@ -168,7 +188,10 @@ export default function PlatformFeesPage() {
             <tbody className="divide-y divide-gray-200">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
+                  <td
+                    colSpan={10}
+                    className="px-6 py-8 text-center text-gray-500"
+                  >
                     <div className="flex justify-center items-center gap-2">
                       <div className="animate-spin h-5 w-5 border-2 border-blue-500 rounded-full border-t-transparent"></div>
                       Đang tải dữ liệu...
@@ -177,44 +200,68 @@ export default function PlatformFeesPage() {
                 </tr>
               ) : data.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
+                  <td
+                    colSpan={10}
+                    className="px-6 py-8 text-center text-gray-500"
+                  >
                     Không có dữ liệu
                   </td>
                 </tr>
               ) : (
                 data.map((item) => (
-                  <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+                  <tr
+                    key={item.id}
+                    className="hover:bg-gray-50 transition-colors"
+                  >
                     <td className="px-6 py-4">
-                      <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                        item.brand === 'menard' ? 'bg-red-100 text-red-700' : 
-                        item.brand === 'yaman' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'
-                      }`}>
-                        {(item.brand || 'N/A').toUpperCase()}
+                      <span
+                        className={`px-2 py-1 rounded text-xs font-semibold ${
+                          item.brand === "menard"
+                            ? "bg-red-100 text-red-700"
+                            : item.brand === "yaman"
+                              ? "bg-blue-100 text-blue-700"
+                              : "bg-gray-100 text-gray-700"
+                        }`}
+                      >
+                        {(item.brand || "N/A").toUpperCase()}
                       </span>
                     </td>
                     <td className="px-6 py-4">
                       <span className="px-2 py-1 rounded text-xs font-semibold bg-orange-100 text-orange-700">
-                        {(item.platform || 'SHOPEE').toUpperCase()}
+                        {(item.platform || "SHOPEE").toUpperCase()}
                       </span>
                     </td>
-                    <td className="px-6 py-4 font-mono text-gray-700">{item.erpOrderCode}</td>
-                    <td className="px-6 py-4">
-                      <details className="cursor-pointer">
-                        <summary className="text-xs text-blue-600 hover:text-blue-800 font-medium">
-                          Xem chi tiết
-                        </summary>
-                        <pre className="mt-2 p-3 bg-gray-50 rounded text-xs overflow-x-auto max-w-2xl">
-                          {JSON.stringify(item.rawData || item, null, 2)}
-                        </pre>
-                      </details>
+                    <td className="px-6 py-4 font-mono text-gray-700">
+                      {item.erpOrderCode}
+                    </td>
+                    <td className="px-6 py-4 font-mono text-gray-700">
+                      {item.orderCode || "-"}
+                    </td>
+                    <td className="px-6 py-4 text-right font-medium text-gray-900">
+                      {formatCurrency(item.voucherShop)}
+                    </td>
+                    <td className="px-6 py-4 text-right font-medium text-gray-900">
+                      {formatCurrency(item.commissionFee)}
+                    </td>
+                    <td className="px-6 py-4 text-right font-medium text-gray-900">
+                      {formatCurrency(item.serviceFee)}
+                    </td>
+                    <td className="px-6 py-4 text-right font-medium text-gray-900">
+                      {formatCurrency(item.paymentFee)}
+                    </td>
+
+                    <td className="px-6 py-4 text-gray-500">
+                      {item.orderCreatedAt
+                        ? format(
+                            new Date(item.orderCreatedAt),
+                            "dd/MM/yyyy HH:mm",
+                          )
+                        : "-"}
                     </td>
                     <td className="px-6 py-4 text-gray-500">
-                      {item.rawData?.created_at
-                        ? format(new Date(item.rawData.created_at), 'dd/MM/yyyy HH:mm')
-                        : '-'}
-                    </td>
-                    <td className="px-6 py-4 text-gray-500">
-                      {item.syncedAt ? format(new Date(item.syncedAt), 'dd/MM/yyyy HH:mm') : '-'}
+                      {item.syncedAt
+                        ? format(new Date(item.syncedAt), "dd/MM/yyyy HH:mm")
+                        : "-"}
                     </td>
                   </tr>
                 ))
@@ -226,7 +273,19 @@ export default function PlatformFeesPage() {
         {/* Pagination */}
         <div className="p-4 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
           <p className="text-sm text-gray-600">
-            Hiển thị <span className="font-medium">{Math.min((pagination.page - 1) * pagination.limit + 1, pagination.total)}</span> đến <span className="font-medium">{Math.min(pagination.page * pagination.limit, pagination.total)}</span> trong tổng số <span className="font-medium">{pagination.total}</span> bản ghi
+            Hiển thị{" "}
+            <span className="font-medium">
+              {Math.min(
+                (pagination.page - 1) * pagination.limit + 1,
+                pagination.total,
+              )}
+            </span>{" "}
+            đến{" "}
+            <span className="font-medium">
+              {Math.min(pagination.page * pagination.limit, pagination.total)}
+            </span>{" "}
+            trong tổng số{" "}
+            <span className="font-medium">{pagination.total}</span> bản ghi
           </p>
           <div className="flex gap-2">
             <button
