@@ -496,21 +496,16 @@ export const renderCellValue = (
 
     case "voucherDp1": {
       // Sử dụng giá trị từ backend
-      if (sale?.voucherDp1Display) {
-        return (
-          <div className={`text-sm ${textClass}`}>{sale.voucherDp1Display}</div>
-        );
+      if (sale?.voucherDp1) {
+        return <div className={`text-sm ${textClass}`}>{sale.voucherDp1}</div>;
       }
       return <span className="text-gray-400 italic">-</span>;
     }
 
     case "chietKhauVoucherDp1": {
       // Sử dụng giá trị từ backend
-      if (
-        sale?.chietKhauVoucherDp1Display != null &&
-        sale.chietKhauVoucherDp1Display > 0
-      ) {
-        return formatNumber(sale.chietKhauVoucherDp1Display);
+      if (sale?.chietKhauVoucherDp1 != null && sale.chietKhauVoucherDp1 > 0) {
+        return formatNumber(sale.chietKhauVoucherDp1);
       }
       return <span className="text-gray-400 italic">-</span>;
     }
