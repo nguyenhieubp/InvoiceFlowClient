@@ -9,8 +9,23 @@ import {
   FIELD_LABELS,
   MAIN_COLUMNS,
 } from "@/lib/constants/order-columns.constants";
-import { normalizeOrderData } from "@/lib/utils/order-mapper.utils";
 import { renderCellValue } from "@/lib/utils/order-cell-renderers";
+import { normalizeOrderData } from "@/lib/utils/order-mapper.utils";
+
+// Sales Order Columns: Filter out warehouse, batch, serial, and stock transfer info
+const SALES_ORDER_COLUMNS = MAIN_COLUMNS.filter(
+  (col) =>
+    ![
+      "maKho",
+      "maLo",
+      "soSerial",
+      "stockTransferStockCode",
+      "stockTransferQty",
+      "stockTransferTransDate",
+      "stockTransferDocCode",
+      "stockTransferBatchSerial",
+    ].includes(col),
+);
 
 export default function SalesOrdersPage() {
   const [allOrders, setAllOrders] = useState<Order[]>([]);
@@ -66,8 +81,9 @@ export default function SalesOrdersPage() {
   const [searchInputValue, setSearchInputValue] = useState(""); // Giá trị trong input (không trigger API)
   const [searchQuery, setSearchQuery] = useState(""); // Giá trị search thực tế (trigger API)
   const [typeSaleInput, setTypeSaleInput] = useState<string>("ALL"); // Giá trị input của typeSale
+
   const [selectedColumns, setSelectedColumns] = useState<OrderColumn[]>([
-    ...MAIN_COLUMNS,
+    ...SALES_ORDER_COLUMNS,
   ]);
   const [showColumnSelector, setShowColumnSelector] = useState(false);
   const [columnSearchQuery, setColumnSearchQuery] = useState("");
@@ -423,7 +439,23 @@ export default function SalesOrdersPage() {
           <div className="flex flex-col gap-4">
             {/* Title and Actions */}
             <div className="flex items-center justify-between flex-wrap gap-3">
-              <h1 className="text-2xl font-bold text-gray-900">Đơn hàng bán</h1>
+              <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-8 w-8 text-blue-600"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
+                  />
+                </svg>
+                Đơn hàng bán
+              </h1>
               <div className="flex items-center gap-2 flex-wrap">
                 {/* Sync from Zappy */}
                 <div className="flex items-center gap-2">

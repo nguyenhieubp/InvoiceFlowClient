@@ -143,8 +143,8 @@ export default function Sidebar({
           ),
           children: [
             {
-              href: "/orders",
-              label: "Hóa đơn bán hàng",
+              href: "/sales-orders",
+              label: "Đơn hàng bán",
               icon: (
                 <svg
                   className="w-3.5 h-3.5"
@@ -156,14 +156,14 @@ export default function Sidebar({
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                    d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
                   />
                 </svg>
               ),
             },
             {
-              href: "/sales-orders",
-              label: "Đơn hàng bán",
+              href: "/orders",
+              label: "Hóa đơn bán hàng",
               icon: (
                 <svg
                   className="w-3.5 h-3.5"
