@@ -703,6 +703,7 @@ export const orderFeesApi = {
     search?: string;
     startDate?: string;
     endDate?: string;
+    platform?: string; // [NEW]
   }) => {
     return api.get("/order-fees", { params });
   },

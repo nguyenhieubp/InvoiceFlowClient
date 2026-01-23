@@ -20,6 +20,7 @@ export default function PlatformFeesPage() {
     totalPages: 0,
   });
   const [brandFilter, setBrandFilter] = useState("menard");
+  const [platformFilter, setPlatformFilter] = useState(""); // [NEW]
   const [search, setSearch] = useState("");
   const [startDate, setStartDate] = useState(
     format(subDays(new Date(), 30), "yyyy-MM-dd"),
@@ -27,6 +28,7 @@ export default function PlatformFeesPage() {
   const [endDate, setEndDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [queryParams, setQueryParams] = useState({
     brand: "menard",
+    platform: "", // [NEW]
     search: "",
     startDate: format(subDays(new Date(), 30), "yyyy-MM-dd"),
     endDate: format(new Date(), "yyyy-MM-dd"),
@@ -39,6 +41,7 @@ export default function PlatformFeesPage() {
         page: pagination.page,
         limit: pagination.limit,
         brand: queryParams.brand || undefined,
+        platform: queryParams.platform || undefined, // [NEW]
         search: queryParams.search || undefined,
         startDate: queryParams.startDate || undefined,
         endDate: queryParams.endDate || undefined,
@@ -64,6 +67,7 @@ export default function PlatformFeesPage() {
     setPagination((prev) => ({ ...prev, page: 1 }));
     setQueryParams({
       brand: brandFilter,
+      platform: platformFilter, // [NEW]
       search: search,
       startDate: startDate,
       endDate: endDate,
@@ -123,6 +127,23 @@ export default function PlatformFeesPage() {
               <option value="">Tất cả</option>
               <option value="menard">Menard</option>
               <option value="yaman">Yaman</option>
+            </select>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-gray-700">
+              Lọc theo Sàn:
+            </label>
+            <select
+              value={platformFilter}
+              onChange={(e) => {
+                setPlatformFilter(e.target.value);
+              }}
+              className="border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Tất cả</option>
+              <option value="shopee">Shopee</option>
+              <option value="tiktok">TikTok</option>
             </select>
           </div>
 
