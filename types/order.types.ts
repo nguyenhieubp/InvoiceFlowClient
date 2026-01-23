@@ -178,7 +178,6 @@ export interface SaleItem {
   isTangHang?: boolean;
   isDichVu?: boolean;
   promCodeDisplay?: string | null;
-  muaHangGiamGiaDisplay?: string | null;
   thanhToanCouponDisplay?: string | null;
   chietKhauThanhToanCouponDisplay?: number | null;
   thanhToanVoucherDisplay?: string | null;

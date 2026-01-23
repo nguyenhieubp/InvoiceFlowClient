@@ -271,10 +271,10 @@ export const renderCellValue = (
 
     case "muaHangGiamGia": {
       // Sử dụng giá trị từ backend
-      if (sale?.muaHangGiamGiaDisplay) {
+      if (sale?.promotionDisplayCode) {
         return (
           <div className={`text-sm ${textClass}`}>
-            {sale.muaHangGiamGiaDisplay}
+            {sale.promotionDisplayCode}
           </div>
         );
       }
@@ -495,6 +495,7 @@ export const renderCellValue = (
     }
 
     case "voucherDp1": {
+      debugger;
       // Sử dụng giá trị từ backend
       if (sale?.voucherDp1) {
         return <div className={`text-sm ${textClass}`}>{sale.voucherDp1}</div>;
