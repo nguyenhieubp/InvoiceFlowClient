@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
@@ -740,6 +740,35 @@ export const orderFeesApi = {
     platform?: string;
   }) => {
     return api.get("/order-fees", { params });
+  },
+};
+
+// Platform Fee Import API
+export const platformFeeImportApi = {
+  import: (file: File, platform: "shopee" | "tiktok" | "lazada") => {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("platform", platform);
+    return api.post("/platform-fee-import/import", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+  },
+  getAll: (params?: {
+    platform?: string;
+    page?: number;
+    limit?: number;
+    startDate?: string;
+    endDate?: string;
+    search?: string;
+  }) => {
+    return api.get("/platform-fee-import", { params });
+  },
+  downloadTemplate: (platform: "shopee" | "tiktok" | "lazada") => {
+    return api.get(`/platform-fee-import/template/${platform}`, {
+      responseType: "blob",
+    });
   },
 };
 
