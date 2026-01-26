@@ -694,7 +694,41 @@ export const platformFeesApi = {
   },
 };
 
-// Order Fees API (Raw data from e-commerce platforms)
+// Shopee Fees API
+export const shopeeFeesApi = {
+  getAll: (params?: {
+    page?: number;
+    limit?: number;
+    brand?: string;
+    search?: string;
+    startDate?: string;
+    endDate?: string;
+  }) => {
+    return api.get("/shopee-fees", { params });
+  },
+  getByErpCode: (erpCode: string) => {
+    return api.get(`/shopee-fees/${erpCode}`);
+  },
+};
+
+// TikTok Fees API
+export const tiktokFeesApi = {
+  getAll: (params?: {
+    page?: number;
+    limit?: number;
+    brand?: string;
+    search?: string;
+    startDate?: string;
+    endDate?: string;
+  }) => {
+    return api.get("/tiktok-fees", { params });
+  },
+  getByErpCode: (erpCode: string) => {
+    return api.get(`/tiktok-fees/${erpCode}`);
+  },
+};
+
+// Order Fees API (DEPRECATED - use shopeeFeesApi or tiktokFeesApi instead)
 export const orderFeesApi = {
   getAll: (params?: {
     page?: number;
@@ -703,7 +737,7 @@ export const orderFeesApi = {
     search?: string;
     startDate?: string;
     endDate?: string;
-    platform?: string; // [NEW]
+    platform?: string;
   }) => {
     return api.get("/order-fees", { params });
   },

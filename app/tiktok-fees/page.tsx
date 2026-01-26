@@ -1,11 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { shopeeFeesApi } from "@/lib/api";
-import Link from "next/link";
+import { tiktokFeesApi } from "@/lib/api";
 import { format, subDays } from "date-fns";
 
-export default function PlatformFeesPage() {
+export default function TikTokFeesPage() {
   const formatCurrency = (value: number | string | undefined) => {
     if (value === undefined || value === null) return "-";
     return Number(value).toString();
@@ -20,6 +19,7 @@ export default function PlatformFeesPage() {
     totalPages: 0,
   });
   const [brandFilter, setBrandFilter] = useState("menard");
+  const [platformFilter] = useState("tiktok"); // Fixed to TikTok only
   const [search, setSearch] = useState("");
   const [startDate, setStartDate] = useState(
     format(subDays(new Date(), 30), "yyyy-MM-dd"),
@@ -27,6 +27,7 @@ export default function PlatformFeesPage() {
   const [endDate, setEndDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [queryParams, setQueryParams] = useState({
     brand: "menard",
+    platform: "tiktok", // Fixed to TikTok
     search: "",
     startDate: format(subDays(new Date(), 30), "yyyy-MM-dd"),
     endDate: format(new Date(), "yyyy-MM-dd"),
@@ -35,7 +36,7 @@ export default function PlatformFeesPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const response = await shopeeFeesApi.getAll({
+      const response = await tiktokFeesApi.getAll({
         page: pagination.page,
         limit: pagination.limit,
         brand: queryParams.brand || undefined,
@@ -49,7 +50,7 @@ export default function PlatformFeesPage() {
         ...response.data.meta,
       }));
     } catch (error) {
-      console.error("Error fetching order fees:", error);
+      console.error("Error fetching TikTok fees:", error);
     } finally {
       setLoading(false);
     }
@@ -64,6 +65,7 @@ export default function PlatformFeesPage() {
     setPagination((prev) => ({ ...prev, page: 1 }));
     setQueryParams({
       brand: brandFilter,
+      platform: platformFilter,
       search: search,
       startDate: startDate,
       endDate: endDate,
@@ -79,10 +81,10 @@ export default function PlatformFeesPage() {
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
-            Chi phí Shopee (Shopee Fees)
+            Chi phí TikTok (TikTok Fees)
           </h1>
           <p className="text-gray-600 mt-1">
-            Quản lý và theo dõi chi phí sàn Shopee
+            Quản lý và theo dõi chi phí sàn TikTok
           </p>
         </div>
         <button
@@ -126,7 +128,7 @@ export default function PlatformFeesPage() {
             </select>
           </div>
 
-          {/* Platform filter removed - Shopee only */}
+          {/* Platform filter removed - TikTok only */}
 
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium text-gray-700">Từ:</span>
@@ -178,20 +180,27 @@ export default function PlatformFeesPage() {
                 <th className="px-6 py-4">Sàn</th>
                 <th className="px-6 py-4">ERP Order Code</th>
                 <th className="px-6 py-4">Order Code</th>
-                <th className="px-6 py-4 text-right">Voucher Shop</th>
-                <th className="px-6 py-4 text-right">Phí cố định</th>
-                <th className="px-6 py-4 text-right">Phí dịch vụ</th>
-                <th className="px-6 py-4 text-right">Phí thanh toán</th>
-
                 <th className="px-6 py-4">Ngày tạo đơn</th>
                 <th className="px-6 py-4">Ngày đồng bộ</th>
+                <th className="px-6 py-4">Tax</th>
+                <th className="px-6 py-4">Currency</th>
+                <th className="px-6 py-4">Sub Total</th>
+                <th className="px-6 py-4">Shipping Fee</th>
+                <th className="px-6 py-4">Total Amount</th>
+                <th className="px-6 py-4">Seller Discount</th>
+                <th className="px-6 py-4">Platform Discount</th>
+                <th className="px-6 py-4">Original Shipping Fee</th>
+                <th className="px-6 py-4">Original Total Product Price</th>
+                <th className="px-6 py-4">Shipping Fee Seller Discount</th>
+                <th className="px-6 py-4">Shipping Fee Cofunded Discount</th>
+                <th className="px-6 py-4">Shipping Fee Platform Discount</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {loading ? (
                 <tr>
                   <td
-                    colSpan={10}
+                    colSpan={18}
                     className="px-6 py-8 text-center text-gray-500"
                   >
                     <div className="flex justify-center items-center gap-2">
@@ -203,7 +212,7 @@ export default function PlatformFeesPage() {
               ) : data.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={10}
+                    colSpan={18}
                     className="px-6 py-8 text-center text-gray-500"
                   >
                     Không có dữ liệu
@@ -229,8 +238,8 @@ export default function PlatformFeesPage() {
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="px-2 py-1 rounded text-xs font-semibold bg-orange-100 text-orange-700">
-                        {(item.platform || "SHOPEE").toUpperCase()}
+                      <span className="px-2 py-1 rounded text-xs font-semibold bg-purple-100 text-purple-700">
+                        {(item.platform || "TIKTOK").toUpperCase()}
                       </span>
                     </td>
                     <td className="px-6 py-4 font-mono text-gray-700">
@@ -239,19 +248,6 @@ export default function PlatformFeesPage() {
                     <td className="px-6 py-4 font-mono text-gray-700">
                       {item.orderCode || "-"}
                     </td>
-                    <td className="px-6 py-4 text-right font-medium text-gray-900">
-                      {formatCurrency(item.voucherShop)}
-                    </td>
-                    <td className="px-6 py-4 text-right font-medium text-gray-900">
-                      {formatCurrency(item.commissionFee)}
-                    </td>
-                    <td className="px-6 py-4 text-right font-medium text-gray-900">
-                      {formatCurrency(item.serviceFee)}
-                    </td>
-                    <td className="px-6 py-4 text-right font-medium text-gray-900">
-                      {formatCurrency(item.paymentFee)}
-                    </td>
-
                     <td className="px-6 py-4 text-gray-500">
                       {item.orderCreatedAt
                         ? format(
@@ -264,6 +260,42 @@ export default function PlatformFeesPage() {
                       {item.syncedAt
                         ? format(new Date(item.syncedAt), "dd/MM/yyyy HH:mm")
                         : "-"}
+                    </td>
+                    <td className="px-6 py-4 text-right font-mono text-gray-700">
+                      {formatCurrency(item.tax)}
+                    </td>
+                    <td className="px-6 py-4 text-gray-700">
+                      {item.currency || "-"}
+                    </td>
+                    <td className="px-6 py-4 text-right font-mono text-gray-700">
+                      {formatCurrency(item.subTotal)}
+                    </td>
+                    <td className="px-6 py-4 text-right font-mono text-gray-700">
+                      {formatCurrency(item.shippingFee)}
+                    </td>
+                    <td className="px-6 py-4 text-right font-mono text-gray-700 font-semibold">
+                      {formatCurrency(item.totalAmount)}
+                    </td>
+                    <td className="px-6 py-4 text-right font-mono text-red-600">
+                      {formatCurrency(item.sellerDiscount)}
+                    </td>
+                    <td className="px-6 py-4 text-right font-mono text-red-600">
+                      {formatCurrency(item.platformDiscount)}
+                    </td>
+                    <td className="px-6 py-4 text-right font-mono text-gray-700">
+                      {formatCurrency(item.originalShippingFee)}
+                    </td>
+                    <td className="px-6 py-4 text-right font-mono text-gray-700">
+                      {formatCurrency(item.originalTotalProductPrice)}
+                    </td>
+                    <td className="px-6 py-4 text-right font-mono text-red-600">
+                      {formatCurrency(item.shippingFeeSellerDiscount)}
+                    </td>
+                    <td className="px-6 py-4 text-right font-mono text-red-600">
+                      {formatCurrency(item.shippingFeeCofundedDiscount)}
+                    </td>
+                    <td className="px-6 py-4 text-right font-mono text-red-600">
+                      {formatCurrency(item.shippingFeePlatformDiscount)}
                     </td>
                   </tr>
                 ))
