@@ -178,22 +178,22 @@ export default function TikTokFeesPage() {
               <tr>
                 <th className="px-6 py-4">Brand</th>
                 <th className="px-6 py-4">Sàn</th>
-                <th className="px-6 py-4">ERP Order Code</th>
-                <th className="px-6 py-4">Order Code</th>
+                <th className="px-6 py-4">Mã đơn ERP</th>
+                <th className="px-6 py-4">Mã đơn hàng</th>
                 <th className="px-6 py-4">Ngày tạo đơn</th>
                 <th className="px-6 py-4">Ngày đồng bộ</th>
-                <th className="px-6 py-4">Tax</th>
-                <th className="px-6 py-4">Currency</th>
-                <th className="px-6 py-4">Sub Total</th>
-                <th className="px-6 py-4">Shipping Fee</th>
-                <th className="px-6 py-4">Total Amount</th>
-                <th className="px-6 py-4">Seller Discount</th>
-                <th className="px-6 py-4">Platform Discount</th>
-                <th className="px-6 py-4">Original Shipping Fee</th>
-                <th className="px-6 py-4">Original Total Product Price</th>
-                <th className="px-6 py-4">Shipping Fee Seller Discount</th>
-                <th className="px-6 py-4">Shipping Fee Cofunded Discount</th>
-                <th className="px-6 py-4">Shipping Fee Platform Discount</th>
+                <th className="px-6 py-4">Thuế</th>
+                <th className="px-6 py-4">Tiền tệ</th>
+                <th className="px-6 py-4">Tổng phụ</th>
+                <th className="px-6 py-4">Phí vận chuyển</th>
+                <th className="px-6 py-4">Tổng tiền</th>
+                <th className="px-6 py-4">Giảm giá người bán</th>
+                <th className="px-6 py-4">Giảm giá sàn</th>
+                <th className="px-6 py-4">Phí ship gốc</th>
+                <th className="px-6 py-4">Tổng giá sản phẩm gốc</th>
+                <th className="px-6 py-4">Giảm giá ship người bán</th>
+                <th className="px-6 py-4">Giảm giá ship đồng tài trợ</th>
+                <th className="px-6 py-4">Giảm giá ship sàn</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
