@@ -389,7 +389,13 @@ export const renderCellValue = (
       const val =
         typeof rawVal === "object" ? JSON.stringify(rawVal) : String(rawVal);
 
-      if (!val || val === "0" || val === "-" || val === "null") {
+      if (
+        !val ||
+        val === "0" ||
+        val === "-" ||
+        val === "null" ||
+        val === "undefined"
+      ) {
         return <span className="text-gray-400 italic">-</span>;
       }
 
@@ -486,8 +492,8 @@ export const renderCellValue = (
     }
 
     case "soSerial": {
-      // Sử dụng giá trị từ backend (soSerialDisplay hoặc soSerial)
-      const val = sale?.soSerialDisplay || sale?.soSerial;
+      // Sử dụng giá trị từ backend (Single Source of Truth)
+      const val = sale?.soSerialDisplay || "";
       if (val) {
         return <div className={`text-sm ${textClass}`}>{val}</div>;
       }

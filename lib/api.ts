@@ -55,7 +55,7 @@ export const salesApi = {
     if (queryParams.typeSale !== undefined) {
       queryParams.typeSale = queryParams.typeSale.toString();
     }
-    return api.get("/sales", { params: queryParams });
+    return api.get("/sales/v2", { params: queryParams });
   },
   getAllAggregated: (params?: {
     brand?: string;
@@ -80,7 +80,7 @@ export const salesApi = {
     if (queryParams.typeSale !== undefined) {
       queryParams.typeSale = queryParams.typeSale.toString();
     }
-    return api.get("/sales/aggregated", { params: queryParams });
+    return api.get("/sales/v2/aggregated", { params: queryParams });
   },
   syncFromZappy: (date: string) => {
     return api.post("/sales/sync-from-zappy", { date });
