@@ -492,8 +492,8 @@ export const renderCellValue = (
     }
 
     case "soSerial": {
-      // Sử dụng giá trị từ backend (Single Source of Truth)
-      const val = sale?.soSerialDisplay || "";
+      // Use maSerial as single source of truth (unified with backend)
+      const val = sale?.maSerial || "";
       if (val) {
         return <div className={`text-sm ${textClass}`}>{val}</div>;
       }

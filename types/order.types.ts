@@ -169,7 +169,8 @@ export interface SaleItem {
   troGia?: number;
   maCtkmTangHang?: string;
   maThe?: string;
-  soSerial?: string;
+  maSerial?: string; // Số serial (single source of truth)
+  soSerial?: string; // Deprecated - use maSerial instead
   revenue?: number;
   tkChietKhau?: string; // Tk chiết khấu
   tkChiPhi?: string; // Tk chi phí (từ creditAdvice)
@@ -186,7 +187,6 @@ export interface SaleItem {
   chietKhauVoucherDp1Display?: number | null;
   thanhToanTkTienAoDisplay?: string | null;
   chietKhauThanhToanTkTienAoDisplay?: number | null;
-  soSerialDisplay?: string | null;
   cucThueDisplay?: string | null;
   tkDoanhThuDisplay?: string | null;
   tkGiaVonDisplay?: string | null;
