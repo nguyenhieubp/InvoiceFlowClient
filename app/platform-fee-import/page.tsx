@@ -6,7 +6,7 @@ import { format } from "date-fns";
 
 type Platform = "shopee" | "tiktok" | "lazada";
 
-type TabType = "import" | "list";
+type TabType = "import" | "shopee" | "tiktok" | "lazada";
 
 export default function PlatformFeeImportPage() {
   const [activeTab, setActiveTab] = useState<TabType>("import");
@@ -22,17 +22,40 @@ export default function PlatformFeeImportPage() {
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // List state
-  const [listData, setListData] = useState<any[]>([]);
+  // List state for each platform
+  const [shopeeData, setShopeeData] = useState<any[]>([]);
+  const [tiktokData, setTiktokData] = useState<any[]>([]);
+  const [lazadaData, setLazadaData] = useState<any[]>([]);
   const [listLoading, setListLoading] = useState(false);
-  const [listPagination, setListPagination] = useState({
+  const [shopeePagination, setShopeePagination] = useState({
     page: 1,
     limit: 10,
     total: 0,
     totalPages: 0,
   });
-  const [listFilters, setListFilters] = useState({
-    platform: "",
+  const [tiktokPagination, setTiktokPagination] = useState({
+    page: 1,
+    limit: 10,
+    total: 0,
+    totalPages: 0,
+  });
+  const [lazadaPagination, setLazadaPagination] = useState({
+    page: 1,
+    limit: 10,
+    total: 0,
+    totalPages: 0,
+  });
+  const [shopeeFilters, setShopeeFilters] = useState({
+    search: "",
+    startDate: "",
+    endDate: "",
+  });
+  const [tiktokFilters, setTiktokFilters] = useState({
+    search: "",
+    startDate: "",
+    endDate: "",
+  });
+  const [lazadaFilters, setLazadaFilters] = useState({
     search: "",
     startDate: "",
     endDate: "",
@@ -71,7 +94,13 @@ export default function PlatformFeeImportPage() {
       setResult(response.data);
       // Refresh list after successful import
       if (response.data.success && response.data.success > 0) {
-        fetchListData();
+        if (selectedPlatform === "shopee") {
+          fetchPlatformData("shopee");
+        } else if (selectedPlatform === "tiktok") {
+          fetchPlatformData("tiktok");
+        } else if (selectedPlatform === "lazada") {
+          fetchPlatformData("lazada");
+        }
       }
     } catch (err: any) {
       setError(
@@ -116,39 +145,378 @@ export default function PlatformFeeImportPage() {
     }
   };
 
-  const fetchListData = async () => {
+  const fetchPlatformData = async (platform: Platform) => {
     setListLoading(true);
     try {
+      let filters, pagination, setData, setPagination;
+      
+      if (platform === "shopee") {
+        filters = shopeeFilters;
+        pagination = shopeePagination;
+        setData = setShopeeData;
+        setPagination = setShopeePagination;
+      } else if (platform === "tiktok") {
+        filters = tiktokFilters;
+        pagination = tiktokPagination;
+        setData = setTiktokData;
+        setPagination = setTiktokPagination;
+      } else {
+        filters = lazadaFilters;
+        pagination = lazadaPagination;
+        setData = setLazadaData;
+        setPagination = setLazadaPagination;
+      }
+
       const response = await platformFeeImportApi.getAll({
-        page: listPagination.page,
-        limit: listPagination.limit,
-        platform: listFilters.platform || undefined,
-        search: listFilters.search || undefined,
-        startDate: listFilters.startDate || undefined,
-        endDate: listFilters.endDate || undefined,
+        page: pagination.page,
+        limit: pagination.limit,
+        platform: platform,
+        search: filters.search || undefined,
+        startDate: filters.startDate || undefined,
+        endDate: filters.endDate || undefined,
       });
-      setListData(response.data.data);
-      setListPagination((prev) => ({
+      setData(response.data.data);
+      setPagination((prev) => ({
         ...prev,
         ...response.data.meta,
       }));
     } catch (err: any) {
-      console.error("Error fetching list:", err);
+      console.error(`Error fetching ${platform} data:`, err);
     } finally {
       setListLoading(false);
     }
   };
 
   useEffect(() => {
-    if (activeTab === "list") {
-      fetchListData();
+    if (activeTab === "shopee") {
+      fetchPlatformData("shopee");
+    } else if (activeTab === "tiktok") {
+      fetchPlatformData("tiktok");
+    } else if (activeTab === "lazada") {
+      fetchPlatformData("lazada");
     }
-  }, [activeTab, listPagination.page, listFilters]);
+  }, [activeTab, shopeePagination.page, tiktokPagination.page, lazadaPagination.page, shopeeFilters, tiktokFilters, lazadaFilters]);
 
-  const handleListSearch = (e: React.FormEvent) => {
+  const handlePlatformSearch = (e: React.FormEvent, platform: Platform) => {
     e.preventDefault();
-    setListPagination((prev) => ({ ...prev, page: 1 }));
-    fetchListData();
+    if (platform === "shopee") {
+      setShopeePagination((prev) => ({ ...prev, page: 1 }));
+    } else if (platform === "tiktok") {
+      setTiktokPagination((prev) => ({ ...prev, page: 1 }));
+    } else {
+      setLazadaPagination((prev) => ({ ...prev, page: 1 }));
+    }
+    fetchPlatformData(platform);
+  };
+
+  // Helper function to render platform table
+  const renderPlatformTable = (
+    platform: Platform,
+    data: any[],
+    pagination: typeof shopeePagination,
+    filters: typeof shopeeFilters,
+    setFilters: React.Dispatch<React.SetStateAction<typeof shopeeFilters>>,
+    setPagination: React.Dispatch<React.SetStateAction<typeof shopeePagination>>,
+  ) => {
+    return (
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        {/* Filters */}
+        <div className="p-4 border-b border-gray-200 bg-gray-50">
+          <form onSubmit={(e) => handlePlatformSearch(e, platform)} className="flex flex-col md:flex-row gap-4">
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium text-gray-700">Từ:</label>
+                <input
+                  type="date"
+                  value={filters.startDate}
+                  onChange={(e) =>
+                    setFilters({ ...filters, startDate: e.target.value })
+                  }
+                  className="border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium text-gray-700">Đến:</label>
+                <input
+                  type="date"
+                  value={filters.endDate}
+                  onChange={(e) =>
+                    setFilters({ ...filters, endDate: e.target.value })
+                  }
+                  className="border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div className="flex-1 flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Tìm kiếm..."
+                  value={filters.search}
+                  onChange={(e) =>
+                    setFilters({ ...filters, search: e.target.value })
+                  }
+                  className="flex-1 border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <button
+                  type="submit"
+                  className="px-3 py-1.5 bg-gray-700 text-white rounded text-sm hover:bg-gray-800 transition"
+                >
+                  Tìm kiếm
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* Table */}
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm min-w-max">
+              <thead className="bg-gray-100 text-gray-600 font-semibold uppercase text-xs">
+                <tr>
+                  <th className="px-3 py-3 whitespace-nowrap">Mã sàn</th>
+                  <th className="px-3 py-3 whitespace-nowrap">Mã nội bộ SP</th>
+                  <th className="px-3 py-3 whitespace-nowrap">Ngày đối soát</th>
+                  <th className="px-3 py-3 whitespace-nowrap">Mã đơn hàng hoàn</th>
+                  <th className="px-3 py-3 whitespace-nowrap">Shop phát hành</th>
+                  <th className="px-3 py-3 whitespace-nowrap text-right">Giá trị giảm giá CTKM</th>
+                  <th className="px-3 py-3 whitespace-nowrap text-right">Doanh thu đơn hàng</th>
+                  {/* Shopee Fees */}
+                  <th className="px-3 py-3 whitespace-nowrap text-right">Phí cố định 6.05%</th>
+                  <th className="px-3 py-3 whitespace-nowrap text-right">Phí Dịch Vụ 6%</th>
+                  <th className="px-3 py-3 whitespace-nowrap text-right">Phí thanh toán 5%</th>
+                  <th className="px-3 py-3 whitespace-nowrap text-right">Phí hoa hồng TT 21%</th>
+                  <th className="px-3 py-3 whitespace-nowrap text-right">Shipping Fee Saver</th>
+                  <th className="px-3 py-3 whitespace-nowrap text-right">Phí Pi Ship</th>
+                  {/* TikTok Fees */}
+                  <th className="px-3 py-3 whitespace-nowrap text-right">Phí giao dịch 5%</th>
+                  <th className="px-3 py-3 whitespace-nowrap text-right">Phí hoa hồng Tiktok 4.54%</th>
+                  <th className="px-3 py-3 whitespace-nowrap text-right">Phí hoa hồng TT 150050</th>
+                  <th className="px-3 py-3 whitespace-nowrap text-right">Phí dịch vụ SFP 6%</th>
+                  {/* Common */}
+                  <th className="px-3 py-3 whitespace-nowrap">Mã tiếp thị liên kết</th>
+                  <th className="px-3 py-3 whitespace-nowrap">Sàn TMĐT</th>
+                  <th className="px-3 py-3 whitespace-nowrap">MKT 1</th>
+                  <th className="px-3 py-3 whitespace-nowrap">MKT 2</th>
+                  <th className="px-3 py-3 whitespace-nowrap">MKT 3</th>
+                  <th className="px-3 py-3 whitespace-nowrap">MKT 4</th>
+                  <th className="px-3 py-3 whitespace-nowrap">MKT 5</th>
+                  <th className="px-3 py-3 whitespace-nowrap">Bộ phận</th>
+                  {/* Lazada */}
+                  <th className="px-3 py-3 whitespace-nowrap">Tên phí/doanh thu</th>
+                  <th className="px-3 py-3 whitespace-nowrap">Quảng cáo TT</th>
+                  <th className="px-3 py-3 whitespace-nowrap">Mã phí hạch toán</th>
+                  <th className="px-3 py-3 whitespace-nowrap">Ghi chú</th>
+                  {/* Generic Fees */}
+                  <th className="px-3 py-3 whitespace-nowrap text-right">Phí 1</th>
+                  <th className="px-3 py-3 whitespace-nowrap text-right">Phí 2</th>
+                  <th className="px-3 py-3 whitespace-nowrap text-right">Phí 3</th>
+                  <th className="px-3 py-3 whitespace-nowrap text-right">Phí 4</th>
+                  <th className="px-3 py-3 whitespace-nowrap text-right">Phí 5</th>
+                  <th className="px-3 py-3 whitespace-nowrap text-right">Phí 6</th>
+                  {/* Metadata */}
+                  <th className="px-3 py-3 whitespace-nowrap">Ngày import</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {listLoading ? (
+                  <tr>
+                    <td
+                      colSpan={37}
+                      className="px-6 py-8 text-center text-gray-500"
+                    >
+                      <div className="flex justify-center items-center gap-2">
+                        <div className="animate-spin h-5 w-5 border-2 border-blue-500 rounded-full border-t-transparent"></div>
+                        Đang tải dữ liệu...
+                      </div>
+                    </td>
+                  </tr>
+                ) : data.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={37}
+                      className="px-6 py-8 text-center text-gray-500"
+                    >
+                      Không có dữ liệu
+                    </td>
+                  </tr>
+                ) : (
+                  data.map((item) => (
+                    <tr
+                      key={item.id}
+                      className="hover:bg-gray-50 transition-colors"
+                    >
+                      <td className="px-3 py-3 font-mono text-gray-700 whitespace-nowrap">
+                        {item.maSan ?? "-"}
+                      </td>
+                      <td className="px-3 py-3 font-mono text-gray-700 whitespace-nowrap">
+                        {item.maNoiBoSp ?? "-"}
+                      </td>
+                      <td className="px-3 py-3 text-gray-500 whitespace-nowrap">
+                        {item.ngayDoiSoat
+                          ? format(new Date(item.ngayDoiSoat), "dd/MM/yyyy")
+                          : "-"}
+                      </td>
+                      <td className="px-3 py-3 font-mono text-gray-700 whitespace-nowrap">
+                        {item.maDonHangHoan ?? "-"}
+                      </td>
+                      <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
+                        {item.shopPhatHanhTrenSan ?? "-"}
+                      </td>
+                      <td className="px-3 py-3 text-right font-medium text-gray-900 whitespace-nowrap">
+                        {formatCurrency(item.giaTriGiamGiaCtkm)}
+                      </td>
+                      <td className="px-3 py-3 text-right font-medium text-gray-900 whitespace-nowrap">
+                        {formatCurrency(item.doanhThuDonHang)}
+                      </td>
+                      {/* Shopee Fees */}
+                      <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
+                        {formatCurrency(item.phiCoDinh605MaPhi164020)}
+                      </td>
+                      <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
+                        {formatCurrency(item.phiDichVu6MaPhi164020)}
+                      </td>
+                      <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
+                        {formatCurrency(item.phiThanhToan5MaPhi164020)}
+                      </td>
+                      <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
+                        {formatCurrency(item.phiHoaHongTiepThiLienKet21150050)}
+                      </td>
+                      <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
+                        {formatCurrency(item.chiPhiDichVuShippingFeeSaver164010)}
+                      </td>
+                      <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
+                        {formatCurrency(item.phiPiShipDoMktDangKy164010)}
+                      </td>
+                      {/* TikTok Fees */}
+                      <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
+                        {formatCurrency(item.phiGiaoDichTyLe5164020)}
+                      </td>
+                      <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
+                        {formatCurrency(item.phiHoaHongTraChoTiktok454164020)}
+                      </td>
+                      <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
+                        {formatCurrency(item.phiHoaHongTiepThiLienKet150050)}
+                      </td>
+                      <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
+                        {formatCurrency(item.phiDichVuSfp6164020)}
+                      </td>
+                      {/* Common */}
+                      <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
+                        {item.maCacBenTiepThiLienKet ?? "-"}
+                      </td>
+                      <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
+                        {item.sanTmdt ?? "-"}
+                      </td>
+                      <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
+                        {item.cotChoBsMkt1 ?? "-"}
+                      </td>
+                      <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
+                        {item.cotChoBsMkt2 ?? "-"}
+                      </td>
+                      <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
+                        {item.cotChoBsMkt3 ?? "-"}
+                      </td>
+                      <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
+                        {item.cotChoBsMkt4 ?? "-"}
+                      </td>
+                      <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
+                        {item.cotChoBsMkt5 ?? "-"}
+                      </td>
+                      <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
+                        {item.boPhan ?? "-"}
+                      </td>
+                      {/* Lazada */}
+                      <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
+                        {item.tenPhiDoanhThu ?? "-"}
+                      </td>
+                      <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
+                        {item.quangCaoTiepThiLienKet ?? "-"}
+                      </td>
+                      <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
+                        {item.maPhiNhanDienHachToan ?? "-"}
+                      </td>
+                      <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
+                        {item.ghiChu ?? "-"}
+                      </td>
+                      {/* Generic Fees */}
+                      <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
+                        {formatCurrency(item.phi1)}
+                      </td>
+                      <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
+                        {formatCurrency(item.phi2)}
+                      </td>
+                      <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
+                        {formatCurrency(item.phi3)}
+                      </td>
+                      <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
+                        {formatCurrency(item.phi4)}
+                      </td>
+                      <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
+                        {formatCurrency(item.phi5)}
+                      </td>
+                      <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
+                        {formatCurrency(item.phi6)}
+                      </td>
+                      {/* Metadata */}
+                      <td className="px-3 py-3 text-gray-500 whitespace-nowrap">
+                        {item.createdAt
+                          ? format(new Date(item.createdAt), "dd/MM/yyyy HH:mm")
+                          : "-"}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination */}
+          <div className="p-4 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
+            <p className="text-sm text-gray-600">
+              Hiển thị{" "}
+              <span className="font-medium">
+                {Math.min(
+                  (pagination.page - 1) * pagination.limit + 1,
+                  pagination.total,
+                )}
+              </span>{" "}
+              đến{" "}
+              <span className="font-medium">
+                {Math.min(
+                  pagination.page * pagination.limit,
+                  pagination.total,
+                )}
+              </span>{" "}
+              trong tổng số{" "}
+              <span className="font-medium">{pagination.total}</span> bản
+              ghi
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() =>
+                  setPagination((prev) => ({
+                    ...prev,
+                    page: prev.page - 1,
+                  }))
+                }
+                disabled={pagination.page <= 1}
+                className="px-3 py-1 border border-gray-300 rounded bg-white text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition"
+              >
+                Trước
+              </button>
+              <button
+                onClick={() =>
+                  setPagination((prev) => ({
+                    ...prev,
+                    page: prev.page + 1,
+                  }))
+                }
+                disabled={pagination.page >= pagination.totalPages}
+                className="px-3 py-1 border border-gray-300 rounded bg-white text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition"
+              >
+                Sau
+              </button>
+            </div>
+          </div>
+        </div>
+    );
   };
 
   const platformInfo = {
@@ -199,14 +567,34 @@ export default function PlatformFeeImportPage() {
             Import
           </button>
           <button
-            onClick={() => setActiveTab("list")}
+            onClick={() => setActiveTab("shopee")}
             className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === "list"
+              activeTab === "shopee"
                 ? "border-blue-500 text-blue-600"
                 : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
             }`}
           >
-            Danh sách đã import
+            Shopee
+          </button>
+          <button
+            onClick={() => setActiveTab("tiktok")}
+            className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              activeTab === "tiktok"
+                ? "border-blue-500 text-blue-600"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+            }`}
+          >
+            TikTok
+          </button>
+          <button
+            onClick={() => setActiveTab("lazada")}
+            className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              activeTab === "lazada"
+                ? "border-blue-500 text-blue-600"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+            }`}
+          >
+            Lazada
           </button>
         </nav>
       </div>
@@ -456,329 +844,14 @@ export default function PlatformFeeImportPage() {
         </div>
       )}
 
-      {/* List Tab */}
-      {activeTab === "list" && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          {/* Filters */}
-          <div className="p-4 border-b border-gray-200 bg-gray-50">
-            <form onSubmit={handleListSearch} className="flex flex-col md:flex-row gap-4">
-              <div className="flex items-center gap-2">
-                <label className="text-sm font-medium text-gray-700">
-                  Platform:
-                </label>
-                <select
-                  value={listFilters.platform}
-                  onChange={(e) =>
-                    setListFilters({ ...listFilters, platform: e.target.value })
-                  }
-                  className="border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Tất cả</option>
-                  <option value="shopee">Shopee</option>
-                  <option value="tiktok">TikTok</option>
-                  <option value="lazada">Lazada</option>
-                </select>
-              </div>
-              <div className="flex items-center gap-2">
-                <label className="text-sm font-medium text-gray-700">Từ:</label>
-                <input
-                  type="date"
-                  value={listFilters.startDate}
-                  onChange={(e) =>
-                    setListFilters({ ...listFilters, startDate: e.target.value })
-                  }
-                  className="border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <label className="text-sm font-medium text-gray-700">Đến:</label>
-                <input
-                  type="date"
-                  value={listFilters.endDate}
-                  onChange={(e) =>
-                    setListFilters({ ...listFilters, endDate: e.target.value })
-                  }
-                  className="border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <div className="flex-1 flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Tìm kiếm..."
-                  value={listFilters.search}
-                  onChange={(e) =>
-                    setListFilters({ ...listFilters, search: e.target.value })
-                  }
-                  className="flex-1 border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <button
-                  type="submit"
-                  className="px-3 py-1.5 bg-gray-700 text-white rounded text-sm hover:bg-gray-800 transition"
-                >
-                  Tìm kiếm
-                </button>
-              </div>
-            </form>
-          </div>
+      {/* Platform Tabs - Shopee */}
+      {activeTab === "shopee" && renderPlatformTable("shopee", shopeeData, shopeePagination, shopeeFilters, setShopeeFilters, setShopeePagination)}
 
-          {/* Table */}
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm min-w-max">
-              <thead className="bg-gray-100 text-gray-600 font-semibold uppercase text-xs">
-                <tr>
-                  <th className="px-3 py-3 whitespace-nowrap">Platform</th>
-                  <th className="px-3 py-3 whitespace-nowrap">Mã sàn</th>
-                  <th className="px-3 py-3 whitespace-nowrap">Mã nội bộ SP</th>
-                  <th className="px-3 py-3 whitespace-nowrap">Ngày đối soát</th>
-                  <th className="px-3 py-3 whitespace-nowrap">Mã đơn hàng hoàn</th>
-                  <th className="px-3 py-3 whitespace-nowrap">Shop phát hành</th>
-                  <th className="px-3 py-3 whitespace-nowrap text-right">Giá trị giảm giá CTKM</th>
-                  <th className="px-3 py-3 whitespace-nowrap text-right">Doanh thu đơn hàng</th>
-                  {/* Shopee Fees */}
-                  <th className="px-3 py-3 whitespace-nowrap text-right">Phí cố định 6.05%</th>
-                  <th className="px-3 py-3 whitespace-nowrap text-right">Phí Dịch Vụ 6%</th>
-                  <th className="px-3 py-3 whitespace-nowrap text-right">Phí thanh toán 5%</th>
-                  <th className="px-3 py-3 whitespace-nowrap text-right">Phí hoa hồng TT 21%</th>
-                  <th className="px-3 py-3 whitespace-nowrap text-right">Shipping Fee Saver</th>
-                  <th className="px-3 py-3 whitespace-nowrap text-right">Phí Pi Ship</th>
-                  {/* TikTok Fees */}
-                  <th className="px-3 py-3 whitespace-nowrap text-right">Phí giao dịch 5%</th>
-                  <th className="px-3 py-3 whitespace-nowrap text-right">Phí hoa hồng Tiktok 4.54%</th>
-                  <th className="px-3 py-3 whitespace-nowrap text-right">Phí hoa hồng TT 150050</th>
-                  <th className="px-3 py-3 whitespace-nowrap text-right">Phí dịch vụ SFP 6%</th>
-                  {/* Common */}
-                  <th className="px-3 py-3 whitespace-nowrap">Mã tiếp thị liên kết</th>
-                  <th className="px-3 py-3 whitespace-nowrap">Sàn TMĐT</th>
-                  <th className="px-3 py-3 whitespace-nowrap">MKT 1</th>
-                  <th className="px-3 py-3 whitespace-nowrap">MKT 2</th>
-                  <th className="px-3 py-3 whitespace-nowrap">MKT 3</th>
-                  <th className="px-3 py-3 whitespace-nowrap">MKT 4</th>
-                  <th className="px-3 py-3 whitespace-nowrap">MKT 5</th>
-                  <th className="px-3 py-3 whitespace-nowrap">Bộ phận</th>
-                  {/* Lazada */}
-                  <th className="px-3 py-3 whitespace-nowrap">Tên phí/doanh thu</th>
-                  <th className="px-3 py-3 whitespace-nowrap">Quảng cáo TT</th>
-                  <th className="px-3 py-3 whitespace-nowrap">Mã phí hạch toán</th>
-                  <th className="px-3 py-3 whitespace-nowrap">Ghi chú</th>
-                  {/* Generic Fees */}
-                  <th className="px-3 py-3 whitespace-nowrap text-right">Phí 1</th>
-                  <th className="px-3 py-3 whitespace-nowrap text-right">Phí 2</th>
-                  <th className="px-3 py-3 whitespace-nowrap text-right">Phí 3</th>
-                  <th className="px-3 py-3 whitespace-nowrap text-right">Phí 4</th>
-                  <th className="px-3 py-3 whitespace-nowrap text-right">Phí 5</th>
-                  <th className="px-3 py-3 whitespace-nowrap text-right">Phí 6</th>
-                  {/* Metadata */}
-                  <th className="px-3 py-3 whitespace-nowrap">Ngày import</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {listLoading ? (
-                  <tr>
-                    <td
-                      colSpan={38}
-                      className="px-6 py-8 text-center text-gray-500"
-                    >
-                      <div className="flex justify-center items-center gap-2">
-                        <div className="animate-spin h-5 w-5 border-2 border-blue-500 rounded-full border-t-transparent"></div>
-                        Đang tải dữ liệu...
-                      </div>
-                    </td>
-                  </tr>
-                ) : listData.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={38}
-                      className="px-6 py-8 text-center text-gray-500"
-                    >
-                      Không có dữ liệu
-                    </td>
-                  </tr>
-                ) : (
-                  listData.map((item) => (
-                    <tr
-                      key={item.id}
-                      className="hover:bg-gray-50 transition-colors"
-                    >
-                      <td className="px-3 py-3">
-                        <span className="px-2 py-1 rounded text-xs font-semibold bg-orange-100 text-orange-700">
-                          {item.platform?.toUpperCase() ?? "-"}
-                        </span>
-                      </td>
-                      <td className="px-3 py-3 font-mono text-gray-700 whitespace-nowrap">
-                        {item.maSan ?? "-"}
-                      </td>
-                      <td className="px-3 py-3 font-mono text-gray-700 whitespace-nowrap">
-                        {item.maNoiBoSp ?? "-"}
-                      </td>
-                      <td className="px-3 py-3 text-gray-500 whitespace-nowrap">
-                        {item.ngayDoiSoat
-                          ? format(new Date(item.ngayDoiSoat), "dd/MM/yyyy")
-                          : "-"}
-                      </td>
-                      <td className="px-3 py-3 font-mono text-gray-700 whitespace-nowrap">
-                        {item.maDonHangHoan ?? "-"}
-                      </td>
-                      <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
-                        {item.shopPhatHanhTrenSan ?? "-"}
-                      </td>
-                      <td className="px-3 py-3 text-right font-medium text-gray-900 whitespace-nowrap">
-                        {formatCurrency(item.giaTriGiamGiaCtkm)}
-                      </td>
-                      <td className="px-3 py-3 text-right font-medium text-gray-900 whitespace-nowrap">
-                        {formatCurrency(item.doanhThuDonHang)}
-                      </td>
-                      {/* Shopee Fees */}
-                      <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
-                        {formatCurrency(item.phiCoDinh605MaPhi164020)}
-                      </td>
-                      <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
-                        {formatCurrency(item.phiDichVu6MaPhi164020)}
-                      </td>
-                      <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
-                        {formatCurrency(item.phiThanhToan5MaPhi164020)}
-                      </td>
-                      <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
-                        {formatCurrency(item.phiHoaHongTiepThiLienKet21150050)}
-                      </td>
-                      <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
-                        {formatCurrency(item.chiPhiDichVuShippingFeeSaver164010)}
-                      </td>
-                      <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
-                        {formatCurrency(item.phiPiShipDoMktDangKy164010)}
-                      </td>
-                      {/* TikTok Fees */}
-                      <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
-                        {formatCurrency(item.phiGiaoDichTyLe5164020)}
-                      </td>
-                      <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
-                        {formatCurrency(item.phiHoaHongTraChoTiktok454164020)}
-                      </td>
-                      <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
-                        {formatCurrency(item.phiHoaHongTiepThiLienKet150050)}
-                      </td>
-                      <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
-                        {formatCurrency(item.phiDichVuSfp6164020)}
-                      </td>
-                      {/* Common */}
-                      <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
-                        {item.maCacBenTiepThiLienKet ?? "-"}
-                      </td>
-                      <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
-                        {item.sanTmdt ?? "-"}
-                      </td>
-                      <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
-                        {item.cotChoBsMkt1 ?? "-"}
-                      </td>
-                      <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
-                        {item.cotChoBsMkt2 ?? "-"}
-                      </td>
-                      <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
-                        {item.cotChoBsMkt3 ?? "-"}
-                      </td>
-                      <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
-                        {item.cotChoBsMkt4 ?? "-"}
-                      </td>
-                      <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
-                        {item.cotChoBsMkt5 ?? "-"}
-                      </td>
-                      <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
-                        {item.boPhan ?? "-"}
-                      </td>
-                      {/* Lazada */}
-                      <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
-                        {item.tenPhiDoanhThu ?? "-"}
-                      </td>
-                      <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
-                        {item.quangCaoTiepThiLienKet ?? "-"}
-                      </td>
-                      <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
-                        {item.maPhiNhanDienHachToan ?? "-"}
-                      </td>
-                      <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
-                        {item.ghiChu ?? "-"}
-                      </td>
-                      {/* Generic Fees */}
-                      <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
-                        {formatCurrency(item.phi1)}
-                      </td>
-                      <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
-                        {formatCurrency(item.phi2)}
-                      </td>
-                      <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
-                        {formatCurrency(item.phi3)}
-                      </td>
-                      <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
-                        {formatCurrency(item.phi4)}
-                      </td>
-                      <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
-                        {formatCurrency(item.phi5)}
-                      </td>
-                      <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
-                        {formatCurrency(item.phi6)}
-                      </td>
-                      {/* Metadata */}
-                      <td className="px-3 py-3 text-gray-500 whitespace-nowrap">
-                        {item.createdAt
-                          ? format(new Date(item.createdAt), "dd/MM/yyyy HH:mm")
-                          : "-"}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+      {/* Platform Tabs - TikTok */}
+      {activeTab === "tiktok" && renderPlatformTable("tiktok", tiktokData, tiktokPagination, tiktokFilters, setTiktokFilters, setTiktokPagination)}
 
-          {/* Pagination */}
-          <div className="p-4 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
-            <p className="text-sm text-gray-600">
-              Hiển thị{" "}
-              <span className="font-medium">
-                {Math.min(
-                  (listPagination.page - 1) * listPagination.limit + 1,
-                  listPagination.total,
-                )}
-              </span>{" "}
-              đến{" "}
-              <span className="font-medium">
-                {Math.min(
-                  listPagination.page * listPagination.limit,
-                  listPagination.total,
-                )}
-              </span>{" "}
-              trong tổng số{" "}
-              <span className="font-medium">{listPagination.total}</span> bản
-              ghi
-            </p>
-            <div className="flex gap-2">
-              <button
-                onClick={() =>
-                  setListPagination((prev) => ({
-                    ...prev,
-                    page: prev.page - 1,
-                  }))
-                }
-                disabled={listPagination.page <= 1}
-                className="px-3 py-1 border border-gray-300 rounded bg-white text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition"
-              >
-                Trước
-              </button>
-              <button
-                onClick={() =>
-                  setListPagination((prev) => ({
-                    ...prev,
-                    page: prev.page + 1,
-                  }))
-                }
-                disabled={listPagination.page >= listPagination.totalPages}
-                className="px-3 py-1 border border-gray-300 rounded bg-white text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition"
-              >
-                Sau
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Platform Tabs - Lazada */}
+      {activeTab === "lazada" && renderPlatformTable("lazada", lazadaData, lazadaPagination, lazadaFilters, setLazadaFilters, setLazadaPagination)}
     </div>
   );
 }
