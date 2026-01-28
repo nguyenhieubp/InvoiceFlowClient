@@ -73,13 +73,50 @@ export default function PurchaseOrdersPage() {
       label: "Ngày PO",
       key: "poDate",
       format: (v: any) => (v ? format(new Date(v), "dd/MM/yyyy") : "-"),
+      className: "whitespace-nowrap",
     },
-    { label: "Mã PO", key: "poCode", className: "font-medium text-blue-600" },
-    { label: "Mã hàng", key: "itemCode" },
-    { label: "Tên hàng", key: "itemName", className: "max-w-[300px] truncate" },
+    {
+      label: "Mã PO",
+      key: "poCode",
+      className: "font-medium text-blue-600 whitespace-nowrap",
+    },
+    { label: "Mã hàng", key: "itemCode", className: "whitespace-nowrap" },
+    {
+      label: "Tên hàng",
+      key: "itemName",
+      className: "max-w-[300px] truncate min-w-[200px]",
+    },
+    { label: "Ngành hàng", key: "catName", className: "whitespace-nowrap" },
+    {
+      label: "Mã NCC",
+      key: "supplierItemCode",
+      className: "whitespace-nowrap",
+    },
+    {
+      label: "Tên NCC",
+      key: "supplierItemName",
+      className: "max-w-[200px] truncate",
+    },
+    {
+      label: "Loại quản lý",
+      key: "manageType",
+      className: "whitespace-nowrap",
+    },
     {
       label: "SL Đặt",
       key: "qty",
+      align: "right",
+      format: (v: any) => Number(v).toLocaleString(),
+    },
+    {
+      label: "SL Nhận",
+      key: "receivedQty",
+      align: "right",
+      format: (v: any) => Number(v).toLocaleString(),
+    },
+    {
+      label: "SL Trả",
+      key: "returnedQty",
       align: "right",
       format: (v: any) => Number(v).toLocaleString(),
     },
@@ -90,24 +127,187 @@ export default function PurchaseOrdersPage() {
       format: (v: any) => formatCurrency(v),
     },
     {
+      label: "Giá bán",
+      key: "salePrice",
+      align: "right",
+      format: (v: any) => formatCurrency(v),
+    },
+    {
+      label: "VAT %",
+      key: "vatPct",
+      align: "right",
+      format: (v: any) => (v ? `${Number(v)}%` : "-"),
+    },
+    {
+      label: "Tiền VAT",
+      key: "vatTotal",
+      align: "right",
+      format: (v: any) => formatCurrency(v),
+    },
+    {
+      label: "Thuế NK %",
+      key: "importTaxPct",
+      align: "right",
+      format: (v: any) => (v ? `${Number(v)}%` : "-"),
+    },
+    {
+      label: "Tiền Thuế NK",
+      key: "importTaxTotal",
+      align: "right",
+      format: (v: any) => formatCurrency(v),
+    },
+    {
+      label: "Chiết khấu %",
+      key: "discPct",
+      align: "right",
+      format: (v: any) => (v ? `${Number(v)}%` : "-"),
+    },
+    {
+      label: "Tiền Chiết khấu",
+      key: "discTotal",
+      align: "right",
+      format: (v: any) => formatCurrency(v),
+    },
+    {
+      label: "Tiền KM",
+      key: "promAmount",
+      align: "right",
+      format: (v: any) => formatCurrency(v),
+    },
+    {
       label: "Thành tiền",
       key: "amount",
       align: "right",
       format: (v: any) => formatCurrency(v),
     },
     {
-      label: "SL Nhận",
-      key: "receivedQty",
+      label: "Tổng tiền",
+      key: "lineTotal",
       align: "right",
-      format: (v: any) => Number(v).toLocaleString(),
+      format: (v: any) => formatCurrency(v),
+    },
+    {
+      label: "Ghi chú Cat",
+      key: "noteCategory",
+      className: "max-w-[150px] truncate",
+    },
+    {
+      label: "Ghi chú Chi tiết",
+      key: "noteDetail",
+      className: "max-w-[200px] truncate",
+    },
+    {
+      label: "CN Nhận (Mã)",
+      key: "shipToBranchCode",
+      className: "whitespace-nowrap",
+    },
+    {
+      label: "CN Nhận (Tên)",
+      key: "shipToBranchName",
+      className: "max-w-[150px] truncate",
+    },
+    {
+      label: "Chi phí item",
+      key: "itemCost",
+      align: "right",
+      format: (v: any) => formatCurrency(v),
+    },
+    {
+      label: "Chi phí PO",
+      key: "poCost",
+      align: "right",
+      format: (v: any) => formatCurrency(v),
+    },
+    {
+      label: "Chi phí trước GR",
+      key: "onGrCost",
+      align: "right",
+      format: (v: any) => formatCurrency(v),
+    },
+    {
+      label: "Chi phí sau GR",
+      key: "afterGrCost",
+      align: "right",
+      format: (v: any) => formatCurrency(v),
+    },
+    {
+      label: "Hàng NCC KM",
+      key: "isSupplierPromotionItem",
+      align: "center",
+      render: (item: any) => (
+        <span
+          className={
+            item.isSupplierPromotionItem === "Y"
+              ? "text-green-600 font-bold"
+              : "text-gray-400"
+          }
+        >
+          {item.isSupplierPromotionItem === "Y" ? "Có" : "-"}
+        </span>
+      ),
+    },
+    {
+      label: "Hàng KM",
+      key: "isPromotionProd",
+      align: "center",
+      render: (item: any) => (
+        <span
+          className={
+            item.isPromotionProd === "Y"
+              ? "text-green-600 font-bold"
+              : "text-gray-400"
+          }
+        >
+          {item.isPromotionProd === "Y" ? "Có" : "-"}
+        </span>
+      ),
+    },
+    {
+      label: "Loại mua hàng",
+      key: "purchaseTypeName",
+      className: "whitespace-nowrap",
+    },
+    { label: "Mã giá", key: "priceCode", className: "whitespace-nowrap" },
+    {
+      label: "Mã giá bán",
+      key: "salePriceCode",
+      className: "whitespace-nowrap",
+    },
+    {
+      label: "Giá Saved",
+      key: "savedPriceForPromItem",
+      align: "right",
+      format: (v: any) => formatCurrency(v),
+    },
+    {
+      label: "Mã lô hàng",
+      key: "shipmentCode",
+      className: "whitespace-nowrap",
+    },
+    {
+      label: "Tên lô hàng",
+      key: "shipmentName",
+      className: "max-w-[150px] truncate",
+    },
+    {
+      label: "Ngày dự kiến",
+      key: "shipmentPlanDate",
+      format: (v: any) => (v ? format(new Date(v), "dd/MM/yyyy") : "-"),
+      className: "whitespace-nowrap",
+    },
+    {
+      label: "Vận chuyển",
+      key: "shipmentTransMethod",
+      className: "whitespace-nowrap",
     },
     {
       label: "Trạng thái",
       key: "status",
       align: "center",
+      className: "whitespace-nowrap",
       render: (item: any) => (
         <span
-          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${
             item.receivedQty >= item.qty
               ? "bg-green-100 text-green-800"
               : "bg-amber-100 text-amber-800"

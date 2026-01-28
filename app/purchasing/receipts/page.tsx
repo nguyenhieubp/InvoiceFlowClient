@@ -72,16 +72,40 @@ export default function GoodsReceiptsPage() {
       label: "Ngày GR",
       key: "grDate",
       format: (v: any) => (v ? format(new Date(v), "dd/MM/yyyy") : "-"),
+      className: "whitespace-nowrap",
     },
-    { label: "Mã GR", key: "grCode", className: "font-medium text-blue-600" },
-    { label: "Mã PO", key: "poCode" },
-    { label: "Mã hàng", key: "itemCode" },
-    { label: "Tên hàng", key: "itemName", className: "max-w-[300px] truncate" },
-    { label: "Lô/Serial", key: "batchSerial", className: "font-mono" },
-    { label: "Ngành hàng", key: "catName" },
+    {
+      label: "Mã GR",
+      key: "grCode",
+      className: "font-medium text-blue-600 whitespace-nowrap",
+    },
+    { label: "Mã PO", key: "poCode", className: "whitespace-nowrap" },
+    { label: "Mã hàng", key: "itemCode", className: "whitespace-nowrap" },
+    {
+      label: "Tên hàng",
+      key: "itemName",
+      className: "max-w-[300px] truncate min-w-[200px]",
+    },
+    {
+      label: "Lô/Serial",
+      key: "batchSerial",
+      className: "font-mono whitespace-nowrap",
+    },
+    { label: "Ngành hàng", key: "catName", className: "whitespace-nowrap" },
+    {
+      label: "Loại quản lý",
+      key: "manageType",
+      className: "whitespace-nowrap",
+    },
     {
       label: "SL Nhận",
       key: "qty",
+      align: "right",
+      format: (v: any) => Number(v).toLocaleString(),
+    },
+    {
+      label: "SL Trả lại",
+      key: "returnedQty",
       align: "right",
       format: (v: any) => Number(v).toLocaleString(),
     },
@@ -97,10 +121,45 @@ export default function GoodsReceiptsPage() {
       align: "right",
       format: (v: any) => formatCurrency(v),
     },
-    { label: "VAT %", key: "vatPct", align: "right" },
+    {
+      label: "VAT %",
+      key: "vatPct",
+      align: "right",
+      format: (v: any) => (v ? `${Number(v)}%` : "-"),
+    },
     {
       label: "Tiền VAT",
       key: "vatTotal",
+      align: "right",
+      format: (v: any) => formatCurrency(v),
+    },
+    {
+      label: "Thuế NK %",
+      key: "importTaxPct",
+      align: "right",
+      format: (v: any) => (v ? `${Number(v)}%` : "-"),
+    },
+    {
+      label: "Tiền Thuế NK",
+      key: "importTaxTotal",
+      align: "right",
+      format: (v: any) => formatCurrency(v),
+    },
+    {
+      label: "Chiết khấu %",
+      key: "discPct",
+      align: "right",
+      format: (v: any) => (v ? `${Number(v)}%` : "-"),
+    },
+    {
+      label: "Tiền Chiết khấu",
+      key: "discTotal",
+      align: "right",
+      format: (v: any) => formatCurrency(v),
+    },
+    {
+      label: "Cước VCQT",
+      key: "cuocVcqt",
       align: "right",
       format: (v: any) => formatCurrency(v),
     },
@@ -110,11 +169,92 @@ export default function GoodsReceiptsPage() {
       align: "right",
       format: (v: any) => formatCurrency(v),
     },
-    { label: "Chi nhánh nhận", key: "shipToBranchCode" },
     {
-      label: "Ghi chú",
+      label: "CN Nhận",
+      key: "shipToBranchCode",
+      className: "whitespace-nowrap",
+    },
+    {
+      label: "Ghi chú Cat",
+      key: "noteCategory",
+      className: "max-w-[150px] truncate",
+    },
+    {
+      label: "Ghi chú Chi tiết",
       key: "noteDetail",
       className: "max-w-[200px] truncate",
+    },
+    {
+      label: "Giá vốn đv",
+      key: "itemCost",
+      align: "right",
+      format: (v: any) => formatCurrency(v),
+    },
+    {
+      label: "Chi phí PO",
+      key: "poCost",
+      align: "right",
+      format: (v: any) => formatCurrency(v),
+    },
+    {
+      label: "Chi phí trước GR",
+      key: "onGrCost",
+      align: "right",
+      format: (v: any) => formatCurrency(v),
+    },
+    {
+      label: "Chi phí sau GR",
+      key: "afterGrCost",
+      align: "right",
+      format: (v: any) => formatCurrency(v),
+    },
+    {
+      label: "Hàng NCC KM",
+      key: "isSupplierPromotionItem",
+      align: "center",
+      render: (item: any) => (
+        <span
+          className={
+            item.isSupplierPromotionItem === "Y"
+              ? "text-green-600 font-bold"
+              : "text-gray-400"
+          }
+        >
+          {item.isSupplierPromotionItem === "Y" ? "Có" : "-"}
+        </span>
+      ),
+    },
+    {
+      label: "Hàng KM",
+      key: "isPromotionProd",
+      align: "center",
+      render: (item: any) => (
+        <span
+          className={
+            item.isPromotionProd === "Y"
+              ? "text-green-600 font-bold"
+              : "text-gray-400"
+          }
+        >
+          {item.isPromotionProd === "Y" ? "Có" : "-"}
+        </span>
+      ),
+    },
+    {
+      label: "Loại mua hàng",
+      key: "purchaseTypeName",
+      className: "whitespace-nowrap",
+    },
+    {
+      label: "Giá Saved",
+      key: "savedPriceForPromItem",
+      align: "right",
+      format: (v: any) => formatCurrency(v),
+    },
+    {
+      label: "Mã lô đề nghị",
+      key: "purchaseRequestShipmentCode",
+      className: "whitespace-nowrap",
     },
   ];
 
