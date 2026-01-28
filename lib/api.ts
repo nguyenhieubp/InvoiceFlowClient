@@ -144,26 +144,39 @@ export const salesApi = {
 export const syncPurchaseOrders = async (
   startDate: string,
   endDate: string,
+  brand?: string,
 ) => {
-  return api.post("/purchase-orders/sync", { startDate, endDate });
+  return api.post("/purchase-orders/sync", { startDate, endDate, brand });
 };
 
-export const syncGoodsReceipts = async (startDate: string, endDate: string) => {
-  return api.post("/goods-receipts/sync", { startDate, endDate });
+export const syncGoodsReceipts = async (
+  startDate: string,
+  endDate: string,
+  brand?: string,
+) => {
+  return api.post("/goods-receipts/sync", { startDate, endDate, brand });
 };
 
-export const getPurchaseOrders = async (params: any) => {
-  const { startDate, endDate, search, page, limit } = params;
-  return api.get("/purchase-orders", {
-    params: { startDate, endDate, search, page, limit },
-  });
+export const getPurchaseOrders = async (params: {
+  startDate?: string;
+  endDate?: string;
+  search?: string;
+  brand?: string;
+  page?: number;
+  limit?: number;
+}) => {
+  return api.get("/purchase-orders", { params });
 };
 
-export const getGoodsReceipts = async (params: any) => {
-  const { startDate, endDate, search, page, limit } = params;
-  return api.get("/goods-receipts", {
-    params: { startDate, endDate, search, page, limit },
-  });
+export const getGoodsReceipts = async (params: {
+  startDate?: string;
+  endDate?: string;
+  search?: string;
+  brand?: string;
+  page?: number;
+  limit?: number;
+}) => {
+  return api.get("/goods-receipts", { params });
 };
 
 // Invoices API

@@ -25,6 +25,7 @@ export default function GoodsReceiptsPage() {
 
   // Filters
   const [search, setSearch] = useState("");
+  const [brand, setBrand] = useState("all");
   const [dateFrom, setDateFrom] = useState(format(new Date(), "yyyy-MM-dd"));
   const [dateTo, setDateTo] = useState(format(new Date(), "yyyy-MM-dd"));
 
@@ -39,6 +40,7 @@ export default function GoodsReceiptsPage() {
         startDate: dateFrom,
         endDate: dateTo,
         search,
+        brand: brand === "all" ? undefined : brand,
       });
       setData(res.data.data);
       setTotalPages(res.data.meta.totalPages);
@@ -78,6 +80,12 @@ export default function GoodsReceiptsPage() {
       label: "Mã GR",
       key: "grCode",
       className: "font-medium text-blue-600 whitespace-nowrap",
+    },
+    {
+      label: "Brand",
+      key: "brand",
+      className: "whitespace-nowrap uppercase font-bold text-amber-600",
+      format: (v: any) => v || "-",
     },
     { label: "Mã", key: "itemCode", className: "whitespace-nowrap" },
     {
@@ -260,8 +268,26 @@ export default function GoodsReceiptsPage() {
             />
           </div>
 
+          {/* Brand Filter */}
+          <div className="col-span-1 md:col-span-1">
+            <label className="block text-sm font-semibold text-gray-700 mb-1">
+              Brand
+            </label>
+            <select
+              value={brand}
+              onChange={(e) => setBrand(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white"
+            >
+              <option value="all">Tất cả Brand</option>
+              <option value="menard">Menard</option>
+              <option value="f3">F3</option>
+              <option value="labhair">Labhair</option>
+              <option value="yaman">Yaman</option>
+            </select>
+          </div>
+
           {/* Search */}
-          <div className="col-span-1 md:col-span-2">
+          <div className="col-span-1 md:col-span-1">
             <label className="block text-sm font-semibold text-gray-700 mb-1">
               Tìm kiếm
             </label>
