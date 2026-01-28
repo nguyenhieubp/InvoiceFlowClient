@@ -271,10 +271,7 @@ export const renderCellValue = (
 
     case "muaHangGiamGia": {
       // Sử dụng giá trị từ backend
-      if (
-        sale?.chietKhauMuaHangGiamGia === 0 ||
-        sale?.chietKhauMuaHangGiamGia === undefined
-      ) {
+      if (sale?.other_discamt === 0 || sale?.other_discamt === undefined) {
         return <div className="text-sm text-gray-400 italic">-</div>;
       }
       if (sale?.promotionDisplayCode) {
