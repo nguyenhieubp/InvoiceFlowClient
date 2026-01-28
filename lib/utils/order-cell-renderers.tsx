@@ -271,6 +271,12 @@ export const renderCellValue = (
 
     case "muaHangGiamGia": {
       // Sử dụng giá trị từ backend
+      if (
+        sale?.chietKhauMuaHangGiamGia === 0 ||
+        sale?.chietKhauMuaHangGiamGia === undefined
+      ) {
+        return <div className="text-sm text-gray-400 italic">-</div>;
+      }
       if (sale?.promotionDisplayCode) {
         return (
           <div className={`text-sm ${textClass}`}>
@@ -278,7 +284,6 @@ export const renderCellValue = (
           </div>
         );
       }
-      return <div className="text-sm text-gray-400 italic">-</div>;
     }
 
     case "maCtkmTangHang": {
@@ -386,10 +391,11 @@ export const renderCellValue = (
 
     case "chietKhauMuaHangGiamGia": {
       const rawVal = sale?.other_discamt ?? sale?.chietKhauMuaHangGiamGia;
-      const val =
+      const val: any =
         typeof rawVal === "object" ? JSON.stringify(rawVal) : String(rawVal);
 
       if (
+        val === 0 ||
         !val ||
         val === "0" ||
         val === "-" ||
