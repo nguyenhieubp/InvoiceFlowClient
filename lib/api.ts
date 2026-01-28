@@ -140,6 +140,32 @@ export const salesApi = {
   },
 };
 
+// Purchasing APIs
+export const syncPurchaseOrders = async (
+  startDate: string,
+  endDate: string,
+) => {
+  return api.post("/purchase-orders/sync", { startDate, endDate });
+};
+
+export const syncGoodsReceipts = async (startDate: string, endDate: string) => {
+  return api.post("/goods-receipts/sync", { startDate, endDate });
+};
+
+export const getPurchaseOrders = async (params: any) => {
+  const { startDate, endDate, search, page, limit } = params;
+  return api.get("/purchase-orders", {
+    params: { startDate, endDate, search, page, limit },
+  });
+};
+
+export const getGoodsReceipts = async (params: any) => {
+  const { startDate, endDate, search, page, limit } = params;
+  return api.get("/goods-receipts", {
+    params: { startDate, endDate, search, page, limit },
+  });
+};
+
 // Invoices API
 export const invoicesApi = {
   getAll: () => {
