@@ -126,6 +126,44 @@ export default function OrdersPage() {
     return convertDateToDDMMMYYYY(syncDateInput);
   };
   const [submittingInvoice, setSubmittingInvoice] = useState(false);
+  const [showBatchModal, setShowBatchModal] = useState(false);
+  const [batchDateFrom, setBatchDateFrom] = useState(
+    new Date().toISOString().split("T")[0],
+  );
+  const [batchDateTo, setBatchDateTo] = useState(
+    new Date().toISOString().split("T")[0],
+  );
+  const [batchProcessing, setBatchProcessing] = useState(false);
+  const [batchResult, setBatchResult] = useState<{
+    success: boolean;
+    message: string;
+    errors?: string[];
+  } | null>(null);
+
+  const handleBatchProcess = async () => {
+    try {
+      setBatchProcessing(true);
+      setBatchResult(null);
+
+      const startDate = convertDateToDDMMMYYYY(batchDateFrom);
+      const endDate = convertDateToDDMMMYYYY(batchDateTo);
+
+      const response = await salesApi.batchProcessInvoices(startDate, endDate);
+      setBatchResult(response.data);
+      if (response.data.success) {
+        showToast("success", "Đã hoàn tất xử lý tự động");
+        loadOrders(); // Reload list
+      }
+    } catch (error: any) {
+      setBatchResult({
+        success: false,
+        message: error?.response?.data?.message || "Lỗi khi xử lý tự động",
+        errors: error?.response?.data?.errors,
+      });
+    } finally {
+      setBatchProcessing(false);
+    }
+  };
 
   // Bỏ cache - chỉ dùng data trực tiếp từ backend order API
 
@@ -455,8 +493,116 @@ export default function OrdersPage() {
                   </svg>
                   Chọn cột hiển thị
                 </button>
+                <button
+                  onClick={() => setShowBatchModal(true)}
+                  className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors inline-flex items-center gap-2"
+                >
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
+                    />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  Tự động chạy
+                </button>
               </div>
             </div>
+
+            {/* Batch Process Modal */}
+            {showBatchModal && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+                <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+                  <h3 className="text-lg font-bold text-gray-900 mb-4">
+                    Tự động chạy hóa đơn
+                  </h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Từ ngày
+                      </label>
+                      <input
+                        type="date"
+                        value={batchDateFrom}
+                        onChange={(e) => setBatchDateFrom(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Đến ngày
+                      </label>
+                      <input
+                        type="date"
+                        value={batchDateTo}
+                        onChange={(e) => setBatchDateTo(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    {batchResult && (
+                      <div
+                        className={`p-3 rounded-md text-sm ${
+                          batchResult.success
+                            ? "bg-green-50 text-green-700"
+                            : "bg-red-50 text-red-700"
+                        }`}
+                      >
+                        <p className="font-medium">{batchResult.message}</p>
+                        {batchResult.errors &&
+                          batchResult.errors.length > 0 && (
+                            <div className="mt-2 max-h-32 overflow-y-auto">
+                              <p className="font-semibold">Chi tiết lỗi:</p>
+                              <ul className="list-disc pl-4 space-y-1">
+                                {batchResult.errors.map((err, idx) => (
+                                  <li key={idx}>{err}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                      </div>
+                    )}
+                  </div>
+                  <div className="mt-6 flex justify-end gap-3">
+                    <button
+                      onClick={() => {
+                        setShowBatchModal(false);
+                        setBatchResult(null);
+                      }}
+                      className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                      disabled={batchProcessing}
+                    >
+                      Đóng
+                    </button>
+                    <button
+                      onClick={handleBatchProcess}
+                      className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 flex items-center gap-2"
+                      disabled={batchProcessing}
+                    >
+                      {batchProcessing ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          Đang chạy...
+                        </>
+                      ) : (
+                        "Chạy ngay"
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Column Selector */}
             {showColumnSelector && (

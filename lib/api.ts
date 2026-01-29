@@ -138,6 +138,9 @@ export const salesApi = {
   syncSalesOctDec2025: () => {
     return api.post("/sales/sync-sales-oct-dec-2025");
   },
+  batchProcessInvoices: (startDate: string, endDate: string) => {
+    return api.post("/sales/invoice/batch-process", { startDate, endDate });
+  },
 };
 
 // Purchasing APIs
@@ -806,7 +809,7 @@ export const platformFeeImportApi = {
       accountCode?: string;
       description?: string;
       active?: boolean;
-    }
+    },
   ) => {
     return api.put(`/platform-fee-import/fee-map/${id}`, data);
   },
