@@ -777,6 +777,42 @@ export const platformFeeImportApi = {
       responseType: "blob",
     });
   },
+  // Fee Map API
+  getFeeMaps: (params?: {
+    platform?: string;
+    page?: number;
+    limit?: number;
+    search?: string;
+    active?: boolean;
+  }) => {
+    return api.get("/platform-fee-import/fee-map", { params });
+  },
+  createFeeMap: (data: {
+    platform: string;
+    rawFeeName: string;
+    internalCode: string;
+    accountCode: string;
+    description?: string;
+    active?: boolean;
+  }) => {
+    return api.post("/platform-fee-import/fee-map", data);
+  },
+  updateFeeMap: (
+    id: string,
+    data: {
+      platform?: string;
+      rawFeeName?: string;
+      internalCode?: string;
+      accountCode?: string;
+      description?: string;
+      active?: boolean;
+    }
+  ) => {
+    return api.put(`/platform-fee-import/fee-map/${id}`, data);
+  },
+  deleteFeeMap: (id: string) => {
+    return api.delete(`/platform-fee-import/fee-map/${id}`);
+  },
 };
 
 // Fast API Invoices API (Bảng kê hóa đơn)

@@ -542,6 +542,697 @@ export default function PlatformFeeImportPage() {
     return new Intl.NumberFormat("vi-VN").format(value);
   };
 
+  const renderShopeeFeeTable = () => {
+    const feeDefs = [
+      {
+        key: "phiCoDinh605MaPhi164020",
+        maPhi: "164020",
+        loaiPhi: "Phí cố định",
+        getAmount: (item: any) => item.phiCoDinh605MaPhi164020,
+      },
+      {
+        key: "phiDichVu6MaPhi164020",
+        maPhi: "164020",
+        loaiPhi: "Phí dịch vụ",
+        getAmount: (item: any) => item.phiDichVu6MaPhi164020,
+      },
+      {
+        key: "phiThanhToan5MaPhi164020",
+        maPhi: "164020",
+        loaiPhi: "Phí thanh toán",
+        getAmount: (item: any) => item.phiThanhToan5MaPhi164020,
+      },
+      {
+        key: "phiHoaHongTiepThiLienKet21150050",
+        maPhi: "150050",
+        loaiPhi: "Phí hoa hồng Tiếp thị liên kết",
+        getAmount: (item: any) => item.phiHoaHongTiepThiLienKet21150050,
+      },
+      {
+        key: "chiPhiDichVuShippingFeeSaver164010",
+        maPhi: "164010",
+        loaiPhi: "Chi phí dịch vụ Shipping Fee Saver",
+        getAmount: (item: any) => item.chiPhiDichVuShippingFeeSaver164010,
+      },
+      {
+        key: "phiPiShipDoMktDangKy164010",
+        maPhi: "164010",
+        loaiPhi: "Phí Pi Ship (Do MKT đăng ký)",
+        getAmount: (item: any) => item.phiPiShipDoMktDangKy164010,
+      },
+    ] as const;
+
+    const rows = shopeeData.flatMap((item, orderIdx) =>
+      feeDefs.map((def, feeIdx) => ({
+        stt:
+          (shopeePagination.page - 1) * shopeePagination.limit * feeDefs.length +
+          orderIdx * feeDefs.length +
+          feeIdx +
+          1,
+        ngayDoiSoat: item.ngayDoiSoat,
+        maDon: item.maSan,
+        maNoiBoSp: item.maNoiBoSp,
+        maPhiNhanDien: def.maPhi,
+        loaiPhi: def.loaiPhi,
+        soTien: def.getAmount(item),
+        maKol: item.maCacBenTiepThiLienKet,
+        maDonHangHoan: item.maDonHangHoan,
+        sanTmdt: item.sanTmdt,
+      })),
+    );
+
+    return (
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        {/* Filters */}
+        <div className="p-4 border-b border-gray-200 bg-gray-50">
+          <form
+            onSubmit={(e) => handlePlatformSearch(e, "shopee")}
+            className="flex flex-col md:flex-row gap-4"
+          >
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-700">Từ:</label>
+              <input
+                type="date"
+                value={shopeeFilters.startDate}
+                onChange={(e) =>
+                  setShopeeFilters({
+                    ...shopeeFilters,
+                    startDate: e.target.value,
+                  })
+                }
+                className="border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-700">Đến:</label>
+              <input
+                type="date"
+                value={shopeeFilters.endDate}
+                onChange={(e) =>
+                  setShopeeFilters({
+                    ...shopeeFilters,
+                    endDate: e.target.value,
+                  })
+                }
+                className="border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div className="flex-1 flex gap-2">
+              <input
+                type="text"
+                placeholder="Tìm kiếm..."
+                value={shopeeFilters.search}
+                onChange={(e) =>
+                  setShopeeFilters({ ...shopeeFilters, search: e.target.value })
+                }
+                className="flex-1 border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <button
+                type="submit"
+                className="px-3 py-1.5 bg-gray-700 text-white rounded text-sm hover:bg-gray-800 transition"
+              >
+                Tìm kiếm
+              </button>
+            </div>
+          </form>
+        </div>
+
+        {/* Table */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm min-w-max">
+            <thead className="bg-gray-100 text-gray-600 font-semibold uppercase text-xs">
+              <tr>
+                <th className="px-3 py-3 whitespace-nowrap">STT</th>
+                <th className="px-3 py-3 whitespace-nowrap">Ngày đối soát</th>
+                <th className="px-3 py-3 whitespace-nowrap">Mã đơn</th>
+                <th className="px-3 py-3 whitespace-nowrap">
+                  Mã sản phẩm của đơn hàng
+                </th>
+                <th className="px-3 py-3 whitespace-nowrap">
+                  Mã phí để nhận diện hạch toán
+                </th>
+                <th className="px-3 py-3 whitespace-nowrap">Loại phí</th>
+                <th className="px-3 py-3 whitespace-nowrap text-right">
+                  Số tiền phí đã đối soát
+                </th>
+                <th className="px-3 py-3 whitespace-nowrap">Mã KOL</th>
+                <th className="px-3 py-3 whitespace-nowrap">
+                  Mã đơn hàng hoàn/trả lại
+                </th>
+                <th className="px-3 py-3 whitespace-nowrap">Sàn TMĐT</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {listLoading ? (
+                <tr>
+                  <td
+                    colSpan={10}
+                    className="px-6 py-8 text-center text-gray-500"
+                  >
+                    <div className="flex justify-center items-center gap-2">
+                      <div className="animate-spin h-5 w-5 border-2 border-blue-500 rounded-full border-t-transparent"></div>
+                      Đang tải dữ liệu...
+                    </div>
+                  </td>
+                </tr>
+              ) : rows.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={10}
+                    className="px-6 py-8 text-center text-gray-500"
+                  >
+                    Không có dữ liệu
+                  </td>
+                </tr>
+              ) : (
+                rows.map((r) => (
+                  <tr key={`${r.stt}`} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
+                      {r.stt}
+                    </td>
+                    <td className="px-3 py-3 text-gray-500 whitespace-nowrap">
+                      {r.ngayDoiSoat
+                        ? format(new Date(r.ngayDoiSoat), "dd/MM/yyyy")
+                        : "-"}
+                    </td>
+                    <td className="px-3 py-3 font-mono text-gray-700 whitespace-nowrap">
+                      {r.maDon ?? "-"}
+                    </td>
+                    <td className="px-3 py-3 font-mono text-gray-700 whitespace-nowrap">
+                      {r.maNoiBoSp ?? "-"}
+                    </td>
+                    <td className="px-3 py-3 font-mono text-gray-700 whitespace-nowrap">
+                      {r.maPhiNhanDien}
+                    </td>
+                    <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
+                      {r.loaiPhi}
+                    </td>
+                    <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
+                      {formatCurrency(r.soTien)}
+                    </td>
+                    <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
+                      {r.maKol ?? "-"}
+                    </td>
+                    <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
+                      {r.maDonHangHoan ?? "-"}
+                    </td>
+                    <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
+                      {r.sanTmdt ?? "-"}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination (by imported orders) */}
+        <div className="p-4 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
+          <p className="text-sm text-gray-600">
+            Hiển thị{" "}
+            <span className="font-medium">
+              {Math.min(
+                (shopeePagination.page - 1) * shopeePagination.limit + 1,
+                shopeePagination.total,
+              )}
+            </span>{" "}
+            đến{" "}
+            <span className="font-medium">
+              {Math.min(
+                shopeePagination.page * shopeePagination.limit,
+                shopeePagination.total,
+              )}
+            </span>{" "}
+            trong tổng số{" "}
+            <span className="font-medium">{shopeePagination.total}</span> bản ghi
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={() =>
+                setShopeePagination((prev) => ({ ...prev, page: prev.page - 1 }))
+              }
+              disabled={shopeePagination.page <= 1}
+              className="px-3 py-1 border border-gray-300 rounded bg-white text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition"
+            >
+              Trước
+            </button>
+            <button
+              onClick={() =>
+                setShopeePagination((prev) => ({ ...prev, page: prev.page + 1 }))
+              }
+              disabled={shopeePagination.page >= shopeePagination.totalPages}
+              className="px-3 py-1 border border-gray-300 rounded bg-white text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition"
+            >
+              Sau
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderLazadaFeeTable = () => {
+    // Lazada data is already in row format (each row = 1 fee), so no need to flatMap
+    const rows = lazadaData.map((item, idx) => ({
+      stt: (lazadaPagination.page - 1) * lazadaPagination.limit + idx + 1,
+      ngayDoiSoat: item.ngayDoiSoat,
+      maDon: item.maSan,
+      maNoiBoSp: item.maNoiBoSp,
+      maPhiNhanDien: item.maPhiNhanDienHachToan,
+      loaiPhi: item.tenPhiDoanhThu,
+      soTien: item.soTienPhi,
+      maKol: item.quangCaoTiepThiLienKet,
+      maDonHangHoan: item.maDonHangHoan,
+      sanTmdt: item.sanTmdt,
+    }));
+
+    return (
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        {/* Filters */}
+        <div className="p-4 border-b border-gray-200 bg-gray-50">
+          <form
+            onSubmit={(e) => handlePlatformSearch(e, "lazada")}
+            className="flex flex-col md:flex-row gap-4"
+          >
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-700">Từ:</label>
+              <input
+                type="date"
+                value={lazadaFilters.startDate}
+                onChange={(e) =>
+                  setLazadaFilters({
+                    ...lazadaFilters,
+                    startDate: e.target.value,
+                  })
+                }
+                className="border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-700">Đến:</label>
+              <input
+                type="date"
+                value={lazadaFilters.endDate}
+                onChange={(e) =>
+                  setLazadaFilters({
+                    ...lazadaFilters,
+                    endDate: e.target.value,
+                  })
+                }
+                className="border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div className="flex-1 flex gap-2">
+              <input
+                type="text"
+                placeholder="Tìm kiếm..."
+                value={lazadaFilters.search}
+                onChange={(e) =>
+                  setLazadaFilters({ ...lazadaFilters, search: e.target.value })
+                }
+                className="flex-1 border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <button
+                type="submit"
+                className="px-3 py-1.5 bg-gray-700 text-white rounded text-sm hover:bg-gray-800 transition"
+              >
+                Tìm kiếm
+              </button>
+            </div>
+          </form>
+        </div>
+
+        {/* Table */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm min-w-max">
+            <thead className="bg-gray-100 text-gray-600 font-semibold uppercase text-xs">
+              <tr>
+                <th className="px-3 py-3 whitespace-nowrap">STT</th>
+                <th className="px-3 py-3 whitespace-nowrap">NGÀY ĐỐI SOÁT</th>
+                <th className="px-3 py-3 whitespace-nowrap">MÃ ĐƠN</th>
+                <th className="px-3 py-3 whitespace-nowrap">
+                  Mã sản phẩm của đơn hàng
+                </th>
+                <th className="px-3 py-3 whitespace-nowrap">
+                  MÃ PHÍ ĐỂ NHẬN DIỆN HẠCH TOÁN
+                </th>
+                <th className="px-3 py-3 whitespace-nowrap">LOẠI PHÍ</th>
+                <th className="px-3 py-3 whitespace-nowrap text-right">
+                  SỐ TIỀN PHÍ ĐÃ ĐỐI SOÁT
+                </th>
+                <th className="px-3 py-3 whitespace-nowrap">Mã KOL</th>
+                <th className="px-3 py-3 whitespace-nowrap">
+                  Mã đơn hàng hoàn/trả lại
+                </th>
+                <th className="px-3 py-3 whitespace-nowrap">Sàn TMĐT</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {listLoading ? (
+                <tr>
+                  <td
+                    colSpan={10}
+                    className="px-6 py-8 text-center text-gray-500"
+                  >
+                    <div className="flex justify-center items-center gap-2">
+                      <div className="animate-spin h-5 w-5 border-2 border-blue-500 rounded-full border-t-transparent"></div>
+                      Đang tải dữ liệu...
+                    </div>
+                  </td>
+                </tr>
+              ) : rows.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={10}
+                    className="px-6 py-8 text-center text-gray-500"
+                  >
+                    Không có dữ liệu
+                  </td>
+                </tr>
+              ) : (
+                rows.map((r) => (
+                  <tr key={`${r.stt}`} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
+                      {r.stt}
+                    </td>
+                    <td className="px-3 py-3 text-gray-500 whitespace-nowrap">
+                      {r.ngayDoiSoat
+                        ? format(new Date(r.ngayDoiSoat), "dd/MM/yyyy")
+                        : "-"}
+                    </td>
+                    <td className="px-3 py-3 font-mono text-gray-700 whitespace-nowrap">
+                      {r.maDon ?? "-"}
+                    </td>
+                    <td className="px-3 py-3 font-mono text-gray-700 whitespace-nowrap">
+                      {r.maNoiBoSp ?? "-"}
+                    </td>
+                    <td className="px-3 py-3 font-mono text-gray-700 whitespace-nowrap">
+                      {r.maPhiNhanDien ?? "-"}
+                    </td>
+                    <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
+                      {r.loaiPhi ?? "-"}
+                    </td>
+                    <td className="px-3 py-3 text-right font-medium text-gray-900 whitespace-nowrap">
+                      {formatCurrency(r.soTien)}
+                    </td>
+                    <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
+                      {r.maKol ?? "-"}
+                    </td>
+                    <td className="px-3 py-3 font-mono text-gray-700 whitespace-nowrap">
+                      {r.maDonHangHoan ?? "-"}
+                    </td>
+                    <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
+                      {r.sanTmdt ?? "-"}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination */}
+        <div className="p-4 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
+          <p className="text-sm text-gray-600">
+            Hiển thị{" "}
+            <span className="font-medium">
+              {Math.min(
+                (lazadaPagination.page - 1) * lazadaPagination.limit + 1,
+                lazadaPagination.total,
+              )}
+            </span>{" "}
+            đến{" "}
+            <span className="font-medium">
+              {Math.min(
+                lazadaPagination.page * lazadaPagination.limit,
+                lazadaPagination.total,
+              )}
+            </span>{" "}
+            trong tổng số{" "}
+            <span className="font-medium">{lazadaPagination.total}</span> bản ghi
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={() =>
+                setLazadaPagination((prev) => ({ ...prev, page: prev.page - 1 }))
+              }
+              disabled={lazadaPagination.page <= 1}
+              className="px-3 py-1 border border-gray-300 rounded bg-white text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition"
+            >
+              Trước
+            </button>
+            <button
+              onClick={() =>
+                setLazadaPagination((prev) => ({ ...prev, page: prev.page + 1 }))
+              }
+              disabled={lazadaPagination.page >= lazadaPagination.totalPages}
+              className="px-3 py-1 border border-gray-300 rounded bg-white text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition"
+            >
+              Sau
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderTiktokFeeTable = () => {
+    const feeDefs = [
+      {
+        key: "phiGiaoDichTyLe5164020",
+        maPhi: "164020",
+        loaiPhi: "Phí giao dịch",
+        getAmount: (item: any) => item.phiGiaoDichTyLe5164020,
+      },
+      {
+        key: "phiHoaHongTraChoTiktok454164020",
+        maPhi: "164020",
+        loaiPhi: "Phí hoa hồng trả cho TikTok",
+        getAmount: (item: any) => item.phiHoaHongTraChoTiktok454164020,
+      },
+      {
+        key: "phiHoaHongTiepThiLienKet150050",
+        maPhi: "150050",
+        loaiPhi: "Phí hoa hồng Tiếp thị liên kết",
+        getAmount: (item: any) => item.phiHoaHongTiepThiLienKet150050,
+      },
+      {
+        key: "phiDichVuSfp6164020",
+        maPhi: "164020",
+        loaiPhi: "Phí dịch vụ",
+        getAmount: (item: any) => item.phiDichVuSfp6164020,
+      },
+    ] as const;
+
+    const rows = tiktokData.flatMap((item, orderIdx) =>
+      feeDefs.map((def, feeIdx) => ({
+        stt:
+          (tiktokPagination.page - 1) * tiktokPagination.limit * feeDefs.length +
+          orderIdx * feeDefs.length +
+          feeIdx +
+          1,
+        ngayDoiSoat: item.ngayDoiSoat,
+        maDon: item.maSan,
+        maNoiBoSp: item.maNoiBoSp,
+        maPhiNhanDien: def.maPhi,
+        loaiPhi: def.loaiPhi,
+        soTien: def.getAmount(item),
+        maKol: item.maCacBenTiepThiLienKet,
+        maDonHangHoan: item.maDonHangHoan,
+        sanTmdt: item.sanTmdt,
+      })),
+    );
+
+    return (
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        {/* Filters */}
+        <div className="p-4 border-b border-gray-200 bg-gray-50">
+          <form
+            onSubmit={(e) => handlePlatformSearch(e, "tiktok")}
+            className="flex flex-col md:flex-row gap-4"
+          >
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-700">Từ:</label>
+              <input
+                type="date"
+                value={tiktokFilters.startDate}
+                onChange={(e) =>
+                  setTiktokFilters({
+                    ...tiktokFilters,
+                    startDate: e.target.value,
+                  })
+                }
+                className="border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-700">Đến:</label>
+              <input
+                type="date"
+                value={tiktokFilters.endDate}
+                onChange={(e) =>
+                  setTiktokFilters({
+                    ...tiktokFilters,
+                    endDate: e.target.value,
+                  })
+                }
+                className="border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div className="flex-1 flex gap-2">
+              <input
+                type="text"
+                placeholder="Tìm kiếm..."
+                value={tiktokFilters.search}
+                onChange={(e) =>
+                  setTiktokFilters({ ...tiktokFilters, search: e.target.value })
+                }
+                className="flex-1 border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <button
+                type="submit"
+                className="px-3 py-1.5 bg-gray-700 text-white rounded text-sm hover:bg-gray-800 transition"
+              >
+                Tìm kiếm
+              </button>
+            </div>
+          </form>
+        </div>
+
+        {/* Table */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm min-w-max">
+            <thead className="bg-gray-100 text-gray-600 font-semibold uppercase text-xs">
+              <tr>
+                <th className="px-3 py-3 whitespace-nowrap">STT</th>
+                <th className="px-3 py-3 whitespace-nowrap">Ngày đối soát</th>
+                <th className="px-3 py-3 whitespace-nowrap">Mã đơn</th>
+                <th className="px-3 py-3 whitespace-nowrap">
+                  Mã sản phẩm của đơn hàng
+                </th>
+                <th className="px-3 py-3 whitespace-nowrap">
+                  Mã phí để nhận diện hạch toán
+                </th>
+                <th className="px-3 py-3 whitespace-nowrap">Loại phí</th>
+                <th className="px-3 py-3 whitespace-nowrap text-right">
+                  Số tiền phí đã đối soát
+                </th>
+                <th className="px-3 py-3 whitespace-nowrap">Mã KOL</th>
+                <th className="px-3 py-3 whitespace-nowrap">
+                  Mã đơn hàng hoàn/trả lại
+                </th>
+                <th className="px-3 py-3 whitespace-nowrap">Sàn TMĐT</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {listLoading ? (
+                <tr>
+                  <td
+                    colSpan={10}
+                    className="px-6 py-8 text-center text-gray-500"
+                  >
+                    <div className="flex justify-center items-center gap-2">
+                      <div className="animate-spin h-5 w-5 border-2 border-blue-500 rounded-full border-t-transparent"></div>
+                      Đang tải dữ liệu...
+                    </div>
+                  </td>
+                </tr>
+              ) : rows.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={10}
+                    className="px-6 py-8 text-center text-gray-500"
+                  >
+                    Không có dữ liệu
+                  </td>
+                </tr>
+              ) : (
+                rows.map((r) => (
+                  <tr key={`${r.stt}`} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
+                      {r.stt}
+                    </td>
+                    <td className="px-3 py-3 text-gray-500 whitespace-nowrap">
+                      {r.ngayDoiSoat
+                        ? format(new Date(r.ngayDoiSoat), "dd/MM/yyyy")
+                        : "-"}
+                    </td>
+                    <td className="px-3 py-3 font-mono text-gray-700 whitespace-nowrap">
+                      {r.maDon ?? "-"}
+                    </td>
+                    <td className="px-3 py-3 font-mono text-gray-700 whitespace-nowrap">
+                      {r.maNoiBoSp ?? "-"}
+                    </td>
+                    <td className="px-3 py-3 font-mono text-gray-700 whitespace-nowrap">
+                      {r.maPhiNhanDien}
+                    </td>
+                    <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
+                      {r.loaiPhi}
+                    </td>
+                    <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
+                      {formatCurrency(r.soTien)}
+                    </td>
+                    <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
+                      {r.maKol ?? "-"}
+                    </td>
+                    <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
+                      {r.maDonHangHoan ?? "-"}
+                    </td>
+                    <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
+                      {r.sanTmdt ?? "-"}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination (by imported orders) */}
+        <div className="p-4 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
+          <p className="text-sm text-gray-600">
+            Hiển thị{" "}
+            <span className="font-medium">
+              {Math.min(
+                (tiktokPagination.page - 1) * tiktokPagination.limit + 1,
+                tiktokPagination.total,
+              )}
+            </span>{" "}
+            đến{" "}
+            <span className="font-medium">
+              {Math.min(
+                tiktokPagination.page * tiktokPagination.limit,
+                tiktokPagination.total,
+              )}
+            </span>{" "}
+            trong tổng số{" "}
+            <span className="font-medium">{tiktokPagination.total}</span> bản ghi
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={() =>
+                setTiktokPagination((prev) => ({ ...prev, page: prev.page - 1 }))
+              }
+              disabled={tiktokPagination.page <= 1}
+              className="px-3 py-1 border border-gray-300 rounded bg-white text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition"
+            >
+              Trước
+            </button>
+            <button
+              onClick={() =>
+                setTiktokPagination((prev) => ({ ...prev, page: prev.page + 1 }))
+              }
+              disabled={tiktokPagination.page >= tiktokPagination.totalPages}
+              className="px-3 py-1 border border-gray-300 rounded bg-white text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition"
+            >
+              Sau
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
@@ -845,13 +1536,13 @@ export default function PlatformFeeImportPage() {
       )}
 
       {/* Platform Tabs - Shopee */}
-      {activeTab === "shopee" && renderPlatformTable("shopee", shopeeData, shopeePagination, shopeeFilters, setShopeeFilters, setShopeePagination)}
+      {activeTab === "shopee" && renderShopeeFeeTable()}
 
       {/* Platform Tabs - TikTok */}
-      {activeTab === "tiktok" && renderPlatformTable("tiktok", tiktokData, tiktokPagination, tiktokFilters, setTiktokFilters, setTiktokPagination)}
+      {activeTab === "tiktok" && renderTiktokFeeTable()}
 
       {/* Platform Tabs - Lazada */}
-      {activeTab === "lazada" && renderPlatformTable("lazada", lazadaData, lazadaPagination, lazadaFilters, setLazadaFilters, setLazadaPagination)}
+      {activeTab === "lazada" && renderLazadaFeeTable()}
     </div>
   );
 }
