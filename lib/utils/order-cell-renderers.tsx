@@ -260,27 +260,14 @@ export const renderCellValue = (
       return <div className={`text-sm ${textClass}`}>{productType || "-"}</div>;
 
     case "promCode": {
-      // Sử dụng giá trị từ backend
-      if (sale?.promCodeDisplay) {
-        return (
-          <div className={`text-sm ${textClass}`}>{sale.promCodeDisplay}</div>
-        );
+      // Show km_yn (if set/1) or ma_ck01 fallback
+      const val =
+        sale?.km_yn != null && sale?.km_yn !== 0 ? sale.km_yn : sale?.ma_ck01;
+
+      if (val) {
+        return <div className={`text-sm ${textClass}`}>{val}</div>;
       }
       return <div className="text-sm text-gray-400 italic">-</div>;
-    }
-
-    case "muaHangGiamGia": {
-      // Sử dụng giá trị từ backend
-      if (sale?.other_discamt === 0 || sale?.other_discamt === undefined) {
-        return <div className="text-sm text-gray-400 italic">-</div>;
-      }
-      if (sale?.muaHangGiamGiaDisplay) {
-        return (
-          <div className={`text-sm ${textClass}`}>
-            {sale.muaHangGiamGiaDisplay}
-          </div>
-        );
-      }
     }
 
     case "maCtkmTangHang": {
@@ -386,44 +373,48 @@ export const renderCellValue = (
         </div>
       );
 
-    case "chietKhauMuaHangGiamGia": {
-      const rawVal = sale?.other_discamt ?? sale?.chietKhauMuaHangGiamGia;
-      const val: any =
-        typeof rawVal === "object" ? JSON.stringify(rawVal) : String(rawVal);
-
-      if (
-        val === 0 ||
-        !val ||
-        val === "0" ||
-        val === "-" ||
-        val === "null" ||
-        val === "undefined"
-      ) {
-        return <span className="text-gray-400 italic">-</span>;
+    case "muaHangGiamGia": {
+      // ma_ck01
+      if (sale?.ma_ck01) {
+        return <div className={`text-sm ${textClass}`}>{sale.ma_ck01}</div>;
       }
-
-      return <div className={`text-sm ${textClass}`}>{val}</div>;
+      return <div className="text-sm text-gray-400 italic">-</div>;
     }
 
-    case "muaHangCkVip": {
-      // Sử dụng giá trị từ backend
-      if (sale?.muaHangCkVip && sale.muaHangCkVip.trim() !== "") {
+    case "chietKhauMuaHangGiamGia": {
+      // ck01_nt
+      if (sale?.ck01_nt != null && sale.ck01_nt > 0) {
         return (
-          <div className={`text-sm ${textClass}`}>{sale.muaHangCkVip}</div>
+          <div className={`text-sm ${textClass}`}>
+            {formatValue(sale.ck01_nt)}
+          </div>
         );
       }
       return <span className="text-gray-400 italic">-</span>;
     }
 
+    case "muaHangCkVip": {
+      // ma_ck03
+      if (sale?.ma_ck03) {
+        return <div className={`text-sm ${textClass}`}>{sale.ma_ck03}</div>;
+      }
+      return <span className="text-gray-400 italic">-</span>;
+    }
+
     case "chietKhauMuaHangCkVip":
-      return (
-        <div className={`text-sm ${textClass}`}>
-          {formatValue(sale?.grade_discamt ?? sale?.chietKhauMuaHangCkVip ?? 0)}
-        </div>
-      );
+      // ck03_nt
+      if (sale?.ck03_nt != null && sale.ck03_nt > 0) {
+        return (
+          <div className={`text-sm ${textClass}`}>
+            {formatValue(sale.ck03_nt)}
+          </div>
+        );
+      }
+      return <span className="text-gray-400 italic">-</span>;
 
     case "maCkTheoChinhSach": {
-      const val = sale?.maCkTheoChinhSach;
+      // ma_ck02
+      const val = sale?.ma_ck02;
       if (val === null || val === undefined || val === "") {
         return <span className="text-gray-400 italic">-</span>;
       }
@@ -431,36 +422,28 @@ export const renderCellValue = (
     }
 
     case "ckTheoChinhSach": {
-      // Map from disc_tm
-      const val = (sale as any)?.disc_tm ?? sale?.chietKhauCkTheoChinhSach;
-      // Hiển thị số nguyên không có format
-      if (val === null || val === undefined || val === "") {
+      // ck02_nt
+      const val = sale?.ck02_nt;
+      if (val === null || val === undefined) {
         return <span className="text-gray-400 italic">-</span>;
       }
       return <div className={`text-sm ${textClass}`}>{Number(val) || 0}</div>;
     }
 
     case "thanhToanCoupon": {
-      // Sử dụng giá trị từ backend
-      if (sale?.thanhToanCouponDisplay) {
-        return (
-          <div className={`text-sm ${textClass}`}>
-            {sale.thanhToanCouponDisplay}
-          </div>
-        );
+      // ma_ck04
+      if (sale?.ma_ck04) {
+        return <div className={`text-sm ${textClass}`}>{sale.ma_ck04}</div>;
       }
       return <span className="text-gray-400 italic">-</span>;
     }
 
     case "chietKhauThanhToanCoupon": {
-      // Sử dụng giá trị từ backend
-      if (
-        sale?.chietKhauThanhToanCouponDisplay != null &&
-        sale.chietKhauThanhToanCouponDisplay > 0
-      ) {
+      // ck04_nt
+      if (sale?.ck04_nt != null && sale.ck04_nt > 0) {
         return (
           <div className={`text-sm ${textClass}`}>
-            {formatValue(sale.chietKhauThanhToanCouponDisplay)}
+            {formatValue(sale.ck04_nt)}
           </div>
         );
       }
@@ -468,14 +451,11 @@ export const renderCellValue = (
     }
 
     case "chietKhauThanhToanVoucher": {
-      // Sử dụng giá trị từ backend
-      if (
-        sale?.paid_by_voucher_ecode_ecoin_bp != null &&
-        sale.paid_by_voucher_ecode_ecoin_bp > 0
-      ) {
+      // ck05_nt
+      if (sale?.ck05_nt != null && sale.ck05_nt > 0) {
         return (
           <div className={`text-sm ${textClass}`}>
-            {formatValue(sale.paid_by_voucher_ecode_ecoin_bp)}
+            {formatValue(sale.ck05_nt)}
           </div>
         );
       }
@@ -483,13 +463,9 @@ export const renderCellValue = (
     }
 
     case "thanhToanVoucher": {
-      // Sử dụng giá trị từ backend
-      if (sale?.thanhToanVoucherDisplay) {
-        return (
-          <div className={`text-sm ${textClass}`}>
-            {sale.thanhToanVoucherDisplay}
-          </div>
-        );
+      // ma_ck05
+      if (sale?.ma_ck05) {
+        return <div className={`text-sm ${textClass}`}>{sale.ma_ck05}</div>;
       }
       return <span className="text-gray-400 italic">-</span>;
     }
@@ -504,42 +480,99 @@ export const renderCellValue = (
     }
 
     case "voucherDp1": {
-      // Sử dụng giá trị từ backend
-      if (sale?.voucherDp1) {
-        return <div className={`text-sm ${textClass}`}>{sale.voucherDp1}</div>;
+      // ma_ck06
+      if (sale?.ma_ck06) {
+        return <div className={`text-sm ${textClass}`}>{sale.ma_ck06}</div>;
       }
       return <span className="text-gray-400 italic">-</span>;
     }
 
     case "chietKhauVoucherDp1": {
-      // Sử dụng giá trị từ backend
-      if (sale?.chietKhauVoucherDp1 != null && sale.chietKhauVoucherDp1 > 0) {
-        return formatNumber(sale.chietKhauVoucherDp1);
+      // ck06_nt
+      if (sale?.ck06_nt != null && sale.ck06_nt > 0) {
+        return formatNumber(sale.ck06_nt);
+      }
+      return <span className="text-gray-400 italic">-</span>;
+    }
+
+    case "voucherDp2": {
+      // ma_ck07
+      if (sale?.ma_ck07) {
+        return <div className={`text-sm ${textClass}`}>{sale.ma_ck07}</div>;
+      }
+      return <span className="text-gray-400 italic">-</span>;
+    }
+
+    case "chietKhauVoucherDp2": {
+      // ck07_nt
+      if (sale?.ck07_nt != null && sale.ck07_nt > 0) {
+        return formatNumber(sale.ck07_nt);
+      }
+      return <span className="text-gray-400 italic">-</span>;
+    }
+
+    case "voucherDp3": {
+      // ma_ck08
+      if (sale?.ma_ck08) {
+        return <div className={`text-sm ${textClass}`}>{sale.ma_ck08}</div>;
+      }
+      return <span className="text-gray-400 italic">-</span>;
+    }
+
+    case "chietKhauVoucherDp3": {
+      // ck08_nt
+      if (sale?.ck08_nt != null && sale.ck08_nt > 0) {
+        return formatNumber(sale.ck08_nt);
+      }
+      return <span className="text-gray-400 italic">-</span>;
+    }
+
+    case "hang": {
+      // ma_ck09
+      if (sale?.ma_ck09) {
+        return <div className={`text-sm ${textClass}`}>{sale.ma_ck09}</div>;
+      }
+      return <span className="text-gray-400 italic">-</span>;
+    }
+
+    case "chietKhauHang": {
+      // ck09_nt
+      if (sale?.ck09_nt != null && sale.ck09_nt > 0) {
+        return formatNumber(sale.ck09_nt);
+      }
+      return <span className="text-gray-400 italic">-</span>;
+    }
+
+    case "thuongBangHang": {
+      // ma_ck10
+      if (sale?.ma_ck10) {
+        return <div className={`text-sm ${textClass}`}>{sale.ma_ck10}</div>;
+      }
+      return <span className="text-gray-400 italic">-</span>;
+    }
+
+    case "chietKhauThuongMuaBangHang": {
+      // ck10_nt
+      if (sale?.ck10_nt != null && sale.ck10_nt > 0) {
+        return formatNumber(sale.ck10_nt);
       }
       return <span className="text-gray-400 italic">-</span>;
     }
 
     case "thanhToanTkTienAo": {
-      // Sử dụng giá trị từ backend
-      if (sale?.thanhToanTkTienAoDisplay) {
-        return (
-          <div className={`text-sm ${textClass}`}>
-            {sale.thanhToanTkTienAoDisplay}
-          </div>
-        );
+      // ma_ck11
+      if (sale?.ma_ck11) {
+        return <div className={`text-sm ${textClass}`}>{sale.ma_ck11}</div>;
       }
       return <span className="text-gray-400 italic">-</span>;
     }
 
     case "chietKhauThanhToanTkTienAo": {
-      // Sử dụng giá trị từ backend
-      if (
-        sale?.chietKhauThanhToanTkTienAoDisplay != null &&
-        sale.chietKhauThanhToanTkTienAoDisplay > 0
-      ) {
+      // ck11_nt
+      if (sale?.ck11_nt != null && sale.ck11_nt > 0) {
         return (
           <div className={`text-sm ${textClass}`}>
-            {formatValue(sale.chietKhauThanhToanTkTienAoDisplay)}
+            {formatValue(sale.ck11_nt)}
           </div>
         );
       }

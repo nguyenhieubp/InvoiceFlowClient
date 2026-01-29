@@ -121,51 +121,30 @@ export interface SaleItem {
   dongThuocGoi?: string;
   trangThai?: string;
   barcode?: string;
-  muaHangGiamGia?: number;
-  chietKhauMuaHangGiamGia?: number;
-  ckTheoChinhSach?: string;
-  chietKhauCkTheoChinhSach?: number;
-  muaHangCkVip?: string;
-  chietKhauMuaHangCkVip?: number;
-  maCkTheoChinhSach?: string;
-  thanhToanCoupon?: number;
-  chietKhauThanhToanCoupon?: number;
-  thanhToanVoucher?: number;
-  chietKhauThanhToanVoucher?: number;
-  duPhong1?: number;
-  chietKhauDuPhong1?: number;
-  duPhong2?: number;
-  chietKhauDuPhong2?: number;
-  duPhong3?: number;
-  chietKhauDuPhong3?: number;
-  hang?: string;
-  chietKhauHang?: number;
-  thuongBangHang?: number;
-  chietKhauThuongMuaBangHang?: number;
-  thanhToanTkTienAo?: number;
-  chietKhauThanhToanTkTienAo?: number;
-  ckThem1?: number;
-  chietKhauThem1?: number;
-  ckThem2?: number;
-  chietKhauThem2?: number;
-  ckThem3?: number;
-  chietKhauThem3?: number;
-  voucherDp1?: string;
-  chietKhauVoucherDp1?: number;
-  voucherDp2?: string;
-  chietKhauVoucherDp2?: number;
-  voucherDp3?: string;
-  chietKhauVoucherDp3?: number;
-  voucherDp4?: string;
-  chietKhauVoucherDp4?: number;
-  voucherDp5?: string;
-  chietKhauVoucherDp5?: number;
-  voucherDp6?: string;
-  chietKhauVoucherDp6?: number;
-  voucherDp7?: string;
-  chietKhauVoucherDp7?: number;
-  voucherDp8?: string;
-  chietKhauVoucherDp8?: number;
+  // ========== STANDARDIZED DISCOUNT FIELDS (01-11) ==========
+  ma_ck01?: string; // Mua hàng giảm giá
+  ck01_nt?: number;
+  ma_ck02?: string; // CK theo chính sách
+  ck02_nt?: number;
+  ma_ck03?: string; // Mua hàng CK VIP
+  ck03_nt?: number;
+  ma_ck04?: string; // Thanh toán coupon
+  ck04_nt?: number;
+  ma_ck05?: string; // Thanh toán Voucher
+  ck05_nt?: number;
+  ma_ck06?: string; // Dự phòng 1
+  ck06_nt?: number;
+  ma_ck07?: string; // Dự phòng 2
+  ck07_nt?: number;
+  ma_ck08?: string; // Dự phòng 3
+  ck08_nt?: number;
+  ma_ck09?: string; // Chiết khấu hãng
+  ck09_nt?: number;
+  ma_ck10?: string; // Thưởng bằng hàng
+  ck10_nt?: number;
+  ma_ck11?: string; // Thanh toán TK tiền ảo
+  ck11_nt?: number;
+
   troGia?: number;
   maCtkmTangHang?: string;
   maThe?: string;
@@ -178,7 +157,7 @@ export interface SaleItem {
   // Các field display từ backend
   isTangHang?: boolean;
   isDichVu?: boolean;
-  promCodeDisplay?: string | null;
+  km_yn?: number; // [RENAME] Was promCodeDisplay
   thanhToanCouponDisplay?: string | null;
   chietKhauThanhToanCouponDisplay?: number | null;
   thanhToanVoucherDisplay?: string | null;
