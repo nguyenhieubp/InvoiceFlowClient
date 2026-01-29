@@ -735,51 +735,19 @@ export const platformFeesApi = {
 
 // Shopee Fees API
 export const shopeeFeesApi = {
-  getAll: (params?: {
-    page?: number;
-    limit?: number;
-    brand?: string;
-    search?: string;
-    startDate?: string;
-    endDate?: string;
-  }) => {
-    return api.get("/shopee-fees", { params });
-  },
-  getByErpCode: (erpCode: string) => {
-    return api.get(`/shopee-fees/${erpCode}`);
-  },
+  getAll: (params: any) => api.get("/order-fees/shopee", { params }),
+  sync: (erpCode: string) => api.post(`/multi-db/sync-order-fee/${erpCode}`),
 };
 
 // TikTok Fees API
 export const tiktokFeesApi = {
-  getAll: (params?: {
-    page?: number;
-    limit?: number;
-    brand?: string;
-    search?: string;
-    startDate?: string;
-    endDate?: string;
-  }) => {
-    return api.get("/tiktok-fees", { params });
-  },
-  getByErpCode: (erpCode: string) => {
-    return api.get(`/tiktok-fees/${erpCode}`);
-  },
+  getAll: (params: any) => api.get("/order-fees/tiktok", { params }),
+  sync: (erpCode: string) => api.post(`/multi-db/sync-order-fee/${erpCode}`),
 };
 
 // Order Fees API (DEPRECATED - use shopeeFeesApi or tiktokFeesApi instead)
 export const orderFeesApi = {
-  getAll: (params?: {
-    page?: number;
-    limit?: number;
-    brand?: string;
-    search?: string;
-    startDate?: string;
-    endDate?: string;
-    platform?: string;
-  }) => {
-    return api.get("/order-fees", { params });
-  },
+  getAll: (params?: any) => api.get("/order-fees", { params }),
 };
 
 // Platform Fee Import API

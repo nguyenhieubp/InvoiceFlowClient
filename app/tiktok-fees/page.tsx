@@ -246,7 +246,7 @@ export default function TikTokFeesPage() {
                       {item.erpOrderCode}
                     </td>
                     <td className="px-6 py-4 font-mono text-gray-700">
-                      {item.orderCode || "-"}
+                      {item.orderSn || "-"}
                     </td>
                     <td className="px-6 py-4 text-gray-500">
                       {item.orderCreatedAt

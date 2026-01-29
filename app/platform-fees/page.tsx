@@ -237,7 +237,7 @@ export default function PlatformFeesPage() {
                       {item.erpOrderCode}
                     </td>
                     <td className="px-6 py-4 font-mono text-gray-700">
-                      {item.orderCode || "-"}
+                      {item.orderSn || "-"}
                     </td>
                     <td className="px-6 py-4 text-right font-medium text-gray-900">
                       {formatCurrency(item.voucherShop)}
