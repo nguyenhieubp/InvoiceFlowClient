@@ -274,10 +274,10 @@ export const renderCellValue = (
       if (sale?.other_discamt === 0 || sale?.other_discamt === undefined) {
         return <div className="text-sm text-gray-400 italic">-</div>;
       }
-      if (sale?.promotionDisplayCode) {
+      if (sale?.muaHangGiamGiaDisplay) {
         return (
           <div className={`text-sm ${textClass}`}>
-            {sale.promotionDisplayCode}
+            {sale.muaHangGiamGiaDisplay}
           </div>
         );
       }

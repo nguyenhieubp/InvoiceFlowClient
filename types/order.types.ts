@@ -73,7 +73,7 @@ export interface OrderDepartment {
 export interface SaleItem {
   id?: string;
   promCode?: string;
-  promotionDisplayCode?: string | null;
+  muaHangGiamGiaDisplay?: string | null;
   itemCode?: string;
   itemName?: string;
   description?: string;
