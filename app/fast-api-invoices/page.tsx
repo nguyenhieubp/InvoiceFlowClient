@@ -39,6 +39,17 @@ export default function FastApiInvoicesPage() {
     startDate: "",
     endDate: "",
   });
+  // [NEW] tempFilters for UI state (while typing)
+  const [tempFilters, setTempFilters] = useState({
+    status: "",
+    docCode: "",
+    maKh: "",
+    tenKh: "",
+    maDvcs: "",
+    startDate: "",
+    endDate: "",
+  });
+
   const [statistics, setStatistics] = useState<{
     total: number;
     success: number;
@@ -216,17 +227,17 @@ export default function FastApiInvoicesPage() {
   }, [loadStatistics]);
 
   const handleFilterChange = (key: string, value: string) => {
-    setFilters({ ...filters, [key]: value });
+    setTempFilters((prev) => ({ ...prev, [key]: value }));
   };
 
   const handleApplyFilters = () => {
     setPagination({ ...pagination, page: 1 });
-    loadInvoices();
-    loadStatistics();
+    setFilters(tempFilters);
+    // loadInvoices & loadStatistics will trigger via useEffect on filters change
   };
 
   const handleResetFilters = () => {
-    setFilters({
+    const emptyFilters = {
       status: "",
       docCode: "",
       maKh: "",
@@ -234,7 +245,9 @@ export default function FastApiInvoicesPage() {
       maDvcs: "",
       startDate: "",
       endDate: "",
-    });
+    };
+    setTempFilters(emptyFilters);
+    setFilters(emptyFilters);
     setPagination({ ...pagination, page: 1 });
   };
 
@@ -723,7 +736,7 @@ export default function FastApiInvoicesPage() {
                 Trạng thái
               </label>
               <select
-                value={filters.status}
+                value={tempFilters.status}
                 onChange={(e) => handleFilterChange("status", e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
@@ -738,7 +751,7 @@ export default function FastApiInvoicesPage() {
               </label>
               <input
                 type="text"
-                value={filters.docCode}
+                value={tempFilters.docCode}
                 onChange={(e) => handleFilterChange("docCode", e.target.value)}
                 placeholder="SO31.00149453"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -750,7 +763,7 @@ export default function FastApiInvoicesPage() {
               </label>
               <input
                 type="text"
-                value={filters.maKh}
+                value={tempFilters.maKh}
                 onChange={(e) => handleFilterChange("maKh", e.target.value)}
                 placeholder="KF25127785"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -762,7 +775,7 @@ export default function FastApiInvoicesPage() {
               </label>
               <input
                 type="text"
-                value={filters.tenKh}
+                value={tempFilters.tenKh}
                 onChange={(e) => handleFilterChange("tenKh", e.target.value)}
                 placeholder="Nguyễn Văn A"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -774,7 +787,7 @@ export default function FastApiInvoicesPage() {
               </label>
               <input
                 type="text"
-                value={filters.maDvcs}
+                value={tempFilters.maDvcs}
                 onChange={(e) => handleFilterChange("maDvcs", e.target.value)}
                 placeholder="FBV"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -786,7 +799,7 @@ export default function FastApiInvoicesPage() {
               </label>
               <input
                 type="date"
-                value={filters.startDate}
+                value={tempFilters.startDate}
                 onChange={(e) =>
                   handleFilterChange("startDate", e.target.value)
                 }
@@ -799,7 +812,7 @@ export default function FastApiInvoicesPage() {
               </label>
               <input
                 type="date"
-                value={filters.endDate}
+                value={tempFilters.endDate}
                 onChange={(e) => handleFilterChange("endDate", e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
