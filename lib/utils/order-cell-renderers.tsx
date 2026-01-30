@@ -260,11 +260,10 @@ export const renderCellValue = (
       return <div className={`text-sm ${textClass}`}>{productType || "-"}</div>;
 
     case "promCode": {
-      // Show km_yn (if set/1) or ma_ck01 fallback
-      const val =
-        sale?.km_yn != null && sale?.km_yn !== 0 ? sale.km_yn : sale?.ma_ck01;
+      // User requested: promCode is sale.km_yn
+      const val = sale?.km_yn;
 
-      if (val) {
+      if (val !== null && val !== undefined) {
         return <div className={`text-sm ${textClass}`}>{val}</div>;
       }
       return <div className="text-sm text-gray-400 italic">-</div>;
