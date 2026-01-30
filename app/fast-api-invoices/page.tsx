@@ -12,7 +12,6 @@ interface FastApiInvoice {
   tenKh: string | null;
   ngayCt: string | null;
   status: number;
-  message: string | null;
   guid: string | null;
   fastApiResponse: string | null;
   payload: string | null;
@@ -435,9 +434,8 @@ export default function FastApiInvoicesPage() {
     { key: "ngayCt", label: "Ngày CT", width: "w-24" },
     { key: "status", label: "Trạng thái", width: "w-24" },
     { key: "action", label: "Thao tác", width: "w-40" },
-    { key: "message", label: "Thông báo", width: "w-96" },
     { key: "payload", label: "Dữ liệu gửi", width: "w-32" },
-    { key: "result", label: "Kết quả", width: "w-48" },
+    { key: "result", label: "Kết quả", width: "w-96" },
   ];
 
   return (
@@ -919,32 +917,17 @@ export default function FastApiInvoicesPage() {
                           {getStatusBadge(invoice.status)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          {invoice.status === 0 && (
-                            <button
-                              onClick={() => handleRetry(invoice.docCode)}
-                              disabled={retrying[invoice.docCode]}
-                              className="px-3 py-1.5 bg-orange-600 text-white text-xs font-medium rounded-md hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                              {retrying[invoice.docCode]
-                                ? "Đang xử lý..."
-                                : "Đồng bộ lại"}
-                            </button>
-                          )}
+                          <button
+                            onClick={() => handleRetry(invoice.docCode)}
+                            disabled={retrying[invoice.docCode]}
+                            className="px-3 py-1.5 bg-orange-600 text-white text-xs font-medium rounded-md hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {retrying[invoice.docCode]
+                              ? "Đang xử lý..."
+                              : "Đồng bộ lại"}
+                          </button>
                         </td>
-                        <td
-                          className={`px-6 py-4 text-sm max-w-96 ${invoice.status === 0 ? "text-red-600 font-medium" : "text-gray-500"}`}
-                        >
-                          {invoice.status === 0 && invoice.message ? (
-                            <div
-                              className="break-words whitespace-normal"
-                              title={invoice.message}
-                            >
-                              {invoice.message}
-                            </div>
-                          ) : (
-                            <span className="text-gray-400">-</span>
-                          )}
-                        </td>
+
                         <td className="px-6 py-4 text-sm text-gray-500">
                           {invoice.payload ? (
                             <button
@@ -962,22 +945,24 @@ export default function FastApiInvoicesPage() {
                             <span className="text-gray-400">-</span>
                           )}
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-500">
-                          {invoice.fastApiResponse ? (
-                            <button
-                              onClick={() =>
-                                setViewingPayload({
-                                  title: `Kết quả trả về của ${invoice.docCode}`,
-                                  content: invoice.fastApiResponse || "",
-                                })
-                              }
-                              className="text-green-600 hover:text-green-800 underline"
-                            >
-                              Xem Kết quả
-                            </button>
-                          ) : (
-                            <span className="text-gray-400">-</span>
-                          )}
+                        <td className="px-6 py-4 text-sm text-gray-500 max-w-96">
+                          <div className="flex flex-col gap-2">
+                            {invoice.fastApiResponse ? (
+                              <button
+                                onClick={() =>
+                                  setViewingPayload({
+                                    title: `Kết quả trả về của ${invoice.docCode}`,
+                                    content: invoice.fastApiResponse || "",
+                                  })
+                                }
+                                className="text-left text-green-600 hover:text-green-800 underline text-xs"
+                              >
+                                Xem Kết quả API
+                              </button>
+                            ) : (
+                              <span className="text-gray-400">-</span>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}
