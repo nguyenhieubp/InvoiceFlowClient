@@ -48,7 +48,7 @@ export const enrichOrdersWithProducts = (
         // Lấy muaHangGiamGia từ promotion nếu có
         muaHangGiamGia: promotion?.muaHangGiamGia !== undefined
           ? (promotion.muaHangGiamGia ? 1 : 0)
-          : sale.muaHangGiamGia,
+          : (sale as any).muaHangGiamGia,
       };
     }) || [],
   }));

@@ -74,6 +74,8 @@ export interface SaleItem {
   id?: string;
   promCode?: string;
   muaHangGiamGiaDisplay?: string | null;
+  // muaHangGiamGia: flag indicating 'mua hàng giảm giá' (1 = true, 0 = false) - kept as number for compatibility
+  muaHangGiamGia?: number | boolean;
   itemCode?: string;
   itemName?: string;
   description?: string;
