@@ -530,26 +530,6 @@ export default function FastApiInvoicesPage() {
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setShowSyncModal(true)}
-              disabled={syncingAll}
-              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              <svg
-                className="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                />
-              </svg>
-              <span>Đồng bộ theo ngày</span>
-            </button>
-            <button
               onClick={handleSyncAllFailed}
               disabled={
                 syncingAll ||
