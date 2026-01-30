@@ -15,6 +15,7 @@ interface FastApiInvoice {
   message: string | null;
   guid: string | null;
   fastApiResponse: string | null;
+  payload: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -56,6 +57,10 @@ export default function FastApiInvoicesPage() {
     startDate: "",
     endDate: "",
   });
+  const [viewingPayload, setViewingPayload] = useState<{
+    title: string;
+    content: string;
+  } | null>(null);
 
   const showToast = useCallback(
     (type: "success" | "error" | "info", message: string) => {
@@ -431,6 +436,7 @@ export default function FastApiInvoicesPage() {
     { key: "status", label: "Trạng thái", width: "w-24" },
     { key: "action", label: "Thao tác", width: "w-40" },
     { key: "message", label: "Thông báo", width: "w-96" },
+    { key: "payload", label: "Dữ liệu gửi", width: "w-32" },
     { key: "result", label: "Kết quả", width: "w-48" },
   ];
 
@@ -444,6 +450,60 @@ export default function FastApiInvoicesPage() {
             message={toast.message}
             onClose={() => setToast(null)}
           />
+        </div>
+      )}
+
+      {/* Payload Modal */}
+      {viewingPayload && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h2 className="text-xl font-bold text-gray-900">
+                {viewingPayload.title}
+              </h2>
+              <button
+                onClick={() => setViewingPayload(null)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg
+                  className="h-6 w-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+            <div className="p-4 overflow-auto flex-1 font-mono text-sm bg-gray-50">
+              <pre className="whitespace-pre-wrap break-all">
+                {(() => {
+                  try {
+                    return JSON.stringify(
+                      JSON.parse(viewingPayload.content),
+                      null,
+                      2,
+                    );
+                  } catch (e) {
+                    return viewingPayload.content;
+                  }
+                })()}
+              </pre>
+            </div>
+            <div className="p-4 border-t flex justify-end">
+              <button
+                onClick={() => setViewingPayload(null)}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -886,25 +946,35 @@ export default function FastApiInvoicesPage() {
                           )}
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-500">
+                          {invoice.payload ? (
+                            <button
+                              onClick={() =>
+                                setViewingPayload({
+                                  title: `Dữ liệu gửi của ${invoice.docCode}`,
+                                  content: invoice.payload || "",
+                                })
+                              }
+                              className="text-blue-600 hover:text-blue-800 underline"
+                            >
+                              Xem JSON
+                            </button>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-500">
                           {invoice.fastApiResponse ? (
-                            <details className="cursor-pointer">
-                              <summary className="text-blue-600 hover:text-blue-800">
-                                Xem kết quả
-                              </summary>
-                              <pre className="mt-2 p-2 bg-gray-100 rounded text-xs overflow-auto max-h-40">
-                                {(() => {
-                                  try {
-                                    return JSON.stringify(
-                                      JSON.parse(invoice.fastApiResponse || ""),
-                                      null,
-                                      2,
-                                    );
-                                  } catch (e) {
-                                    return invoice.fastApiResponse || "-";
-                                  }
-                                })()}
-                              </pre>
-                            </details>
+                            <button
+                              onClick={() =>
+                                setViewingPayload({
+                                  title: `Kết quả trả về của ${invoice.docCode}`,
+                                  content: invoice.fastApiResponse || "",
+                                })
+                              }
+                              className="text-green-600 hover:text-green-800 underline"
+                            >
+                              Xem Kết quả
+                            </button>
                           ) : (
                             <span className="text-gray-400">-</span>
                           )}
