@@ -141,6 +141,9 @@ export const salesApi = {
   batchProcessInvoices: (startDate: string, endDate: string) => {
     return api.post("/sales/invoice/batch-process", { startDate, endDate });
   },
+  retryFailedInvoices: () => {
+    return api.post("/sales/retry-failed-invoices");
+  },
 };
 
 // Purchasing APIs
