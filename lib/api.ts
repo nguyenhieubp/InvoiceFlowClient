@@ -141,8 +141,19 @@ export const salesApi = {
   batchProcessInvoices: (startDate: string, endDate: string) => {
     return api.post("/sales/invoice/batch-process", { startDate, endDate });
   },
-  retryFailedInvoices: () => {
-    return api.post("/sales/retry-failed-invoices");
+  retryFailedInvoices() {
+    return api.post("/sales/invoice/retry-failed");
+  },
+  getOrderCount(params?: {
+    brand?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    search?: string;
+    typeSale?: string;
+    isProcessed?: boolean;
+    statusAsys?: boolean;
+  }) {
+    return api.get("/sales/statistics/order-count", { params });
   },
 };
 
