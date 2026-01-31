@@ -848,6 +848,20 @@ export const fastApiInvoicesApi = {
   }) => {
     return api.get("/fast-api-invoices", { params });
   },
+  exportExcel: (params?: {
+    status?: number;
+    docCode?: string;
+    maKh?: string;
+    tenKh?: string;
+    maDvcs?: string;
+    startDate?: string;
+    endDate?: string;
+  }) => {
+    return api.get("/fast-api-invoices/export/excel", {
+      params,
+      responseType: "blob",
+    });
+  },
   getById: (id: string) => {
     return api.get(`/fast-api-invoices/${id}`);
   },

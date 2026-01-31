@@ -71,6 +71,7 @@ export default function FastApiInvoicesPage() {
     title: string;
     content: string;
   } | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
 
   const showToast = useCallback(
     (type: "success" | "error" | "info", message: string) => {
@@ -451,6 +452,48 @@ export default function FastApiInvoicesPage() {
     { key: "result", label: "Kết quả", width: "w-96" },
   ];
 
+  const handleExportExcel = async () => {
+    try {
+      setIsExporting(true);
+      const params: any = {};
+      if (filters.status) params.status = parseInt(filters.status);
+      if (filters.docCode) params.docCode = filters.docCode;
+      if (filters.maKh) params.maKh = filters.maKh;
+      if (filters.tenKh) params.tenKh = filters.tenKh;
+      if (filters.maDvcs) params.maDvcs = filters.maDvcs;
+      if (filters.startDate) params.startDate = filters.startDate;
+      if (filters.endDate) params.endDate = filters.endDate;
+
+      const response = await fastApiInvoicesApi.exportExcel(params);
+
+      // Download file
+      const blob = new Blob([response.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute(
+        "download",
+        `InvoiceLogs_${new Date().toISOString().split("T")[0]}.xlsx`,
+      );
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      showToast("success", "Xuất file Excel thành công");
+    } catch (error: any) {
+      console.error("Error exporting excel:", error);
+      showToast(
+        "error",
+        error?.response?.data?.message || "Lỗi khi xuất file Excel",
+      );
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <div className="p-6">
       {/* Toast - Fixed position at top */}
@@ -809,6 +852,54 @@ export default function FastApiInvoicesPage() {
                 className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500"
               >
                 Reset
+              </button>
+              <button
+                onClick={handleExportExcel}
+                disabled={isExporting || loading}
+                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 flex items-center gap-2"
+              >
+                {isExporting ? (
+                  <>
+                    <svg
+                      className="animate-spin h-4 w-4"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                    <span>Đang xuất...</span>
+                  </>
+                ) : (
+                  <>
+                    <svg
+                      className="h-4 w-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                      />
+                    </svg>
+                    <span>Xuất Excel</span>
+                  </>
+                )}
               </button>
             </div>
           </div>
