@@ -15,6 +15,7 @@ interface FastApiInvoice {
   guid: string | null;
   fastApiResponse: string | null;
   payload: string | null;
+  lastErrorMessage: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -393,6 +394,29 @@ export default function FastApiInvoicesPage() {
     }
   };
 
+  const getQuickView = (invoice: FastApiInvoice) => {
+    if (invoice.lastErrorMessage) {
+      return invoice.lastErrorMessage;
+    }
+    if (invoice.fastApiResponse) {
+      try {
+        const response = JSON.parse(invoice.fastApiResponse);
+        if (Array.isArray(response) && response.length > 0) {
+          return (
+            response[0].message || response[0].error || "Lỗi không xác định"
+          );
+        }
+        if (typeof response === "object") {
+          return response.message || response.error || "Lỗi không xác định";
+        }
+      } catch (e) {
+        // Fallback if not JSON or different structure
+        return invoice.fastApiResponse.substring(0, 100) + "...";
+      }
+    }
+    return "-";
+  };
+
   const formatDate = (dateString: string | null) => {
     if (!dateString) return "-";
     try {
@@ -449,7 +473,8 @@ export default function FastApiInvoicesPage() {
     { key: "status", label: "Trạng thái", width: "w-24" },
     { key: "action", label: "Thao tác", width: "w-40" },
     { key: "payload", label: "Dữ liệu gửi", width: "w-32" },
-    { key: "result", label: "Kết quả", width: "w-96" },
+    { key: "result", label: "Kết quả", width: "w-48" },
+    { key: "quickView", label: "Xem nhanh", width: "min-w-[20rem]" },
   ];
 
   const handleExportExcel = async () => {
@@ -1029,7 +1054,7 @@ export default function FastApiInvoicesPage() {
                             <span className="text-gray-400">-</span>
                           )}
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-500 max-w-96">
+                        <td className="px-6 py-4 text-sm text-gray-500 max-w-48">
                           <div className="flex flex-col gap-2">
                             {invoice.fastApiResponse ? (
                               <button
@@ -1046,6 +1071,15 @@ export default function FastApiInvoicesPage() {
                             ) : (
                               <span className="text-gray-400">-</span>
                             )}
+                          </div>
+                        </td>
+                        <td
+                          className="px-6 py-4 text-sm text-gray-600"
+                          style={{ minWidth: "20rem", maxWidth: "20rem" }}
+                          title={getQuickView(invoice)}
+                        >
+                          <div className="line-clamp-4 whitespace-normal break-words">
+                            {getQuickView(invoice)}
                           </div>
                         </td>
                       </tr>
