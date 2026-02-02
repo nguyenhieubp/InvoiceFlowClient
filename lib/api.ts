@@ -109,6 +109,7 @@ export const salesApi = {
     dateTo?: string;
     search?: string;
     statusAsys?: boolean;
+    typeSale?: string;
   }) => {
     return api.get("/sales/export-orders", {
       params,
