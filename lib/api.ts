@@ -394,6 +394,7 @@ export const stockTransferApi = {
     branchCode?: string;
     itemCode?: string;
     soCode?: string;
+    doctype?: string;
   }) => {
     return api.get("/sync/stock-transfers", { params });
   },

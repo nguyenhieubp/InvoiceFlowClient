@@ -2,6 +2,17 @@
 
 import React, { useEffect, useState } from "react";
 import { stockTransferApi, syncApi } from "@/lib/api";
+import { Toast } from "@/components/Toast";
+import {
+  Search,
+  Filter,
+  Calendar,
+  RefreshCw,
+  Download,
+  Package,
+  TrendingUp,
+  AlertCircle,
+} from "lucide-react";
 
 interface StockTransfer {
   id: string;
@@ -42,6 +53,7 @@ export default function StockTransferPage() {
     itemCode?: string;
     soCode?: string;
     docCode?: string;
+    doctype?: string;
   }>({});
   const [filter, setFilter] = useState<{
     brand?: string;
@@ -51,6 +63,7 @@ export default function StockTransferPage() {
     itemCode?: string;
     soCode?: string;
     docCode?: string;
+    doctype?: string;
   }>({});
   const [pagination, setPagination] = useState({
     page: 1,
@@ -187,6 +200,7 @@ export default function StockTransferPage() {
       if (filter.itemCode) params.itemCode = filter.itemCode;
       if (filter.soCode) params.soCode = filter.soCode;
       if (filter.docCode) params.docCode = filter.docCode;
+      if (filter.doctype) params.doctype = filter.doctype;
 
       const response = await stockTransferApi.getAll(params);
       setStockTransfers(response.data.data || []);
@@ -375,75 +389,62 @@ export default function StockTransferPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-slate-50/50 p-6">
       {/* Toast Notification */}
       {toast && (
-        <div
-          className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg ${
-            toast.type === "success"
-              ? "bg-green-500 text-white"
-              : toast.type === "error"
-                ? "bg-red-500 text-white"
-                : "bg-blue-500 text-white"
-          }`}
-        >
-          <div className="flex items-center justify-between">
-            <span>{toast.message}</span>
-            <button
-              onClick={() => setToast(null)}
-              className="ml-4 text-white hover:text-gray-200"
-            >
-              ×
-            </button>
-          </div>
+        <div className="fixed top-4 right-4 z-50">
+          <Toast
+            type={toast.type}
+            message={toast.message}
+            onClose={() => setToast(null)}
+          />
         </div>
       )}
 
-      <div className="w-full px-4 py-4">
-        {/* Header with Filters & Sync */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4">
-          <div className="flex flex-col gap-4">
-            {/* Title and Actions */}
-            <div className="flex items-center justify-between flex-wrap gap-3">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">
-                  Dữ liệu xuất kho
-                </h1>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  Quản lý và đồng bộ dữ liệu xuất kho từ Zappy API
-                </p>
-              </div>
-            </div>
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900 mb-2">
+              Dữ liệu xuất kho
+            </h1>
+            <p className="text-sm text-slate-600">
+              Quản lý và đồng bộ dữ liệu xuất kho từ Zappy API
+            </p>
+          </div>
+        </div>
 
-            {/* Sync Section */}
-            <div className="border-b border-gray-200 pb-4">
-              <h3 className="text-sm font-semibold text-gray-700 mb-3">
+        {/* Sync Section */}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-4">
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Calendar className="h-5 w-5 text-slate-600" />
+              <h3 className="text-sm font-semibold text-slate-700">
                 Đồng bộ dữ liệu
               </h3>
 
               {/* Đồng bộ khoảng ngày */}
               <div className="flex items-center gap-2 flex-wrap">
                 <div className="flex items-center gap-2">
-                  <label className="text-sm text-gray-700 whitespace-nowrap">
+                  <label className="text-sm text-slate-700 whitespace-nowrap">
                     Từ ngày:
                   </label>
                   <input
                     type="date"
                     value={syncDateFromInput}
                     onChange={(e) => setSyncDateFromInput(e.target.value)}
-                    className="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                    className="px-3 py-2 text-sm border border-slate-200 rounded-lg bg-slate-50/50 text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
                     disabled={syncing || syncingRange}
                   />
                 </div>
                 <div className="flex items-center gap-2">
-                  <label className="text-sm text-gray-700 whitespace-nowrap">
+                  <label className="text-sm text-slate-700 whitespace-nowrap">
                     Đến ngày:
                   </label>
                   <input
                     type="date"
                     value={syncDateToInput}
                     onChange={(e) => setSyncDateToInput(e.target.value)}
-                    className="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                    className="px-3 py-2 text-sm border border-slate-200 rounded-lg bg-slate-50/50 text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
                     disabled={syncing || syncingRange}
                   />
                 </div>
@@ -455,7 +456,7 @@ export default function StockTransferPage() {
                     !syncDateFromInput ||
                     !syncDateToInput
                   }
-                  className="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-green-600 rounded-lg hover:bg-green-700 transition-colors inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {syncingRange ? (
                     <>
@@ -464,19 +465,7 @@ export default function StockTransferPage() {
                     </>
                   ) : (
                     <>
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                        />
-                      </svg>
+                      <RefreshCw className="h-4 w-4" />
                       Đồng bộ khoảng ngày
                     </>
                   )}
@@ -485,10 +474,11 @@ export default function StockTransferPage() {
             </div>
 
             {/* Filter Section */}
-            <div>
-              <h3 className="text-sm font-semibold text-gray-700 mb-3">
-                Bộ lọc
-              </h3>
+            <div className="border-t border-slate-200 pt-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Filter className="h-5 w-5 text-slate-600" />
+                <h3 className="text-sm font-semibold text-slate-700">Bộ lọc</h3>
+              </div>
               <div className="flex items-center gap-2 flex-wrap">
                 <select
                   value={filterInput.brand || ""}
@@ -498,7 +488,7 @@ export default function StockTransferPage() {
                       brand: e.target.value || undefined,
                     })
                   }
-                  className="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  className="px-3 py-2 text-sm border border-slate-200 rounded-lg bg-slate-50/50 text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
                 >
                   <option value="">Tất cả nhãn hàng</option>
                   <option value="f3">F3</option>
@@ -519,7 +509,7 @@ export default function StockTransferPage() {
                         dateFrom: e.target.value,
                       })
                     }
-                    className="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    className="px-3 py-2 text-sm border border-slate-200 rounded-lg bg-slate-50/50 text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
                   />
                 </div>
                 <div className="flex items-center gap-2">
@@ -532,7 +522,7 @@ export default function StockTransferPage() {
                     onChange={(e) =>
                       setFilterInput({ ...filterInput, dateTo: e.target.value })
                     }
-                    className="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    className="px-3 py-2 text-sm border border-slate-200 rounded-lg bg-slate-50/50 text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
                   />
                 </div>
                 <input
@@ -545,7 +535,7 @@ export default function StockTransferPage() {
                     })
                   }
                   placeholder="Mã chi nhánh (VD: FS07)"
-                  className="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  className="px-3 py-2 text-sm border border-slate-200 rounded-lg bg-slate-50/50 text-slate-700 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
                 />
                 <input
                   type="text"
@@ -557,7 +547,7 @@ export default function StockTransferPage() {
                     })
                   }
                   placeholder="Mã sản phẩm (VD: F00011)"
-                  className="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  className="px-3 py-2 text-sm border border-slate-200 rounded-lg bg-slate-50/50 text-slate-700 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
                 />
                 <input
                   type="text"
@@ -569,7 +559,7 @@ export default function StockTransferPage() {
                     })
                   }
                   placeholder="Mã đơn hàng (VD: SO37.00131367)"
-                  className="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  className="px-3 py-2 text-sm border border-slate-200 rounded-lg bg-slate-50/50 text-slate-700 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
                 />
                 <input
                   type="text"
@@ -581,12 +571,41 @@ export default function StockTransferPage() {
                     })
                   }
                   placeholder="Mã xuất kho (VD: ST01.00134507)"
-                  className="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  className="px-3 py-2 text-sm border border-slate-200 rounded-lg bg-slate-50/50 text-slate-700 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
                 />
+                <select
+                  value={filterInput.doctype || ""}
+                  onChange={(e) =>
+                    setFilterInput({
+                      ...filterInput,
+                      doctype: e.target.value || undefined,
+                    })
+                  }
+                  className="px-3 py-2 text-sm border border-slate-200 rounded-lg bg-slate-50/50 text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                  style={{ minWidth: "150px" }}
+                >
+                  <option value="">Tất cả loại chứng từ</option>
+                  <option value="STOCK_REPACK">STOCK_REPACK</option>
+                  <option value="STOCK_RETURN">STOCK_RETURN</option>
+                  <option value="SALE_RETURN">SALE_RETURN</option>
+                  <option value="PURCHASE_GOOD_RETURN">
+                    PURCHASE_GOOD_RETURN
+                  </option>
+                  <option value="STOCK_TAKE">STOCK_TAKE</option>
+                  <option value="STOCK_REVALUE">STOCK_REVALUE</option>
+                  <option value="STOCK_IO">STOCK_IO</option>
+                  <option value="STOCK_TRANSFER">STOCK_TRANSFER</option>
+                  <option value="STOCK_RECEIVE">STOCK_RECEIVE</option>
+                  <option value="PURCHASE_GOOD_RECEIVE">
+                    PURCHASE_GOOD_RECEIVE
+                  </option>
+                  <option value="SALE_STOCKOUT">SALE_STOCKOUT</option>
+                </select>
                 <button
                   onClick={handleSearch}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors text-sm font-medium"
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors text-sm font-medium inline-flex items-center gap-2"
                 >
+                  <Search className="h-4 w-4" />
                   Tìm kiếm
                 </button>
               </div>
@@ -597,28 +616,29 @@ export default function StockTransferPage() {
         {/* Main Content */}
         <div className="w-full">
           {loading ? (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12">
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12">
               <div className="flex flex-col items-center justify-center">
-                <div className="animate-spin rounded-full h-10 w-10 border-2 border-gray-200 border-t-blue-600 mb-4"></div>
-                <p className="text-sm text-gray-500">Đang tải dữ liệu...</p>
+                <div className="animate-spin rounded-full h-10 w-10 border-2 border-slate-200 border-t-indigo-600 mb-4"></div>
+                <p className="text-sm text-slate-500">Đang tải dữ liệu...</p>
               </div>
             </div>
           ) : (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
               {/* Table Header Info */}
-              <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+              <div className="px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-gray-700">
+                  <Package className="h-5 w-5 text-slate-600" />
+                  <span className="text-sm font-medium text-slate-700">
                     Danh sách xuất kho
                   </span>
                   {pagination.total > 0 && (
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs text-slate-500">
                       ({pagination.total} bản ghi)
                     </span>
                   )}
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-gray-500">Hiển thị:</span>
+                  <span className="text-xs text-slate-500">Hiển thị:</span>
                   <select
                     value={pagination.limit}
                     onChange={(e) => {
@@ -629,7 +649,7 @@ export default function StockTransferPage() {
                         page: 1,
                       }));
                     }}
-                    className="border border-gray-300 rounded px-2 py-1 text-xs text-gray-700 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="border border-slate-200 rounded px-2 py-1 text-xs text-slate-700 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
                   >
                     <option value="10">10</option>
                     <option value="25">25</option>
@@ -641,89 +661,77 @@ export default function StockTransferPage() {
 
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-gray-50 border-b border-gray-200">
-                    <tr>
-                      <th className="px-2 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  <thead className="bg-slate-50">
+                    <tr className="border-b border-slate-200">
+                      <th className="px-2 py-2.5 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
                         Loại CT
                       </th>
-                      <th className="px-2 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      <th className="px-2 py-2.5 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
                         Ngày
                       </th>
-                      <th className="px-2 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      <th className="px-2 py-2.5 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
                         Mã CT
                       </th>
-                      <th className="px-2 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      <th className="px-2 py-2.5 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
                         Mô tả
                       </th>
-                      <th className="px-2 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      <th className="px-2 py-2.5 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
                         CN
                       </th>
-                      <th className="px-2 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      <th className="px-2 py-2.5 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
                         Nhãn
                       </th>
-                      <th className="px-2 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      <th className="px-2 py-2.5 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
                         Mã SP
                       </th>
-                      <th className="px-2 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      <th className="px-2 py-2.5 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
                         Material Code
                       </th>
-                      <th className="px-2 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      <th className="px-2 py-2.5 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
                         Tên SP
                       </th>
-                      <th className="px-2 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      <th className="px-2 py-2.5 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
                         Kho
                       </th>
-                      <th className="px-2 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      <th className="px-2 py-2.5 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
                         Kho liên quan
                       </th>
-                      <th className="px-2 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      <th className="px-2 py-2.5 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
                         Loại I/O
                       </th>
-                      <th className="px-2 py-2.5 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      <th className="px-2 py-2.5 text-right text-xs font-semibold text-slate-700 uppercase tracking-wider">
                         SL
                       </th>
-                      <th className="px-2 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      <th className="px-2 py-2.5 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
                         Batch/Serial
                       </th>
-                      <th className="px-2 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      <th className="px-2 py-2.5 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
                         Mã nhập xuất
                       </th>
-                      <th className="px-2 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      <th className="px-2 py-2.5 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
                         Line Info 2
                       </th>
-                      <th className="px-2 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      <th className="px-2 py-2.5 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
                         Mã ĐH
                       </th>
-                      <th className="px-2 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      <th className="px-2 py-2.5 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
                         Sync Date
                       </th>
-                      <th className="px-2 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      <th className="px-2 py-2.5 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
                         Ngày tạo
                       </th>
-                      <th className="px-2 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      <th className="px-2 py-2.5 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
                         Ngày cập nhật
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody className="bg-white divide-y divide-slate-100">
                     {stockTransfers.length === 0 ? (
                       <tr>
                         <td colSpan={20} className="px-4 py-12 text-center">
                           <div className="flex flex-col items-center">
-                            <svg
-                              className="w-12 h-12 text-gray-400 mb-3"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
-                              />
-                            </svg>
-                            <p className="text-sm text-gray-500">
+                            <Package className="w-12 h-12 text-slate-400 mb-3" />
+                            <p className="text-sm text-slate-500">
                               Không có dữ liệu
                             </p>
                           </div>
@@ -851,7 +859,7 @@ export default function StockTransferPage() {
                                       e.stopPropagation();
                                       handleRetryMaterialCode(st.soCode!);
                                     }}
-                                    className="text-blue-500 hover:text-blue-700 p-1 rounded hover:bg-blue-50 transition-colors"
+                                    className="text-indigo-500 hover:text-indigo-700 p-1 rounded hover:bg-indigo-50 transition-colors"
                                     title="Cập nhật Material Code từ Loyalty"
                                   >
                                     <svg
@@ -875,10 +883,10 @@ export default function StockTransferPage() {
                             >
                               {st.syncDate || "-"}
                             </td>
-                            <td className="px-2 py-2.5 whitespace-nowrap text-xs text-gray-500">
+                            <td className="px-2 py-2.5 whitespace-nowrap text-xs text-slate-500">
                               {formatDate(st.createdAt)}
                             </td>
-                            <td className="px-2 py-2.5 whitespace-nowrap text-xs text-gray-500">
+                            <td className="px-2 py-2.5 whitespace-nowrap text-xs text-slate-500">
                               {formatDate(st.updatedAt)}
                             </td>
                           </tr>
@@ -891,8 +899,8 @@ export default function StockTransferPage() {
 
               {/* Pagination */}
               {pagination.totalPages > 0 && (
-                <div className="bg-white px-4 py-2.5 flex items-center justify-between border-t border-gray-200">
-                  <div className="text-xs text-gray-600">
+                <div className="bg-white px-4 py-2.5 flex items-center justify-between border-t border-slate-200">
+                  <div className="text-xs text-slate-600">
                     Trang <span className="font-medium">{pagination.page}</span>{" "}
                     /{" "}
                     <span className="font-medium">{pagination.totalPages}</span>
@@ -906,7 +914,7 @@ export default function StockTransferPage() {
                         }))
                       }
                       disabled={pagination.page === 1}
-                      className="px-2.5 py-1 text-xs border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      className="px-2.5 py-1 text-xs border border-slate-200 rounded-md hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                       ←
                     </button>
