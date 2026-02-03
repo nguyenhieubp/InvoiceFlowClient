@@ -19,6 +19,7 @@ interface FastApiInvoice {
   lastErrorMessage: string | null;
   createdAt: string;
   updatedAt: string;
+  xemNhanh: string | null; // [New]
 }
 
 export default function FastApiInvoicesPage() {
@@ -396,6 +397,10 @@ export default function FastApiInvoicesPage() {
   };
 
   const getQuickView = (invoice: FastApiInvoice) => {
+    // [NEW] Prioritize the dedicated xemNhanh column
+    if (invoice.xemNhanh) {
+      return invoice.xemNhanh;
+    }
     if (invoice.lastErrorMessage) {
       return invoice.lastErrorMessage;
     }
