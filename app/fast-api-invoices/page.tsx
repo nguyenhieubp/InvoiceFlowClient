@@ -162,6 +162,7 @@ export default function FastApiInvoicesPage() {
           "info",
           data.message || `Đơn hàng ${docCode} đã được tạo hóa đơn trước đó`,
         );
+        // Load lại để cập nhật status nếu cần
         await loadInvoices();
         await loadStatistics();
         return;
@@ -174,31 +175,43 @@ export default function FastApiInvoicesPage() {
         hasError = data.result.status === 0;
       }
 
+      // Xác định thông báo lỗi/thành công để cập nhật UI
+      let uiMessage = "";
       if (data.success && !hasError) {
-        showToast(
-          "success",
-          data.message || `Đồng bộ lại ${docCode} thành công`,
-        );
-        // Đợi một chút để đảm bảo database đã được cập nhật
-        await new Promise((resolve) => setTimeout(resolve, 300));
-        await loadInvoices();
-        await loadStatistics();
+        uiMessage = data.message || `Đồng bộ lại ${docCode} thành công`;
+        showToast("success", uiMessage);
       } else {
-        let errorMessage = data.message || `Đồng bộ lại ${docCode} thất bại`;
-
+        uiMessage = data.message || `Đồng bộ lại ${docCode} thất bại`;
         if (Array.isArray(data.result) && data.result.length > 0) {
           const firstError = data.result[0];
-          if (firstError.message) {
-            errorMessage = firstError.message;
-          }
+          if (firstError.message) uiMessage = firstError.message;
         } else if (data.result?.message) {
-          errorMessage = data.result.message;
+          uiMessage = data.result.message;
         }
-
-        showToast("error", errorMessage);
-        await loadInvoices();
-        await loadStatistics();
+        showToast("error", uiMessage);
       }
+
+      // [NEW] Cập nhật ngay lập tức state local để log hiển thị luôn
+      setInvoices((prevInvoices) =>
+        prevInvoices.map((inv) => {
+          if (inv.docCode === docCode) {
+            return {
+              ...inv,
+              status: data.success && !hasError ? 1 : 0,
+              xemNhanh: uiMessage,
+              lastErrorMessage:
+                !data.success || hasError ? uiMessage : inv.lastErrorMessage,
+              fastApiResponse: JSON.stringify(data.result || {}),
+              updatedAt: new Date().toISOString(),
+            };
+          }
+          return inv;
+        }),
+      );
+
+      // Reload background để đảm bảo đồng bộ hoàn toàn
+      loadInvoices();
+      loadStatistics();
     } catch (error: any) {
       console.error("Error retrying invoice:", error);
       let errorMessage = `Lỗi khi đồng bộ lại ${docCode}`;
@@ -217,6 +230,22 @@ export default function FastApiInvoicesPage() {
       }
 
       showToast("error", errorMessage);
+
+      // Update state to show error
+      setInvoices((prevInvoices) =>
+        prevInvoices.map((inv) => {
+          if (inv.docCode === docCode) {
+            return {
+              ...inv,
+              status: 0,
+              xemNhanh: errorMessage,
+              lastErrorMessage: errorMessage,
+              updatedAt: new Date().toISOString(),
+            };
+          }
+          return inv;
+        }),
+      );
     } finally {
       setRetrying((prev) => ({ ...prev, [docCode]: false }));
     }
