@@ -169,7 +169,7 @@ export default function MissingMaterialPage() {
 
   const handleSave = async (id: string) => {
     try {
-      await stockTransferApi.updateMaterialCode(id, editMaterialCode);
+      await stockTransferApi.update(id, { materialCode: editMaterialCode });
       alert("Cập nhật thành công");
       setEditingId(null);
       fetchData(); // Refresh list (item should disappear if logic holds)

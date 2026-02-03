@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { salesApi } from "@/lib/api";
+import { salesApi, stockTransferApi } from "@/lib/api";
 // Icons as basic SVGs to avoid dependency
 const RotateCwIcon = ({ className }: { className?: string }) => (
   <svg
@@ -16,6 +16,54 @@ const RotateCwIcon = ({ className }: { className?: string }) => (
   >
     <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
     <path d="M21 3v5h-5" />
+  </svg>
+);
+
+const Edit2Icon = ({ className }: { className?: string }) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
+  </svg>
+);
+
+const SaveIcon = ({ className }: { className?: string }) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+    <polyline points="17 21 17 13 7 13 7 21" />
+    <polyline points="7 3 7 8 15 8" />
+  </svg>
+);
+
+const XIcon = ({ className }: { className?: string }) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    <line x1="18" y1="6" x2="6" y2="18" />
+    <line x1="6" y1="6" x2="18" y2="18" />
   </svg>
 );
 
@@ -121,6 +169,10 @@ export default function ErrorOrdersPage() {
   });
 
   const [page, setPage] = useState(1);
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  const [editMaterialCode, setEditMaterialCode] = useState("");
+  const [editBranchCode, setEditBranchCode] = useState("");
 
   const fetchData = async () => {
     setLoading(true);
@@ -211,7 +263,33 @@ export default function ErrorOrdersPage() {
       console.error("Sync single failed", error);
       alert("Lỗi khi đồng bộ đơn hàng.");
     } finally {
-      setSyncing(false);
+    }
+  };
+
+  const handleEdit = (item: ErrorOrder) => {
+    setEditingId(item.id);
+    setEditMaterialCode(item.materialCode || "");
+    setEditBranchCode(item.branchCode || "");
+  };
+
+  const handleCancel = () => {
+    setEditingId(null);
+    setEditMaterialCode("");
+    setEditBranchCode("");
+  };
+
+  const handleSave = async (id: string) => {
+    try {
+      await salesApi.updateErrorOrder(id, {
+        materialCode: editMaterialCode,
+        branchCode: editBranchCode,
+      });
+      alert("Cập nhật thành công");
+      setEditingId(null);
+      fetchData(); // Refresh list
+    } catch (error) {
+      console.error("Update failed", error);
+      alert("Cập nhật thất bại");
     }
   };
 
@@ -377,7 +455,16 @@ export default function ErrorOrdersPage() {
                       {item.itemCode}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-xs text-gray-700 font-mono">
-                      {item.materialCode ? (
+                      {editingId === item.id ? (
+                        <input
+                          type="text"
+                          value={editMaterialCode}
+                          onChange={(e) => setEditMaterialCode(e.target.value)}
+                          className="w-full px-2 py-1 text-xs border border-blue-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          autoFocus
+                          placeholder="Nhập code..."
+                        />
+                      ) : item.materialCode ? (
                         <span className="text-green-600 font-medium">
                           {item.materialCode}
                         </span>
@@ -386,7 +473,17 @@ export default function ErrorOrdersPage() {
                       )}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-xs text-gray-600 font-mono">
-                      {item.branchCode}
+                      {editingId === item.id ? (
+                        <input
+                          type="text"
+                          value={editBranchCode}
+                          onChange={(e) => setEditBranchCode(e.target.value)}
+                          className="w-full px-2 py-1 text-xs border border-blue-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          placeholder="Chi nhánh..."
+                        />
+                      ) : (
+                        item.branchCode
+                      )}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-center">
                       <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
@@ -394,14 +491,41 @@ export default function ErrorOrdersPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right whitespace-nowrap">
-                      <button
-                        onClick={() => handleSyncSingle(item.docCode)}
-                        className="px-2 py-1 text-xs font-medium text-white bg-indigo-500 hover:bg-indigo-600 rounded transition-colors inline-flex items-center gap-1"
-                        title="Đồng bộ lại đơn này"
-                      >
-                        <RefreshCwIcon className="w-3 h-3" />
-                        Sync
-                      </button>
+                      {editingId === item.id ? (
+                        <div className="flex justify-end gap-1">
+                          <button
+                            onClick={() => handleSave(item.id)}
+                            className="p-1 text-green-600 hover:bg-green-50 rounded"
+                            title="Lưu"
+                          >
+                            <SaveIcon className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={handleCancel}
+                            className="p-1 text-red-600 hover:bg-red-50 rounded"
+                            title="Hủy"
+                          >
+                            <XIcon className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex justify-end gap-1">
+                          <button
+                            onClick={() => handleEdit(item)}
+                            className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                            title="Chỉnh sửa"
+                          >
+                            <Edit2Icon className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleSyncSingle(item.docCode)}
+                            className="px-2 py-1 text-xs font-medium text-white bg-indigo-500 hover:bg-indigo-600 rounded transition-colors inline-flex items-center gap-1"
+                            title="Đồng bộ lại đơn này"
+                          >
+                            <RefreshCwIcon className="w-3 h-3" />
+                          </button>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))

@@ -156,6 +156,12 @@ export const salesApi = {
   }) {
     return api.get("/sales/statistics/order-count", { params });
   },
+  updateErrorOrder: (
+    id: string,
+    data: { materialCode?: string; branchCode?: string },
+  ) => {
+    return api.post(`/sales/error-order/${id}`, data);
+  },
 };
 
 // Purchasing APIs
@@ -403,8 +409,11 @@ export const stockTransferApi = {
   }) => {
     return api.get("/stock-transfers/missing-material", { params });
   },
-  updateMaterialCode: (id: string, materialCode: string) => {
-    return api.put(`/stock-transfers/${id}`, { materialCode });
+  update: (
+    id: string,
+    data: { materialCode?: string; branchCode?: string },
+  ) => {
+    return api.put(`/stock-transfers/${id}`, data);
   },
 };
 
