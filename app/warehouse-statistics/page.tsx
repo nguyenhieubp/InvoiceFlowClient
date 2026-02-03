@@ -484,7 +484,7 @@ export default function WarehouseStatisticsPage() {
                 <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
                 <p>
                   Hệ thống sẽ tìm các bản ghi bị lỗi trong khoảng thời gian đã
-                  chọn tham số "success=false" và thực hiện xử lý lại.
+                  chọn tham số &quot;success=false&quot; và thực hiện xử lý lại.
                 </p>
               </div>
 
