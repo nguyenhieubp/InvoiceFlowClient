@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { stockTransferApi, syncApi } from "@/lib/api";
+import { stockTransferApi, syncApi, warehouseProcessedApi } from "@/lib/api";
 import { Toast } from "@/components/Toast";
 import {
   Search,
@@ -78,6 +78,21 @@ export default function StockTransferPage() {
   const [processingWarehouse, setProcessingWarehouse] = useState<string | null>(
     null,
   );
+
+  // Batch Warehouse Sync State
+  const [showBatchSyncModal, setShowBatchSyncModal] = useState(false);
+  const [batchSyncDateFrom, setBatchSyncDateFrom] = useState<string>("");
+  const [batchSyncDateTo, setBatchSyncDateTo] = useState<string>("");
+  const [batchSyncDoctype, setBatchSyncDoctype] = useState<string>("");
+  const [batchSyncing, setBatchSyncing] = useState(false);
+  const [batchSyncResult, setBatchSyncResult] = useState<{
+    success: boolean;
+    message: string;
+    totalProcessed: number;
+    successCount: number;
+    failedCount: number;
+    errors: string[];
+  } | null>(null);
 
   // Hàm convert từ Date object hoặc YYYY-MM-DD sang DDMMMYYYY
   const convertDateToDDMMMYYYY = (date: Date | string): string => {
@@ -320,6 +335,63 @@ export default function StockTransferPage() {
     }
   };
 
+  const openBatchSyncModal = () => {
+    const today = getSyncDate();
+    setBatchSyncDateFrom(today);
+    setBatchSyncDateTo(today);
+    setBatchSyncDoctype("");
+    setBatchSyncResult(null);
+    setShowBatchSyncModal(true);
+  };
+
+  const handleBatchSync = async () => {
+    if (!batchSyncDateFrom || !batchSyncDateTo) {
+      showToast("error", "Vui lòng chọn khoảng thời gian");
+      return;
+    }
+
+    setBatchSyncing(true);
+    setBatchSyncResult(null);
+
+    try {
+      const dateFromFormatted = convertDateToDDMMMYYYY(batchSyncDateFrom);
+      const dateToFormatted = convertDateToDDMMMYYYY(batchSyncDateTo);
+
+      const response = await warehouseProcessedApi.syncByDateRangeAndDoctype(
+        dateFromFormatted,
+        dateToFormatted,
+        batchSyncDoctype || undefined,
+      );
+
+      setBatchSyncResult(response.data);
+
+      if (response.data.success) {
+        showToast("success", response.data.message);
+        // Reload data after successful sync
+        loadStockTransfers();
+      } else {
+        showToast("info", response.data.message);
+      }
+    } catch (error: any) {
+      showToast(
+        "error",
+        error.response?.data?.message ||
+          error.message ||
+          "Lỗi khi đồng bộ batch",
+      );
+      setBatchSyncResult({
+        success: false,
+        message: error.response?.data?.message || error.message,
+        totalProcessed: 0,
+        successCount: 0,
+        failedCount: 0,
+        errors: [error.response?.data?.message || error.message],
+      });
+    } finally {
+      setBatchSyncing(false);
+    }
+  };
+
   const handleDoubleClick = async (stockTransfer: StockTransfer) => {
     // Kiểm tra doctype
     if (stockTransfer.doctype === "STOCK_TRANSFER") {
@@ -401,6 +473,162 @@ export default function StockTransferPage() {
         </div>
       )}
 
+      {/* Batch Warehouse Sync Modal */}
+      {showBatchSyncModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl overflow-hidden animate-fade-in-up">
+            <div className="flex items-center justify-between p-4 border-b border-slate-100 bg-slate-50">
+              <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                <Package className="w-5 h-5 text-emerald-500" />
+                Đồng bộ Warehouse Batch
+              </h2>
+              <button
+                onClick={() => setShowBatchSyncModal(false)}
+                className="text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <svg
+                  className="w-6 h-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            <div className="p-6">
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Từ ngày
+                    </label>
+                    <input
+                      type="date"
+                      value={batchSyncDateFrom}
+                      onChange={(e) => setBatchSyncDateFrom(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      disabled={batchSyncing}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Đến ngày
+                    </label>
+                    <input
+                      type="date"
+                      value={batchSyncDateTo}
+                      onChange={(e) => setBatchSyncDateTo(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      disabled={batchSyncing}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Loại chứng từ
+                  </label>
+                  <select
+                    value={batchSyncDoctype}
+                    onChange={(e) => setBatchSyncDoctype(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    disabled={batchSyncing}
+                  >
+                    <option value="">Tất cả</option>
+                    <option value="STOCK_TRANSFER">STOCK_TRANSFER</option>
+                    <option value="STOCK_IO">STOCK_IO</option>
+                  </select>
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <button
+                    onClick={() => setShowBatchSyncModal(false)}
+                    className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
+                    disabled={batchSyncing}
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    onClick={handleBatchSync}
+                    disabled={
+                      batchSyncing || !batchSyncDateFrom || !batchSyncDateTo
+                    }
+                    className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors inline-flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {batchSyncing ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                        Đang xử lý...
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="w-4 h-4" />
+                        Đồng bộ
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {/* Results */}
+                {batchSyncResult && (
+                  <div className="mt-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
+                    <h3 className="font-semibold text-slate-800 mb-3">
+                      Kết quả
+                    </h3>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-slate-600">Tổng số:</span>
+                        <span className="font-medium">
+                          {batchSyncResult.totalProcessed}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-green-600">Thành công:</span>
+                        <span className="font-medium text-green-600">
+                          {batchSyncResult.successCount}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-red-600">Thất bại:</span>
+                        <span className="font-medium text-red-600">
+                          {batchSyncResult.failedCount}
+                        </span>
+                      </div>
+
+                      {batchSyncResult.errors &&
+                        batchSyncResult.errors.length > 0 && (
+                          <div className="mt-3 pt-3 border-t border-slate-200">
+                            <p className="font-medium text-slate-700 mb-2">
+                              Lỗi:
+                            </p>
+                            <div className="max-h-40 overflow-y-auto space-y-1">
+                              {batchSyncResult.errors.map((error, index) => (
+                                <div
+                                  key={index}
+                                  className="text-xs text-red-600 bg-red-50 p-2 rounded"
+                                >
+                                  {error}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="mb-6">
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -469,6 +697,13 @@ export default function StockTransferPage() {
                       Đồng bộ khoảng ngày
                     </>
                   )}
+                </button>
+                <button
+                  onClick={openBatchSyncModal}
+                  className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 border border-emerald-600 rounded-lg hover:bg-emerald-700 transition-colors inline-flex items-center gap-2"
+                >
+                  <Package className="h-4 w-4" />
+                  Đồng bộ Warehouse Batch
                 </button>
               </div>
             </div>

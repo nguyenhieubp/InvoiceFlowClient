@@ -461,6 +461,17 @@ export const warehouseProcessedApi = {
       },
     );
   },
+  syncByDateRangeAndDoctype: (
+    dateFrom: string,
+    dateTo: string,
+    doctype?: string,
+  ) => {
+    return api.post("/sales/stock-transfer/warehouse-sync-by-date-range", {
+      dateFrom,
+      dateTo,
+      doctype,
+    });
+  },
 };
 
 // Shift End Cash API
