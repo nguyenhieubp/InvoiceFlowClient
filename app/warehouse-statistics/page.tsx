@@ -29,6 +29,8 @@ interface WarehouseProcessed {
   result?: string;
   success: boolean;
   errorMessage?: string;
+  payload?: string;
+  fastApiResponse?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -105,6 +107,11 @@ export default function WarehouseStatisticsPage() {
   const [toast, setToast] = useState<{
     type: "success" | "error" | "info";
     message: string;
+  } | null>(null);
+
+  const [viewingPayload, setViewingPayload] = useState<{
+    title: string;
+    content: string;
   } | null>(null);
 
   // Hàm convert từ Date object hoặc YYYY-MM-DD sang DDMMMYYYY
@@ -332,6 +339,55 @@ export default function WarehouseStatisticsPage() {
     showToast("info", "Đã sao chép mã chứng từ");
   };
 
+  const getQuickView = (item: WarehouseProcessed) => {
+    // If success, show success message
+    if (item.success) {
+      if (item.fastApiResponse) {
+        try {
+          const response = JSON.parse(item.fastApiResponse);
+          if (Array.isArray(response) && response.length > 0) {
+            const firstItem = response[0];
+            if (firstItem.guid) {
+              return `Thành công - GUID: ${Array.isArray(firstItem.guid) ? firstItem.guid[0] : firstItem.guid}`;
+            }
+            return firstItem.message || "Thành công";
+          }
+          if (typeof response === "object") {
+            if (response.guid) {
+              return `Thành công - GUID: ${Array.isArray(response.guid) ? response.guid[0] : response.guid}`;
+            }
+            return response.message || "Thành công";
+          }
+        } catch (e) {
+          return "Thành công";
+        }
+      }
+      return "Thành công";
+    }
+
+    // If failed, show error message
+    if (item.errorMessage) {
+      return item.errorMessage;
+    }
+    if (item.fastApiResponse) {
+      try {
+        const response = JSON.parse(item.fastApiResponse);
+        if (Array.isArray(response) && response.length > 0) {
+          return (
+            response[0].error || response[0].message || "Lỗi không xác định"
+          );
+        }
+        if (typeof response === "object") {
+          return response.error || response.message || "Lỗi không xác định";
+        }
+      } catch (e) {
+        // Fallback if not JSON or different structure
+        return item.fastApiResponse.substring(0, 100) + "...";
+      }
+    }
+    return "Lỗi không xác định";
+  };
+
   const openBatchRetryModal = () => {
     setBatchRetryDateFrom(getTodayISO());
     setBatchRetryDateTo(getTodayISO());
@@ -349,6 +405,60 @@ export default function WarehouseStatisticsPage() {
             message={toast.message}
             onClose={() => setToast(null)}
           />
+        </div>
+      )}
+
+      {/* Payload/Response Viewing Modal */}
+      {viewingPayload && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h2 className="text-xl font-bold text-gray-900">
+                {viewingPayload.title}
+              </h2>
+              <button
+                onClick={() => setViewingPayload(null)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg
+                  className="h-6 w-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+            <div className="p-4 overflow-auto flex-1 font-mono text-sm bg-gray-50">
+              <pre className="whitespace-pre-wrap break-all">
+                {(() => {
+                  try {
+                    return JSON.stringify(
+                      JSON.parse(viewingPayload.content),
+                      null,
+                      2,
+                    );
+                  } catch (e) {
+                    return viewingPayload.content;
+                  }
+                })()}
+              </pre>
+            </div>
+            <div className="p-4 border-t flex justify-end">
+              <button
+                onClick={() => setViewingPayload(null)}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -740,7 +850,9 @@ export default function WarehouseStatisticsPage() {
                 <th className="px-6 py-4">Loại IO</th>
                 <th className="px-6 py-4">Status</th>
                 <th className="px-6 py-4">Ngày xử lý</th>
-                <th className="px-6 py-4">Kết quả / Lỗi</th>
+                <th className="px-6 py-4">Payload</th>
+                <th className="px-6 py-4">Response</th>
+                <th className="px-6 py-4">Quick View</th>
                 <th className="px-6 py-4 text-center">Thao tác</th>
               </tr>
             </thead>
@@ -748,7 +860,7 @@ export default function WarehouseStatisticsPage() {
               {loading ? (
                 <tr>
                   <td
-                    colSpan={6}
+                    colSpan={8}
                     className="px-6 py-12 text-center text-gray-500"
                   >
                     <div className="flex flex-col items-center justify-center">
@@ -760,7 +872,7 @@ export default function WarehouseStatisticsPage() {
               ) : warehouseProcessed.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={6}
+                    colSpan={8}
                     className="px-6 py-12 text-center text-gray-500"
                   >
                     <div className="flex flex-col items-center justify-center">
@@ -800,11 +912,11 @@ export default function WarehouseStatisticsPage() {
                     </td>
                     <td className="px-6 py-4">
                       {item.success ? (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700 border border-gray-300">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-600 border border-emerald-200">
                           Thành công
                         </span>
                       ) : (
-                        <span className="inline-flex items-center px-2.5 py-0.5 w-20 text-center rounded-full text-xs font-medium bg-gray-100 text-gray-700 border border-gray-300">
+                        <span className="inline-flex items-center px-2.5 py-0.5 w-20 text-center rounded-full text-xs font-medium bg-rose-50 text-rose-600 border border-rose-200">
                           Thất bại
                         </span>
                       )}
@@ -813,19 +925,50 @@ export default function WarehouseStatisticsPage() {
                       {formatDate(item.processedDate)}
                     </td>
                     <td className="px-6 py-4">
-                      <div className="max-w-xs truncate text-xs font-mono text-gray-500">
-                        {item.success ? (
-                          <span className="text-gray-700" title={item.result}>
-                            {item.result || "OK"}
-                          </span>
-                        ) : (
-                          <span
-                            className="text-gray-700"
-                            title={item.errorMessage}
+                      <div>
+                        {item.payload ? (
+                          <button
+                            onClick={() =>
+                              setViewingPayload({
+                                title: `Payload của ${item.docCode}`,
+                                content: item.payload || "",
+                              })
+                            }
+                            className="text-left text-blue-600 hover:text-blue-800 underline text-xs"
                           >
-                            {item.errorMessage || "Unknown Error"}
-                          </span>
+                            Xem Payload
+                          </button>
+                        ) : (
+                          <span className="text-gray-400">-</span>
                         )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div>
+                        {item.fastApiResponse ? (
+                          <button
+                            onClick={() =>
+                              setViewingPayload({
+                                title: `Kết quả trả về của ${item.docCode}`,
+                                content: item.fastApiResponse || "",
+                              })
+                            }
+                            className="text-left text-green-600 hover:text-green-800 underline text-xs"
+                          >
+                            Xem Kết quả API
+                          </button>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </div>
+                    </td>
+                    <td
+                      className="px-6 py-4 text-sm text-gray-600"
+                      style={{ minWidth: "20rem", maxWidth: "20rem" }}
+                      title={getQuickView(item)}
+                    >
+                      <div className="line-clamp-4 whitespace-normal break-words">
+                        {getQuickView(item)}
                       </div>
                     </td>
                     <td className="px-6 py-4 text-center">
