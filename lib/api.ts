@@ -478,6 +478,17 @@ export const warehouseProcessedApi = {
       doctype,
     });
   },
+  deleteWarehouseTwiceByDateRange: (
+    dateFrom: string,
+    dateTo: string,
+    doctype?: string,
+  ) => {
+    return api.post("/sales/stock-transfer/warehouse-delete-by-date-range", {
+      dateFrom,
+      dateTo,
+      doctype,
+    });
+  },
 };
 
 // Shift End Cash API

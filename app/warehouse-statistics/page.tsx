@@ -19,6 +19,7 @@ import {
   Archive,
   ArrowUpRight,
   ArrowDownLeft,
+  Trash2,
 } from "lucide-react";
 
 interface WarehouseProcessed {
@@ -399,6 +400,57 @@ export default function WarehouseStatisticsPage() {
     return "Lỗi không xác định";
   };
 
+  const handleDeleteBatch = async () => {
+    if (!batchRetryDateFrom || !batchRetryDateTo) {
+      showToast("error", "Vui lòng chọn đầy đủ từ ngày và đến ngày");
+      return;
+    }
+
+    const dateFrom = convertDateToDDMMMYYYY(batchRetryDateFrom);
+    const dateTo = convertDateToDDMMMYYYY(batchRetryDateTo);
+
+    if (!dateFrom || !dateTo) {
+      showToast("error", "Ngày không hợp lệ. Vui lòng chọn lại ngày");
+      return;
+    }
+
+    if (
+      !window.confirm(
+        `Bạn có chắc chắn muốn XÓA thống kê trong khoảng thời gian từ ${dateFrom} đến ${dateTo}? Hành động này không thể hoàn tác!`,
+      )
+    ) {
+      return;
+    }
+
+    try {
+      setBatchRetrying(true);
+      setBatchRetryResult(null);
+      const response =
+        await warehouseProcessedApi.deleteWarehouseTwiceByDateRange(
+          dateFrom,
+          dateTo,
+          batchRetryDoctype || undefined,
+        );
+
+      showToast(
+        "success",
+        response.data.message ||
+          `Đã xóa ${response.data.deletedCount} bản ghi thành công`,
+      );
+      // Reload data after delete
+      await loadWarehouseProcessed();
+      setShowBatchRetryModal(false);
+    } catch (error: any) {
+      const errorMessage =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Lỗi khi xóa thống kê warehouse";
+      showToast("error", errorMessage);
+    } finally {
+      setBatchRetrying(false);
+    }
+  };
+
   const openBatchRetryModal = () => {
     setBatchRetryDateFrom(getTodayISO());
     setBatchRetryDateTo(getTodayISO());
@@ -584,6 +636,14 @@ export default function WarehouseStatisticsPage() {
               )}
 
               <div className="flex justify-end gap-3 pt-2">
+                <button
+                  onClick={handleDeleteBatch}
+                  disabled={batchRetrying}
+                  className="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 font-medium text-sm transition-colors mr-auto flex items-center gap-2"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Xóa thống kê
+                </button>
                 <button
                   onClick={() => setShowBatchRetryModal(false)}
                   disabled={batchRetrying}
