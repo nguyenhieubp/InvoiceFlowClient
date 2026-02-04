@@ -972,22 +972,20 @@ export default function WarehouseStatisticsPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      {!item.success && (
-                        <button
-                          onClick={() => handleRetry(item.docCode)}
-                          disabled={retryingDocCode === item.docCode}
-                          className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {retryingDocCode === item.docCode ? (
-                            <div className="animate-spin rounded-full h-3 w-3 border-2 border-gray-300 border-t-transparent" />
-                          ) : (
-                            <>
-                              <RefreshCw className="w-3 h-3 mr-1" />
-                              Retry
-                            </>
-                          )}
-                        </button>
-                      )}
+                      <button
+                        onClick={() => handleRetry(item.docCode)}
+                        disabled={retryingDocCode === item.docCode}
+                        className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {retryingDocCode === item.docCode ? (
+                          <div className="animate-spin rounded-full h-3 w-3 border-2 border-gray-300 border-t-transparent" />
+                        ) : (
+                          <>
+                            <RefreshCw className="w-3 h-3 mr-1" />
+                            Retry
+                          </>
+                        )}
+                      </button>
                     </td>
                   </tr>
                 ))

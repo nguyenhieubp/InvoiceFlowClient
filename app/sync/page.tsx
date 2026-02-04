@@ -361,6 +361,11 @@ export default function SyncPage() {
       });
       return;
     }
+
+    setSyncingWsaleRange(true);
+    setWsaleRangeResult(null);
+    setResult(null);
+
     const brands = ["menard", "yaman"];
     for (const brand of brands) {
       try {
@@ -386,6 +391,8 @@ export default function SyncPage() {
         });
       }
     }
+
+    setSyncingWsaleRange(false);
   };
 
   const handleSyncShiftEndCashByDateRange = async () => {
@@ -709,23 +716,25 @@ export default function SyncPage() {
               <h3 className="text-xl font-bold text-gray-900 mb-2">
                 {syncingBrand
                   ? `Đang đồng bộ ${syncingBrand.toUpperCase()}`
-                  : syncingSalesRange
-                    ? `Đang đồng bộ Sale (${convertDateToDDMMMYYYY(salesStartDate)} - ${convertDateToDDMMMYYYY(salesEndDate)})`
-                    : syncingShiftEndCashRange
-                      ? `Đang đồng bộ Báo cáo nộp quỹ cuối ca ${shiftEndCashBrand ? `(${shiftEndCashBrand})` : ""} (${convertDateToDDMMMYYYY(shiftEndCashStartDate)} - ${convertDateToDDMMMYYYY(shiftEndCashEndDate)})`
-                      : syncingRepackFormulaRange
-                        ? `Đang đồng bộ Tách gộp BOM (${convertDateToDDMMMYYYY(repackFormulaStartDate)} - ${convertDateToDDMMMYYYY(repackFormulaEndDate)})`
-                        : syncingPromotionRange
-                          ? `Đang đồng bộ Danh sách CTKM (${convertDateToDDMMMYYYY(promotionStartDate)} - ${convertDateToDDMMMYYYY(promotionEndDate)})`
-                          : syncingVoucherIssueRange
-                            ? `Đang đồng bộ Danh sách Voucher (${convertDateToDDMMMYYYY(voucherIssueStartDate)} - ${convertDateToDDMMMYYYY(voucherIssueEndDate)})`
-                            : syncingOrderFeeRange
-                              ? `Đang đồng bộ Order Fees (${convertDateToDDMMMYYYY(orderFeeStartDate)} - ${convertDateToDDMMMYYYY(orderFeeEndDate)})`
-                              : syncingPO
-                                ? `Đang đồng bộ Đơn mua hàng (PO) (${convertDateToDDMMMYYYY(poStartDate)} - ${convertDateToDDMMMYYYY(poEndDate)})`
-                                : syncingGR
-                                  ? `Đang đồng bộ Nhận hàng (GR) (${convertDateToDDMMMYYYY(grStartDate)} - ${convertDateToDDMMMYYYY(grEndDate)})`
-                                  : "Đang xử lý..."}
+                  : syncingWsaleRange
+                    ? `Đang đồng bộ Sale bán buôn (${convertDateToDDMMMYYYY(wsaleStartDate)} - ${convertDateToDDMMMYYYY(wsaleEndDate)})`
+                    : syncingSalesRange
+                      ? `Đang đồng bộ Sale (${convertDateToDDMMMYYYY(salesStartDate)} - ${convertDateToDDMMMYYYY(salesEndDate)})`
+                      : syncingShiftEndCashRange
+                        ? `Đang đồng bộ Báo cáo nộp quỹ cuối ca ${shiftEndCashBrand ? `(${shiftEndCashBrand})` : ""} (${convertDateToDDMMMYYYY(shiftEndCashStartDate)} - ${convertDateToDDMMMYYYY(shiftEndCashEndDate)})`
+                        : syncingRepackFormulaRange
+                          ? `Đang đồng bộ Tách gộp BOM (${convertDateToDDMMMYYYY(repackFormulaStartDate)} - ${convertDateToDDMMMYYYY(repackFormulaEndDate)})`
+                          : syncingPromotionRange
+                            ? `Đang đồng bộ Danh sách CTKM (${convertDateToDDMMMYYYY(promotionStartDate)} - ${convertDateToDDMMMYYYY(promotionEndDate)})`
+                            : syncingVoucherIssueRange
+                              ? `Đang đồng bộ Danh sách Voucher (${convertDateToDDMMMYYYY(voucherIssueStartDate)} - ${convertDateToDDMMMYYYY(voucherIssueEndDate)})`
+                              : syncingOrderFeeRange
+                                ? `Đang đồng bộ Order Fees (${convertDateToDDMMMYYYY(orderFeeStartDate)} - ${convertDateToDDMMMYYYY(orderFeeEndDate)})`
+                                : syncingPO
+                                  ? `Đang đồng bộ Đơn mua hàng (PO) (${convertDateToDDMMMYYYY(poStartDate)} - ${convertDateToDDMMMYYYY(poEndDate)})`
+                                  : syncingGR
+                                    ? `Đang đồng bộ Nhận hàng (GR) (${convertDateToDDMMMYYYY(grStartDate)} - ${convertDateToDDMMMYYYY(grEndDate)})`
+                                    : "Đang xử lý..."}
               </h3>
               <p className="text-sm text-gray-600 text-center">
                 Vui lòng đợi trong giây lát, không đóng trang này...
