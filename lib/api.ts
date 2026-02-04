@@ -444,6 +444,7 @@ export const warehouseProcessedApi = {
     ioType?: string;
     success?: boolean;
     docCode?: string;
+    doctype?: string;
   }) => {
     return api.get("/sync/warehouse-processed", { params });
   },

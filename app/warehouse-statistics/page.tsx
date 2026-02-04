@@ -25,6 +25,7 @@ interface WarehouseProcessed {
   id: string;
   docCode: string;
   ioType: string;
+  doctype?: string;
   processedDate: string;
   result?: string;
   success: boolean;
@@ -42,6 +43,7 @@ interface Statistics {
   byIoType: {
     I: number;
     O: number;
+    T: number;
   };
 }
 
@@ -53,7 +55,7 @@ export default function WarehouseStatisticsPage() {
     total: 0,
     success: 0,
     failed: 0,
-    byIoType: { I: 0, O: 0 },
+    byIoType: { I: 0, O: 0, T: 0 },
   });
   const [loading, setLoading] = useState(true);
 
@@ -66,6 +68,7 @@ export default function WarehouseStatisticsPage() {
     ioType?: string;
     success?: string;
     docCode?: string;
+    doctype?: string;
   }>({
     dateFrom: getTodayISO(),
     dateTo: getTodayISO(),
@@ -77,6 +80,7 @@ export default function WarehouseStatisticsPage() {
     ioType?: string;
     success?: boolean;
     docCode?: string;
+    doctype?: string;
   }>({
     dateFrom: getTodayISO(),
     dateTo: getTodayISO(),
@@ -182,6 +186,7 @@ export default function WarehouseStatisticsPage() {
       if (filter.ioType) params.ioType = filter.ioType;
       if (filter.success !== undefined) params.success = filter.success;
       if (filter.docCode) params.docCode = filter.docCode;
+      if (filter.doctype) params.doctype = filter.doctype;
 
       const response = await warehouseProcessedApi.getAll(params);
       setWarehouseProcessed(response.data.data || []);
@@ -225,6 +230,7 @@ export default function WarehouseStatisticsPage() {
       ioType: filterInput.ioType,
       success: filterInput.success ? filterInput.success === "true" : undefined,
       docCode: filterInput.docCode,
+      doctype: filterInput.doctype,
     });
     setPagination((prev) => ({ ...prev, page: 1 }));
   };
@@ -237,6 +243,7 @@ export default function WarehouseStatisticsPage() {
       ioType: "",
       success: "",
       docCode: "",
+      doctype: "",
     });
     setFilter({
       dateFrom: today,
@@ -608,7 +615,7 @@ export default function WarehouseStatisticsPage() {
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 mb-8">
         <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
           <div className="flex items-center justify-between mb-4">
             <div className="p-2 bg-indigo-50 rounded-lg">
@@ -715,6 +722,25 @@ export default function WarehouseStatisticsPage() {
             </div>
           </div>
         </div>
+
+        <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-2 bg-purple-50 rounded-lg">
+              <RefreshCw className="w-5 h-5 text-purple-500" />
+            </div>
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+              Chuyển kho (T)
+            </span>
+          </div>
+          <div className="flex items-end justify-between">
+            <div>
+              <div className="text-3xl font-bold text-slate-800">
+                {statistics.byIoType.T.toLocaleString()}
+              </div>
+              <div className="text-xs text-slate-500 mt-1">bản ghi</div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Filters Section */}
@@ -772,6 +798,34 @@ export default function WarehouseStatisticsPage() {
                 <option value="">Tất cả</option>
                 <option value="I">Nhập (I)</option>
                 <option value="O">Xuất (O)</option>
+                <option value="T">Chuyển kho (T)</option>
+              </select>
+              <div className="absolute right-3 top-3 pointer-events-none text-slate-400">
+                <ArrowUpRight className="w-4 h-4" />
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              Loại chứng từ
+            </label>
+            <div className="relative">
+              <select
+                value={filterInput.doctype || ""}
+                onChange={(e) =>
+                  setFilterInput({ ...filterInput, doctype: e.target.value })
+                }
+                className="w-full pl-3 pr-8 py-2.5 border border-slate-200 rounded-lg text-sm bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent appearance-none transition-all"
+              >
+                <option value="">Tất cả</option>
+                <option value="STOCK_TRANSFER">
+                  Chuyển kho (STOCK_TRANSFER)
+                </option>
+                <option value="STOCK_IO">Xuất nhập khác (STOCK_IO)</option>
+                <option value="STOCK_REPACK">Tách gộp (STOCK_REPACK)</option>
+                <option value="STOCK_RETURN">Trả hàng (STOCK_RETURN)</option>
+                <option value="SALE_RETURN">Khách trả (SALE_RETURN)</option>
               </select>
               <div className="absolute right-3 top-3 pointer-events-none text-slate-400">
                 <ArrowUpRight className="w-4 h-4" />
@@ -847,6 +901,7 @@ export default function WarehouseStatisticsPage() {
             <colgroup>
               <col style={{ width: "160px" }} />
               <col style={{ width: "100px" }} />
+              <col style={{ width: "150px" }} />
               <col style={{ width: "130px" }} />
               <col style={{ width: "160px" }} />
               <col style={{ width: "130px" }} />
@@ -858,6 +913,7 @@ export default function WarehouseStatisticsPage() {
               <tr>
                 <th className="px-4 py-3 text-left">Mã chứng từ</th>
                 <th className="px-4 py-3 text-left">Loại IO</th>
+                <th className="px-4 py-3 text-left">Loại chứng từ</th>
                 <th className="px-4 py-3 text-left">Status</th>
                 <th className="px-4 py-3 text-left">Ngày xử lý</th>
                 <th className="px-4 py-3 text-left">Payload</th>
@@ -870,7 +926,7 @@ export default function WarehouseStatisticsPage() {
               {loading ? (
                 <tr>
                   <td
-                    colSpan={8}
+                    colSpan={9}
                     className="px-6 py-12 text-center text-gray-500"
                   >
                     <div className="flex flex-col items-center justify-center">
@@ -882,7 +938,7 @@ export default function WarehouseStatisticsPage() {
               ) : warehouseProcessed.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={8}
+                    colSpan={9}
                     className="px-6 py-12 text-center text-gray-500"
                   >
                     <div className="flex flex-col items-center justify-center">
@@ -913,12 +969,21 @@ export default function WarehouseStatisticsPage() {
                       <span
                         className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                           item.ioType === "I"
-                            ? "bg-gray-100 text-gray-700 border border-gray-300"
-                            : "bg-gray-100 text-gray-700 border border-gray-300"
+                            ? "bg-sky-50 text-sky-700 border border-sky-200"
+                            : item.ioType === "O"
+                              ? "bg-amber-50 text-amber-700 border border-amber-200"
+                              : "bg-purple-50 text-purple-700 border border-purple-200"
                         }`}
                       >
-                        {item.ioType === "I" ? "Nhập" : "Xuất"}
+                        {item.ioType === "I"
+                          ? "Nhập"
+                          : item.ioType === "O"
+                            ? "Xuất"
+                            : "Chuyển kho"}
                       </span>
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">
+                      {item.doctype || "-"}
                     </td>
                     <td className="px-4 py-3">
                       {item.success ? (
