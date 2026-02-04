@@ -26,6 +26,7 @@ interface WarehouseProcessed {
   docCode: string;
   ioType: string;
   doctype?: string;
+  transDate?: string;
   processedDate: string;
   result?: string;
   success: boolean;
@@ -904,6 +905,7 @@ export default function WarehouseStatisticsPage() {
               <col style={{ width: "150px" }} />
               <col style={{ width: "130px" }} />
               <col style={{ width: "160px" }} />
+              <col style={{ width: "160px" }} />
               <col style={{ width: "130px" }} />
               <col style={{ width: "150px" }} />
               <col style={{ minWidth: "300px" }} />
@@ -914,6 +916,7 @@ export default function WarehouseStatisticsPage() {
                 <th className="px-4 py-3 text-left">Mã chứng từ</th>
                 <th className="px-4 py-3 text-left">Loại IO</th>
                 <th className="px-4 py-3 text-left">Loại chứng từ</th>
+                <th className="px-4 py-3 text-left">Ngày chứng từ</th>
                 <th className="px-4 py-3 text-left">Status</th>
                 <th className="px-4 py-3 text-left">Ngày xử lý</th>
                 <th className="px-4 py-3 text-left">Payload</th>
@@ -926,7 +929,7 @@ export default function WarehouseStatisticsPage() {
               {loading ? (
                 <tr>
                   <td
-                    colSpan={9}
+                    colSpan={10}
                     className="px-6 py-12 text-center text-gray-500"
                   >
                     <div className="flex flex-col items-center justify-center">
@@ -938,7 +941,7 @@ export default function WarehouseStatisticsPage() {
               ) : warehouseProcessed.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={9}
+                    colSpan={10}
                     className="px-6 py-12 text-center text-gray-500"
                   >
                     <div className="flex flex-col items-center justify-center">
@@ -984,6 +987,9 @@ export default function WarehouseStatisticsPage() {
                     </td>
                     <td className="px-4 py-3 text-gray-600">
                       {item.doctype || "-"}
+                    </td>
+                    <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
+                      {item.transDate ? formatDate(item.transDate) : "-"}
                     </td>
                     <td className="px-4 py-3">
                       {item.success ? (
