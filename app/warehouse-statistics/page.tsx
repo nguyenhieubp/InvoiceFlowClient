@@ -281,6 +281,8 @@ export default function WarehouseStatisticsPage() {
     }
   };
 
+  const [batchRetryDoctype, setBatchRetryDoctype] = useState<string>("");
+
   const handleBatchRetry = async () => {
     if (!batchRetryDateFrom || !batchRetryDateTo) {
       showToast("error", "Vui lòng chọn đầy đủ từ ngày và đến ngày");
@@ -301,6 +303,7 @@ export default function WarehouseStatisticsPage() {
       const response = await warehouseProcessedApi.retryFailedByDateRange(
         dateFrom,
         dateTo,
+        batchRetryDoctype || undefined,
       );
       setBatchRetryResult(response.data);
       showToast(
@@ -399,6 +402,7 @@ export default function WarehouseStatisticsPage() {
   const openBatchRetryModal = () => {
     setBatchRetryDateFrom(getTodayISO());
     setBatchRetryDateTo(getTodayISO());
+    setBatchRetryDoctype("");
     setBatchRetryResult(null);
     setShowBatchRetryModal(true);
   };
@@ -519,6 +523,23 @@ export default function WarehouseStatisticsPage() {
                     className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
                   />
                 </div>
+              </div>
+
+              <div className="mb-6 space-y-1.5">
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  Loại chứng từ
+                </label>
+                <select
+                  value={batchRetryDoctype}
+                  onChange={(e) => setBatchRetryDoctype(e.target.value)}
+                  className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                >
+                  <option value="">Tất cả</option>
+                  <option value="STOCK_TRANSFER">
+                    Chuyển kho (STOCK_TRANSFER)
+                  </option>
+                  <option value="STOCK_IO">Xuất nhập khác (STOCK_IO)</option>
+                </select>
               </div>
 
               {batchRetryResult && (
@@ -824,9 +845,6 @@ export default function WarehouseStatisticsPage() {
                   Chuyển kho (STOCK_TRANSFER)
                 </option>
                 <option value="STOCK_IO">Xuất nhập khác (STOCK_IO)</option>
-                <option value="STOCK_REPACK">Tách gộp (STOCK_REPACK)</option>
-                <option value="STOCK_RETURN">Trả hàng (STOCK_RETURN)</option>
-                <option value="SALE_RETURN">Khách trả (SALE_RETURN)</option>
               </select>
               <div className="absolute right-3 top-3 pointer-events-none text-slate-400">
                 <ArrowUpRight className="w-4 h-4" />

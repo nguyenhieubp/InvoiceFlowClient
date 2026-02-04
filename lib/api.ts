@@ -453,12 +453,17 @@ export const warehouseProcessedApi = {
       `/sales/stock-transfer/doc-code/${docCode}/warehouse-retry`,
     );
   },
-  retryFailedByDateRange: (dateFrom: string, dateTo: string) => {
+  retryFailedByDateRange: (
+    dateFrom: string,
+    dateTo: string,
+    doctype?: string,
+  ) => {
     return api.post(
       "/sales/stock-transfer/warehouse-retry-failed-by-date-range",
       {
         dateFrom,
         dateTo,
+        doctype,
       },
     );
   },
