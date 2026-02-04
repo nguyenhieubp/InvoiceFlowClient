@@ -843,17 +843,27 @@ export default function WarehouseStatisticsPage() {
       {/* Main Table */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="max-h-[700px] overflow-auto custom-scrollbar">
-          <table className="w-full text-sm text-left">
-            <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider text-xs font-semibold sticky top-0 z-10 shadow-sm">
+          <table className="w-full text-sm">
+            <colgroup>
+              <col style={{ width: "160px" }} />
+              <col style={{ width: "100px" }} />
+              <col style={{ width: "130px" }} />
+              <col style={{ width: "160px" }} />
+              <col style={{ width: "130px" }} />
+              <col style={{ width: "150px" }} />
+              <col style={{ minWidth: "300px" }} />
+              <col style={{ width: "110px" }} />
+            </colgroup>
+            <thead className="bg-gray-50 text-gray-700 text-xs font-medium sticky top-0 z-10 border-b border-gray-200">
               <tr>
-                <th className="px-6 py-4">Mã chứng từ</th>
-                <th className="px-6 py-4">Loại IO</th>
-                <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4">Ngày xử lý</th>
-                <th className="px-6 py-4">Payload</th>
-                <th className="px-6 py-4">Response</th>
-                <th className="px-6 py-4">Quick View</th>
-                <th className="px-6 py-4 text-center">Thao tác</th>
+                <th className="px-4 py-3 text-left">Mã chứng từ</th>
+                <th className="px-4 py-3 text-left">Loại IO</th>
+                <th className="px-4 py-3 text-left">Status</th>
+                <th className="px-4 py-3 text-left">Ngày xử lý</th>
+                <th className="px-4 py-3 text-left">Payload</th>
+                <th className="px-4 py-3 text-left">Response</th>
+                <th className="px-4 py-3 text-left">Quick View</th>
+                <th className="px-4 py-3 text-center">Thao tác</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -887,7 +897,7 @@ export default function WarehouseStatisticsPage() {
                     key={item.id}
                     className="hover:bg-gray-50 transition-colors group"
                   >
-                    <td className="px-6 py-4 font-medium text-gray-900">
+                    <td className="px-4 py-3 font-medium text-gray-900">
                       <div className="flex items-center gap-2">
                         {item.docCode}
                         <button
@@ -899,7 +909,7 @@ export default function WarehouseStatisticsPage() {
                         </button>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-3">
                       <span
                         className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                           item.ioType === "I"
@@ -910,21 +920,21 @@ export default function WarehouseStatisticsPage() {
                         {item.ioType === "I" ? "Nhập" : "Xuất"}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-3">
                       {item.success ? (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-600 border border-emerald-200">
+                        <span className="inline-flex items-center justify-center px-2.5 py-0.5 w-24 rounded-full text-xs font-medium bg-emerald-50 text-emerald-600 border border-emerald-200">
                           Thành công
                         </span>
                       ) : (
-                        <span className="inline-flex items-center px-2.5 py-0.5 w-20 text-center rounded-full text-xs font-medium bg-rose-50 text-rose-600 border border-rose-200">
+                        <span className="inline-flex items-center justify-center px-2.5 py-0.5 w-24 rounded-full text-xs font-medium bg-rose-50 text-rose-600 border border-rose-200">
                           Thất bại
                         </span>
                       )}
                     </td>
-                    <td className="px-6 py-4 text-gray-600 whitespace-nowrap">
+                    <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
                       {formatDate(item.processedDate)}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-3">
                       <div>
                         {item.payload ? (
                           <button
@@ -943,7 +953,7 @@ export default function WarehouseStatisticsPage() {
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-3">
                       <div>
                         {item.fastApiResponse ? (
                           <button
@@ -963,15 +973,14 @@ export default function WarehouseStatisticsPage() {
                       </div>
                     </td>
                     <td
-                      className="px-6 py-4 text-sm text-gray-600"
-                      style={{ minWidth: "20rem", maxWidth: "20rem" }}
+                      className="px-4 py-3 text-sm text-gray-600"
                       title={getQuickView(item)}
                     >
-                      <div className="line-clamp-4 whitespace-normal break-words">
+                      <div className="line-clamp-3 whitespace-normal break-words">
                         {getQuickView(item)}
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-center">
+                    <td className="px-4 py-3 text-center">
                       <button
                         onClick={() => handleRetry(item.docCode)}
                         disabled={retryingDocCode === item.docCode}
