@@ -1,7 +1,19 @@
-'use client';
+"use client";
 
-import React, { useEffect, useState } from 'react';
-import { api } from '@/lib/api';
+import React, { useEffect, useState } from "react";
+import { api } from "@/lib/api";
+import {
+  Search,
+  Filter,
+  RefreshCw,
+  FileText,
+  AlertCircle,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  ArrowLeft,
+  ArrowRight,
+} from "lucide-react";
 
 interface PaymentSyncLog {
   id: string;
@@ -26,8 +38,14 @@ export default function PaymentAuditPage() {
   });
 
   const [filters, setFilters] = useState({
-    docCode: '',
-    status: '',
+    docCode: "",
+    status: "",
+  });
+
+  // [NEW] Actual filters applied to API
+  const [activeFilters, setActiveFilters] = useState({
+    docCode: "",
+    status: "",
   });
 
   const [selectedLog, setSelectedLog] = useState<PaymentSyncLog | null>(null);
@@ -36,20 +54,20 @@ export default function PaymentAuditPage() {
   useEffect(() => {
     loadLogs();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pagination.page, pagination.limit, filters]);
+  }, [pagination.page, pagination.limit, activeFilters]);
 
   const loadLogs = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/payments/audit', {
+      const response = await api.get("/payments/audit", {
         params: {
           page: pagination.page,
           limit: pagination.limit,
-          docCode: filters.docCode || undefined,
-          status: filters.status || undefined,
+          docCode: activeFilters.docCode || undefined,
+          status: activeFilters.status || undefined,
         },
       });
-      
+
       setLogs(response.data.items || []);
       setPagination((prev) => ({
         ...prev,
@@ -57,25 +75,29 @@ export default function PaymentAuditPage() {
         totalPages: response.data.totalPages || 1,
       }));
     } catch (error) {
-      console.error('Error loading audit logs:', error);
+      console.error("Error loading audit logs:", error);
     } finally {
       setLoading(false);
     }
   };
 
   const handleRetry = async (log: PaymentSyncLog) => {
-    if (!confirm('Bạn có chắc muốn chạy lại giao dịch này?')) return;
-    
+    if (!confirm("Bạn có chắc muốn chạy lại giao dịch này?")) return;
+
     try {
       setRetryLoading(log.id);
       const response = await api.post(`/payments/audit/${log.id}/retry`);
-      
+
       // Reload logs after retry (a new log will be created)
-      alert(response.data?.success ? 'Retry thành công!' : 'Retry thất bại/có lỗi!');
+      alert(
+        response.data?.success ? "Retry thành công!" : "Retry thất bại/có lỗi!",
+      );
       loadLogs();
     } catch (error: any) {
-      console.error('Retry failed:', error);
-      alert('Retry thất bại: ' + (error.response?.data?.message || error.message));
+      console.error("Retry failed:", error);
+      alert(
+        "Retry thất bại: " + (error.response?.data?.message || error.message),
+      );
     } finally {
       setRetryLoading(null);
     }
@@ -87,121 +109,260 @@ export default function PaymentAuditPage() {
     }
   };
 
-  return (
-    <div className="p-6 bg-gray-50 min-h-screen font-sans text-gray-900">
-      <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-extrabold text-gray-900 mb-8 tracking-tight">
-          Lịch sử đồng bộ thanh toán
-        </h1>
+  const handleSearch = () => {
+    setPagination((prev) => ({ ...prev, page: 1 }));
+    setActiveFilters(filters);
+  };
 
-        {/* Filters */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm mb-8 border border-gray-100">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Mã đơn hàng / Chứng từ
-              </label>
-              <input
-                type="text"
-                className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none"
-                placeholder="Nhập mã..."
-                value={filters.docCode}
-                onChange={(e) => setFilters({ ...filters, docCode: e.target.value })}
-                onKeyDown={(e) => e.key === 'Enter' && setPagination(p => ({...p, page: 1}))}
-              />
+  return (
+    <div className="min-h-screen bg-slate-50 font-sans text-slate-900 pb-20">
+      {/* Header */}
+      <div className="bg-white border-b border-slate-200 sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-indigo-50 rounded-lg">
+              <FileText className="w-6 h-6 text-indigo-600" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <h1 className="text-xl font-bold text-slate-900">
+                Lịch sử đồng bộ thanh toán
+              </h1>
+              <p className="text-sm text-slate-500">
+                Theo dõi và kiểm tra các bản ghi đồng bộ giao dịch
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
+        {/* Filters */}
+        <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+          <div className="flex items-center gap-2 mb-4 text-slate-700 font-semibold text-sm uppercase tracking-wide">
+            <Filter className="w-4 h-4" />
+            Bộ lọc tìm kiếm
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="md:col-span-2">
+              <label className="block text-xs font-medium text-slate-500 mb-1.5 uppercase">
+                Mã chứng từ / Đơn hàng
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-slate-50 focus:bg-white transition-all outline-none"
+                  placeholder="Nhập mã chứng từ..."
+                  value={filters.docCode}
+                  onChange={(e) =>
+                    setFilters({ ...filters, docCode: e.target.value })
+                  }
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleSearch();
+                  }}
+                />
+                <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1.5 uppercase">
                 Trạng thái
               </label>
-              <select
-                className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none"
-                value={filters.status}
-                onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-              >
-                <option value="">Tất cả</option>
-                <option value="SUCCESS">Thành công</option>
-                <option value="ERROR">Lỗi</option>
-              </select>
+              <div className="relative">
+                <select
+                  className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-slate-50 focus:bg-white transition-all outline-none appearance-none cursor-pointer"
+                  value={filters.status}
+                  onChange={(e) =>
+                    setFilters({ ...filters, status: e.target.value })
+                  }
+                >
+                  <option value="">Tất cả trạng thái</option>
+                  <option value="SUCCESS">Thành công</option>
+                  <option value="ERROR">Thất bại</option>
+                </select>
+                <div className="absolute left-3 top-2.5 pointer-events-none text-slate-400">
+                  {filters.status === "SUCCESS" ? (
+                    <CheckCircle2 className="w-4 h-4 text-green-500" />
+                  ) : filters.status === "ERROR" ? (
+                    <XCircle className="w-4 h-4 text-red-500" />
+                  ) : (
+                    <Filter className="w-4 h-4" />
+                  )}
+                </div>
+              </div>
             </div>
+
             <div className="flex items-end">
               <button
-                onClick={() => setPagination((prev) => ({ ...prev, page: 1 }))}
-                className="px-6 py-2 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 transition-colors shadow-sm"
+                onClick={handleSearch}
+                className="w-full h-[42px] bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors shadow-md shadow-indigo-100 flex items-center justify-center gap-2 active:scale-95 duration-100"
               >
-                Tìm kiếm
+                <Search className="w-4 h-4" />
+                <span>Tìm kiếm</span>
               </button>
             </div>
           </div>
         </div>
 
         {/* Table */}
-        <div className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100">
-          <div className="overflow-x-auto">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
+          <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+            <span className="text-sm text-slate-500 font-medium">
+              Tổng số:{" "}
+              <span className="text-slate-900 font-bold">
+                {pagination.total}
+              </span>{" "}
+              bản ghi
+            </span>
+            <div className="text-xs text-slate-400 italic flex items-center gap-1">
+              <Clock className="w-3 h-3" /> Updated just now
+            </div>
+          </div>
+
+          <div className="overflow-x-auto min-h-[400px]">
             <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-100">
+              <thead className="bg-slate-50 border-b border-slate-200">
                 <tr>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Thời gian</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Mã chứng từ</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Trạng thái</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Lỗi</th>
-                  <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Hành động</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider w-[180px]">
+                    Thời gian
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                    Mã chứng từ / Payload
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider w-[140px]">
+                    Trạng thái
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider w-[30%]">
+                    Thông báo lỗi
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider w-[120px]">
+                    Thao tác
+                  </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-slate-100">
                 {loading ? (
-                  <tr>
-                    <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
-                      Đang tải dữ liệu...
-                    </td>
-                  </tr>
+                  Array.from({ length: 5 }).map((_, i) => (
+                    <tr key={i} className="animate-pulse">
+                      <td className="px-6 py-4">
+                        <div className="h-4 bg-slate-100 rounded w-32"></div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="h-4 bg-slate-100 rounded w-48 mb-2"></div>
+                        <div className="h-3 bg-slate-100 rounded w-24"></div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="h-6 bg-slate-100 rounded-full w-20"></div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="h-4 bg-slate-100 rounded w-full"></div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="h-4 bg-slate-100 rounded w-8 ml-auto"></div>
+                      </td>
+                    </tr>
+                  ))
                 ) : logs.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
-                      Không có dữ liệu
+                    <td
+                      colSpan={5}
+                      className="px-6 py-16 text-center text-slate-400 flex flex-col items-center justify-center"
+                    >
+                      <div className="p-4 bg-slate-50 rounded-full mb-3">
+                        <Search className="w-8 h-8 text-slate-300" />
+                      </div>
+                      <p>Không tìm thấy dữ liệu nào phù hợp</p>
                     </td>
                   </tr>
                 ) : (
                   logs.map((log) => (
-                    <tr key={log.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 text-sm text-gray-900 whitespace-nowrap">
-                        {new Date(log.createdAt).toLocaleString('vi-VN')}
+                    <tr
+                      key={log.id}
+                      className="group hover:bg-indigo-50/30 transition-colors"
+                    >
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium text-slate-700">
+                            {new Date(log.createdAt).toLocaleDateString(
+                              "vi-VN",
+                            )}
+                          </span>
+                          <span className="text-xs text-slate-500 font-mono">
+                            {new Date(log.createdAt).toLocaleTimeString(
+                              "vi-VN",
+                            )}
+                          </span>
+                        </div>
                       </td>
-                      <td className="px-6 py-4 text-sm font-medium text-gray-900 whitespace-nowrap">
-                        {log.docCode || '-'}
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col gap-1">
+                          <span className="text-sm font-bold text-indigo-900 font-mono">
+                            {log.docCode || "-"}
+                          </span>
+                          <span
+                            className="text-xs text-slate-400 font-mono"
+                            title={log.id}
+                          >
+                            ID: {log.id.slice(0, 8)}...
+                          </span>
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            log.status === 'SUCCESS'
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-red-100 text-red-800'
+                          className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${
+                            log.status === "SUCCESS"
+                              ? "bg-emerald-50 text-emerald-700 border-emerald-100"
+                              : "bg-red-50 text-red-700 border-red-100"
                           }`}
                         >
+                          {log.status === "SUCCESS" ? (
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                          ) : (
+                            <AlertCircle className="w-3.5 h-3.5" />
+                          )}
                           {log.status}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-sm text-red-600 max-w-xs truncate">
-                        {log.errorMessage || '-'}
-                      </td>
-                      <td className="px-6 py-4 text-right text-sm font-medium space-x-3">
-                        <button
-                          onClick={() => setSelectedLog(log)}
-                          className="text-indigo-600 hover:text-indigo-900 transition-colors"
-                        >
-                          Chi tiết
-                        </button>
-                        {log.status === 'ERROR' && (
-                          <button
-                            onClick={() => handleRetry(log)}
-                            disabled={retryLoading === log.id}
-                            className={`text-red-600 hover:text-red-900 transition-colors ${
-                              retryLoading === log.id ? 'opacity-50 cursor-not-allowed' : ''
-                            }`}
+                      <td className="px-6 py-4">
+                        {log.errorMessage ? (
+                          <div
+                            className="text-sm text-red-600 bg-red-50/50 p-2 rounded-lg border border-red-100 line-clamp-2"
+                            title={log.errorMessage}
                           >
-                            {retryLoading === log.id ? 'Running...' : 'Chạy lại'}
-                          </button>
+                            {log.errorMessage}
+                          </div>
+                        ) : (
+                          <span className="text-slate-400 text-sm italic">
+                            -
+                          </span>
                         )}
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => setSelectedLog(log)}
+                            className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-all"
+                            title="Xem chi tiết"
+                          >
+                            <FileText className="w-4 h-4" />
+                          </button>
+
+                          {log.status === "ERROR" && (
+                            <button
+                              onClick={() => handleRetry(log)}
+                              disabled={retryLoading === log.id}
+                              className={`p-1.5 text-slate-500 hover:text-orange-600 hover:bg-orange-50 rounded-md transition-all ${
+                                retryLoading === log.id
+                                  ? "opacity-50 cursor-not-allowed animate-spin"
+                                  : ""
+                              }`}
+                              title="Chạy lại (Retry)"
+                            >
+                              <RefreshCw className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -211,77 +372,161 @@ export default function PaymentAuditPage() {
           </div>
 
           {/* Pagination */}
-          <div className="bg-white px-6 py-4 border-t border-gray-100 flex items-center justify-between">
-            <span className="text-sm text-gray-700">
-              Trang {pagination.page} / {pagination.totalPages}
+          <div className="bg-white px-6 py-4 border-t border-slate-200 flex items-center justify-between">
+            <span className="text-sm text-slate-500">
+              Trang{" "}
+              <span className="font-semibold text-slate-700">
+                {pagination.page}
+              </span>{" "}
+              / {pagination.totalPages}
             </span>
-            <div className="space-x-2">
+            <div className="flex gap-2">
               <button
                 onClick={() => handlePageChange(pagination.page - 1)}
                 disabled={pagination.page <= 1}
-                className="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="flex items-center gap-1 px-3 py-1.5 border border-slate-200 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
               >
-                Trước
+                <ArrowLeft className="w-4 h-4" /> Trước
               </button>
               <button
                 onClick={() => handlePageChange(pagination.page + 1)}
                 disabled={pagination.page >= pagination.totalPages}
-                className="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="flex items-center gap-1 px-3 py-1.5 border border-slate-200 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
               >
-                Sau
+                Sau <ArrowRight className="w-4 h-4" />
               </button>
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Details Modal */}
-        {selectedLog && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 backdrop-blur-sm transition-opacity">
-            <div className="bg-white rounded-2xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
-              <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-                <h3 className="text-xl font-bold text-gray-900">Chi tiết Log #...{selectedLog.id.slice(-8)}</h3>
-                <button
-                  onClick={() => setSelectedLog(null)}
-                  className="text-gray-400 hover:text-gray-500 transition-colors"
-                >
-                  <span className="sr-only">Close</span>
-                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-              <div className="p-6 overflow-y-auto flex-1 space-y-6">
-                <div>
-                  <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wide mb-2">Request Payload</h4>
-                  <pre className="bg-slate-900 text-slate-50 p-4 rounded-xl text-xs overflow-x-auto font-mono">
-                    {tryFormatJson(selectedLog.requestPayload)}
-                  </pre>
+      {/* Details Modal */}
+      {selectedLog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+            onClick={() => setSelectedLog(null)}
+          ></div>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col z-10 animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/80 rounded-t-2xl">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-white border border-slate-200 rounded-lg shadow-sm">
+                  <FileText className="w-5 h-5 text-indigo-600" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wide mb-2">Response Payload</h4>
-                  <pre className="bg-slate-900 text-slate-50 p-4 rounded-xl text-xs overflow-x-auto font-mono">
-                    {tryFormatJson(selectedLog.responsePayload)}
-                  </pre>
+                  <h3 className="text-lg font-bold text-slate-800">
+                    Chi tiết Log giao dịch
+                  </h3>
+                  <div className="flex items-center gap-2 text-xs text-slate-500 font-mono mt-0.5">
+                    ID: {selectedLog.id}
+                  </div>
                 </div>
               </div>
-              <div className="p-6 border-t border-gray-100 flex justify-end bg-gray-50">
-                <button
-                  onClick={() => setSelectedLog(null)}
-                  className="px-6 py-2 bg-gray-900 text-white font-medium rounded-xl hover:bg-gray-800 transition-colors"
-                >
-                  Đóng
-                </button>
+              <button
+                onClick={() => setSelectedLog(null)}
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+              >
+                <XCircle className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto flex-1 bg-slate-50/30 space-y-6">
+              <div className="grid grid-cols-2 gap-6">
+                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">
+                    Trạng thái
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-bold ${
+                        selectedLog.status === "SUCCESS"
+                          ? "bg-emerald-100 text-emerald-800"
+                          : "bg-red-100 text-red-800"
+                      }`}
+                    >
+                      {selectedLog.status}
+                    </span>
+                    <span className="text-sm text-slate-500">
+                      •{" "}
+                      {new Date(selectedLog.createdAt).toLocaleString("vi-VN")}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">
+                    Thông tin chứng từ
+                  </span>
+                  <div className="text-sm font-mono text-slate-800 font-medium">
+                    {selectedLog.docCode || "N/A"}
+                  </div>
+                </div>
+              </div>
+
+              {selectedLog.errorMessage && (
+                <div className="bg-red-50 border border-red-100 p-4 rounded-xl text-sm text-red-700 flex gap-3 items-start">
+                  <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="font-bold mb-1">Lỗi xảy ra</h4>
+                    {selectedLog.errorMessage}
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-4">
+                <div className="flex flex-col gap-2">
+                  <div className="flex justify-between items-end">
+                    <h4 className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                      Request Payload
+                    </h4>
+                    <span className="text-xs text-slate-400 bg-white border border-slate-200 px-2 py-1 rounded">
+                      JSON
+                    </span>
+                  </div>
+                  <div className="relative group">
+                    <pre className="bg-slate-900 text-slate-50 p-5 rounded-xl text-xs overflow-x-auto font-mono leading-relaxed border border-slate-800 shadow-inner max-h-[300px]">
+                      {tryFormatJson(selectedLog.requestPayload)}
+                    </pre>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <div className="flex justify-between items-end">
+                    <h4 className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      Response Payload
+                    </h4>
+                    <span className="text-xs text-slate-400 bg-white border border-slate-200 px-2 py-1 rounded">
+                      JSON
+                    </span>
+                  </div>
+                  <div className="relative group">
+                    <pre className="bg-slate-900 text-slate-50 p-5 rounded-xl text-xs overflow-x-auto font-mono leading-relaxed border border-slate-800 shadow-inner max-h-[300px]">
+                      {tryFormatJson(selectedLog.responsePayload)}
+                    </pre>
+                  </div>
+                </div>
               </div>
             </div>
+
+            <div className="p-4 border-t border-slate-200 flex justify-end gap-3 bg-white rounded-b-2xl">
+              <button
+                onClick={() => setSelectedLog(null)}
+                className="px-5 py-2.5 bg-white border border-slate-300 text-slate-700 font-medium rounded-lg hover:bg-slate-50 transition-colors shadow-sm"
+              >
+                Đóng
+              </button>
+            </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
 
 function tryFormatJson(str: string | null) {
-  if (!str) return 'null';
+  if (!str) return "null";
   try {
     return JSON.stringify(JSON.parse(str), null, 2);
   } catch (e) {
