@@ -208,10 +208,6 @@ export default function FastApiInvoicesPage() {
           return inv;
         }),
       );
-
-      // Reload background để đảm bảo đồng bộ hoàn toàn
-      loadInvoices();
-      loadStatistics();
     } catch (error: any) {
       console.error("Error retrying invoice:", error);
       let errorMessage = `Lỗi khi đồng bộ lại ${docCode}`;
@@ -248,6 +244,9 @@ export default function FastApiInvoicesPage() {
       );
     } finally {
       setRetrying((prev) => ({ ...prev, [docCode]: false }));
+      // Reload background để đảm bảo đồng bộ hoàn toàn, kể cả khi lỗi
+      loadInvoices();
+      loadStatistics();
     }
   };
 
