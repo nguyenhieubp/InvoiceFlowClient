@@ -887,10 +887,10 @@ export default function OrdersPage() {
                         row.sale?.id || index
                       }`;
                       const isSelected = selectedRowKey === rowKey;
-                      // Kiểm tra statusAsys: nếu false thì bôi đỏ dòng
-                      // Chú ý: statusAsys có thể là undefined, null, true, hoặc false
-                      // Chỉ bôi đỏ khi statusAsys === false (không phải undefined hoặc null)
-                      const isStatusAsysFalse = row.sale?.statusAsys === false;
+                      // Kiểm tra product và department: nếu thiếu 1 trong 2 thì bôi đỏ
+                      // Logic cũ dùng statusAsys không còn sử dụng
+                      const isMissingData =
+                        !row.sale?.product || !row.sale?.department;
                       const isMissingCucThue = !row.sale?.cucThue;
 
                       return (
@@ -901,8 +901,8 @@ export default function OrdersPage() {
                             handleRowDoubleClick(row.order, row.sale);
                           }}
                           className={`transition-colors cursor-pointer ${
-                            isStatusAsysFalse
-                              ? "bg-red-100 hover:bg-red-200" // Bôi đỏ nếu statusAsys = false
+                            isMissingData
+                              ? "bg-red-100 hover:bg-red-200"
                               : isSelected
                                 ? "bg-blue-100 hover:bg-blue-200"
                                 : "hover:bg-gray-50"
