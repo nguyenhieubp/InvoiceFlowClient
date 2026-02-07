@@ -1478,6 +1478,9 @@ export const fastApiInvoicesApi = {
         `/fast-api-invoices/doc-code/${docCode}/ma-dvcs/${maDvcs}/ma-kh/${maKh}/ten-kh/${tenKh}/status/${status}/start-date/${startDate}/end-date/${endDate}/page/${page}/limit/${limit}/search/${search}/sort-by/${sortBy}/sort-order/${sortOrder}/fields/${fields}/expand/${expand}/select/${select}/filter/${filter}/group-by/${groupBy}/aggregate/${aggregate}/count/${count}/distinct/${distinct}/format/${format}/callback/${callback}/skip/${skip}/top/${top}/inlinecount/${inlinecount}/order-by/${orderBy}/custom/${custom}/details`,
       );
     },
+  syncPOCharges: (data: any) => {
+    return api.post("/fast-integration/po-charges", data);
+  },
 };
 
-// Stock Transfer API
+

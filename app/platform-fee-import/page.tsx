@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { platformFeeImportApi } from "@/lib/api";
+import { platformFeeImportApi, fastApiInvoicesApi } from "@/lib/api";
 import { format } from "date-fns";
 
 type Platform = "shopee" | "tiktok" | "lazada";
@@ -61,6 +61,23 @@ export default function PlatformFeeImportPage() {
     endDate: "",
   });
 
+  // Input states (separated from applied filters)
+  const [shopeeInputs, setShopeeInputs] = useState({
+    search: "",
+    startDate: "",
+    endDate: "",
+  });
+  const [tiktokInputs, setTiktokInputs] = useState({
+    search: "",
+    startDate: "",
+    endDate: "",
+  });
+  const [lazadaInputs, setLazadaInputs] = useState({
+    search: "",
+    startDate: "",
+    endDate: "",
+  });
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setFile(e.target.files[0]);
@@ -105,8 +122,8 @@ export default function PlatformFeeImportPage() {
     } catch (err: any) {
       setError(
         err.response?.data?.message ||
-          err.message ||
-          "Lỗi khi import file. Vui lòng thử lại.",
+        err.message ||
+        "Lỗi khi import file. Vui lòng thử lại.",
       );
     } finally {
       setLoading(false);
@@ -149,7 +166,7 @@ export default function PlatformFeeImportPage() {
     setListLoading(true);
     try {
       let filters, pagination, setData, setPagination;
-      
+
       if (platform === "shopee") {
         filters = shopeeFilters;
         pagination = shopeePagination;
@@ -200,13 +217,144 @@ export default function PlatformFeeImportPage() {
   const handlePlatformSearch = (e: React.FormEvent, platform: Platform) => {
     e.preventDefault();
     if (platform === "shopee") {
+      setShopeeFilters(shopeeInputs);
       setShopeePagination((prev) => ({ ...prev, page: 1 }));
     } else if (platform === "tiktok") {
+      setTiktokFilters(tiktokInputs);
       setTiktokPagination((prev) => ({ ...prev, page: 1 }));
     } else {
+      setLazadaFilters(lazadaInputs);
       setLazadaPagination((prev) => ({ ...prev, page: 1 }));
     }
-    fetchPlatformData(platform);
+  };
+
+  const handleSyncPOCharges = async (item: any, platform: string) => {
+    if (!item) return;
+
+    // Construct Payload
+    const master = {
+      dh_so: item.maSan || "",
+      // Format date to ISO string if exists, else current date or empty? 
+      // User example: "2026-01-15T06:36:04.292Z"
+      dh_ngay: item.ngayDoiSoat ? new Date(item.ngayDoiSoat).toISOString() : new Date().toISOString(),
+      dh_dvcs: item.boPhan || "TTM", // Default to TTM if empty as per user example? Or just use boPhan.
+    };
+
+    const details: any[] = [];
+
+    // Helper to add detail
+    const addDetail = (dong: number, code: string, value: number) => {
+      if (value && value !== 0) {
+        details.push({
+          dong: dong,
+          ma_cp: code,
+          cp01_nt: 0,
+          cp02_nt: value, // Lần 2 -> cp02
+          cp03_nt: 0, cp04_nt: 0, cp05_nt: 0, cp06_nt: 0
+        });
+      }
+    };
+
+    if (platform === "shopee") {
+      console.log("============= ", item);
+
+      const fixedFee = Number(item.phiCoDinh605MaPhi164020 || 0);
+      const serviceFee = Number(item.phiDichVu6MaPhi164020 || 0);
+      const paymentFee = Number(item.phiThanhToan5MaPhi164020 || 0);
+      const affiliateFee = Number(item.phiHoaHongTiepThiLienKet21150050 || 0);
+      const shippingFeeSaver = Number(item.chiPhiDichVuShippingFeeSaver164010 || 0);
+      const mktShippingFee = Number(item.phiPiShipDoMktDangKy164010 || 0);
+
+      // Line 1: Fixed
+      addDetail(1, "164020", fixedFee);
+      // Line 2: Service
+      addDetail(2, "164020", serviceFee);
+      // Line 3: Payment
+      addDetail(3, "164020", paymentFee);
+
+      // Line 4: Affiliate
+      addDetail(4, "150050", affiliateFee);
+
+      // Line 5: Shipping Fee Saver (164010)
+      if (shippingFeeSaver !== 0) {
+        addDetail(5, "164010", shippingFeeSaver);
+      }
+
+      // Line 6: Pi Ship (164010)
+      if (mktShippingFee !== 0) {
+        addDetail(6, "164010", mktShippingFee);
+      }
+
+    } else if (platform === "tiktok") {
+      // Line 1: Transaction (Fixed/Rate?)
+      addDetail(1, "164020", item.phiGiaoDichTyLe5164020);
+      // Line 2: Commission (Service?)
+      addDetail(2, "164020", item.phiHoaHongTraChoTiktok454164020);
+      // Line 3: SFP (Payment?) or SFP=Line 4? 
+      // Adjusting to fit standard if possible. If SFP is unique, maybe Line 3 for Tiktok?
+      // Based on Shopee align: L3 = Payment. Tiktok SFP is separate?
+      // Let's use Line 3 for SFP for now to map somewhere. 
+      // Or Line 6?
+      // User didn't specify strict Tiktok alignment, but "Làm tương tự".
+      // Let's map SFP to Line 3 (slot shared with Payment) or Line 2/1 if appropriate.
+      // Tiktok Transaction Fee -> Line 3 (Payment)? 
+      // Tiktok Commission -> Line 1/2?
+      // Let's just use: 
+      // 1. Transaction -> Line 3 (Payment equivalent)
+      // 2. Commission -> Line 2 (Service equivalent)
+      // 3. SFP -> Line 1 (Fixed equivalent??) or Line 5?
+      // To correspond to Shopee:
+      // Shopee Fixed -> Line 1
+      // Shopee Service -> Line 2
+      // Shopee Payment -> Line 3
+
+      // Tiktok Transaction ~ Payment -> Line 3
+      // Tiktok Commission ~ Service -> Line 2
+      // Tiktok SFP ~ Service -> ....
+      // For now I will blindly map 1, 2, 3 as per variable order to keep it simple unless specified.
+
+      addDetail(1, "164020", item.phiGiaoDichTyLe5164020); // Transaction
+      addDetail(2, "164020", item.phiHoaHongTraChoTiktok454164020); // Commission
+      addDetail(3, "164020", item.phiDichVuSfp6164020); // SFP
+
+      // Line 4: Affiliate
+      addDetail(4, "150050", item.phiHoaHongTiepThiLienKet150050);
+
+    } else if (platform === "lazada") {
+      if (item.maPhiNhanDienHachToan) {
+        const value = item.soTien || item.phi1 || 0;
+        addDetail(1, item.maPhiNhanDienHachToan, value);
+      }
+    }
+
+    if (details.length === 0) {
+      alert("Không có dữ liệu phí để đồng bộ (hoặc phí = 0)");
+      return;
+    }
+
+    const payload = {
+      master,
+      detail: details
+    };
+
+    if (!confirm(`Bạn có chắc chắn muốn đẩy phí cho đơn ${master.dh_so} sang Fast?`)) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await fastApiInvoicesApi.syncPOCharges(payload);
+      if (res.data?.success || res.status === 200 || res.status === 201) {
+        alert(`Đồng bộ thành công! ${res.data?.message || ""}`);
+      } else {
+        alert(`Đồng bộ thất bại: ${res.data?.message}`);
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert(`Lỗi khi đồng bộ: ${err.message || "Unknown error"}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Helper function to render platform table
@@ -223,299 +371,299 @@ export default function PlatformFeeImportPage() {
         {/* Filters */}
         <div className="p-4 border-b border-gray-200 bg-gray-50">
           <form onSubmit={(e) => handlePlatformSearch(e, platform)} className="flex flex-col md:flex-row gap-4">
-              <div className="flex items-center gap-2">
-                <label className="text-sm font-medium text-gray-700">Từ:</label>
-                <input
-                  type="date"
-                  value={filters.startDate}
-                  onChange={(e) =>
-                    setFilters({ ...filters, startDate: e.target.value })
-                  }
-                  className="border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <label className="text-sm font-medium text-gray-700">Đến:</label>
-                <input
-                  type="date"
-                  value={filters.endDate}
-                  onChange={(e) =>
-                    setFilters({ ...filters, endDate: e.target.value })
-                  }
-                  className="border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <div className="flex-1 flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Tìm kiếm..."
-                  value={filters.search}
-                  onChange={(e) =>
-                    setFilters({ ...filters, search: e.target.value })
-                  }
-                  className="flex-1 border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <button
-                  type="submit"
-                  className="px-3 py-1.5 bg-gray-700 text-white rounded text-sm hover:bg-gray-800 transition"
-                >
-                  Tìm kiếm
-                </button>
-              </div>
-            </form>
-          </div>
-
-          {/* Table */}
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm min-w-max">
-              <thead className="bg-gray-100 text-gray-600 font-semibold uppercase text-xs">
-                <tr>
-                  <th className="px-3 py-3 whitespace-nowrap">Mã sàn</th>
-                  <th className="px-3 py-3 whitespace-nowrap">Mã nội bộ SP</th>
-                  <th className="px-3 py-3 whitespace-nowrap">Ngày đối soát</th>
-                  <th className="px-3 py-3 whitespace-nowrap">Mã đơn hàng hoàn</th>
-                  <th className="px-3 py-3 whitespace-nowrap">Shop phát hành</th>
-                  <th className="px-3 py-3 whitespace-nowrap text-right">Giá trị giảm giá CTKM</th>
-                  <th className="px-3 py-3 whitespace-nowrap text-right">Doanh thu đơn hàng</th>
-                  {/* Shopee Fees */}
-                  <th className="px-3 py-3 whitespace-nowrap text-right">Phí cố định 6.05%</th>
-                  <th className="px-3 py-3 whitespace-nowrap text-right">Phí Dịch Vụ 6%</th>
-                  <th className="px-3 py-3 whitespace-nowrap text-right">Phí thanh toán 5%</th>
-                  <th className="px-3 py-3 whitespace-nowrap text-right">Phí hoa hồng TT 21%</th>
-                  <th className="px-3 py-3 whitespace-nowrap text-right">Shipping Fee Saver</th>
-                  <th className="px-3 py-3 whitespace-nowrap text-right">Phí Pi Ship</th>
-                  {/* TikTok Fees */}
-                  <th className="px-3 py-3 whitespace-nowrap text-right">Phí giao dịch 5%</th>
-                  <th className="px-3 py-3 whitespace-nowrap text-right">Phí hoa hồng Tiktok 4.54%</th>
-                  <th className="px-3 py-3 whitespace-nowrap text-right">Phí hoa hồng TT 150050</th>
-                  <th className="px-3 py-3 whitespace-nowrap text-right">Phí dịch vụ SFP 6%</th>
-                  {/* Common */}
-                  <th className="px-3 py-3 whitespace-nowrap">Mã tiếp thị liên kết</th>
-                  <th className="px-3 py-3 whitespace-nowrap">Sàn TMĐT</th>
-                  <th className="px-3 py-3 whitespace-nowrap">MKT 1</th>
-                  <th className="px-3 py-3 whitespace-nowrap">MKT 2</th>
-                  <th className="px-3 py-3 whitespace-nowrap">MKT 3</th>
-                  <th className="px-3 py-3 whitespace-nowrap">MKT 4</th>
-                  <th className="px-3 py-3 whitespace-nowrap">MKT 5</th>
-                  <th className="px-3 py-3 whitespace-nowrap">Bộ phận</th>
-                  {/* Lazada */}
-                  <th className="px-3 py-3 whitespace-nowrap">Tên phí/doanh thu</th>
-                  <th className="px-3 py-3 whitespace-nowrap">Quảng cáo TT</th>
-                  <th className="px-3 py-3 whitespace-nowrap">Mã phí hạch toán</th>
-                  <th className="px-3 py-3 whitespace-nowrap">Ghi chú</th>
-                  {/* Generic Fees */}
-                  <th className="px-3 py-3 whitespace-nowrap text-right">Phí 1</th>
-                  <th className="px-3 py-3 whitespace-nowrap text-right">Phí 2</th>
-                  <th className="px-3 py-3 whitespace-nowrap text-right">Phí 3</th>
-                  <th className="px-3 py-3 whitespace-nowrap text-right">Phí 4</th>
-                  <th className="px-3 py-3 whitespace-nowrap text-right">Phí 5</th>
-                  <th className="px-3 py-3 whitespace-nowrap text-right">Phí 6</th>
-                  {/* Metadata */}
-                  <th className="px-3 py-3 whitespace-nowrap">Ngày import</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {listLoading ? (
-                  <tr>
-                    <td
-                      colSpan={37}
-                      className="px-6 py-8 text-center text-gray-500"
-                    >
-                      <div className="flex justify-center items-center gap-2">
-                        <div className="animate-spin h-5 w-5 border-2 border-blue-500 rounded-full border-t-transparent"></div>
-                        Đang tải dữ liệu...
-                      </div>
-                    </td>
-                  </tr>
-                ) : data.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={37}
-                      className="px-6 py-8 text-center text-gray-500"
-                    >
-                      Không có dữ liệu
-                    </td>
-                  </tr>
-                ) : (
-                  data.map((item) => (
-                    <tr
-                      key={item.id}
-                      className="hover:bg-gray-50 transition-colors"
-                    >
-                      <td className="px-3 py-3 font-mono text-gray-700 whitespace-nowrap">
-                        {item.maSan ?? "-"}
-                      </td>
-                      <td className="px-3 py-3 font-mono text-gray-700 whitespace-nowrap">
-                        {item.maNoiBoSp ?? "-"}
-                      </td>
-                      <td className="px-3 py-3 text-gray-500 whitespace-nowrap">
-                        {item.ngayDoiSoat
-                          ? format(new Date(item.ngayDoiSoat), "dd/MM/yyyy")
-                          : "-"}
-                      </td>
-                      <td className="px-3 py-3 font-mono text-gray-700 whitespace-nowrap">
-                        {item.maDonHangHoan ?? "-"}
-                      </td>
-                      <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
-                        {item.shopPhatHanhTrenSan ?? "-"}
-                      </td>
-                      <td className="px-3 py-3 text-right font-medium text-gray-900 whitespace-nowrap">
-                        {formatCurrency(item.giaTriGiamGiaCtkm)}
-                      </td>
-                      <td className="px-3 py-3 text-right font-medium text-gray-900 whitespace-nowrap">
-                        {formatCurrency(item.doanhThuDonHang)}
-                      </td>
-                      {/* Shopee Fees */}
-                      <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
-                        {formatCurrency(item.phiCoDinh605MaPhi164020)}
-                      </td>
-                      <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
-                        {formatCurrency(item.phiDichVu6MaPhi164020)}
-                      </td>
-                      <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
-                        {formatCurrency(item.phiThanhToan5MaPhi164020)}
-                      </td>
-                      <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
-                        {formatCurrency(item.phiHoaHongTiepThiLienKet21150050)}
-                      </td>
-                      <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
-                        {formatCurrency(item.chiPhiDichVuShippingFeeSaver164010)}
-                      </td>
-                      <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
-                        {formatCurrency(item.phiPiShipDoMktDangKy164010)}
-                      </td>
-                      {/* TikTok Fees */}
-                      <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
-                        {formatCurrency(item.phiGiaoDichTyLe5164020)}
-                      </td>
-                      <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
-                        {formatCurrency(item.phiHoaHongTraChoTiktok454164020)}
-                      </td>
-                      <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
-                        {formatCurrency(item.phiHoaHongTiepThiLienKet150050)}
-                      </td>
-                      <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
-                        {formatCurrency(item.phiDichVuSfp6164020)}
-                      </td>
-                      {/* Common */}
-                      <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
-                        {item.maCacBenTiepThiLienKet ?? "-"}
-                      </td>
-                      <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
-                        {item.sanTmdt ?? "-"}
-                      </td>
-                      <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
-                        {item.cotChoBsMkt1 ?? "-"}
-                      </td>
-                      <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
-                        {item.cotChoBsMkt2 ?? "-"}
-                      </td>
-                      <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
-                        {item.cotChoBsMkt3 ?? "-"}
-                      </td>
-                      <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
-                        {item.cotChoBsMkt4 ?? "-"}
-                      </td>
-                      <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
-                        {item.cotChoBsMkt5 ?? "-"}
-                      </td>
-                      <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
-                        {item.boPhan ?? "-"}
-                      </td>
-                      {/* Lazada */}
-                      <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
-                        {item.tenPhiDoanhThu ?? "-"}
-                      </td>
-                      <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
-                        {item.quangCaoTiepThiLienKet ?? "-"}
-                      </td>
-                      <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
-                        {item.maPhiNhanDienHachToan ?? "-"}
-                      </td>
-                      <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
-                        {item.ghiChu ?? "-"}
-                      </td>
-                      {/* Generic Fees */}
-                      <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
-                        {formatCurrency(item.phi1)}
-                      </td>
-                      <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
-                        {formatCurrency(item.phi2)}
-                      </td>
-                      <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
-                        {formatCurrency(item.phi3)}
-                      </td>
-                      <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
-                        {formatCurrency(item.phi4)}
-                      </td>
-                      <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
-                        {formatCurrency(item.phi5)}
-                      </td>
-                      <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
-                        {formatCurrency(item.phi6)}
-                      </td>
-                      {/* Metadata */}
-                      <td className="px-3 py-3 text-gray-500 whitespace-nowrap">
-                        {item.createdAt
-                          ? format(new Date(item.createdAt), "dd/MM/yyyy HH:mm")
-                          : "-"}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Pagination */}
-          <div className="p-4 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
-            <p className="text-sm text-gray-600">
-              Hiển thị{" "}
-              <span className="font-medium">
-                {Math.min(
-                  (pagination.page - 1) * pagination.limit + 1,
-                  pagination.total,
-                )}
-              </span>{" "}
-              đến{" "}
-              <span className="font-medium">
-                {Math.min(
-                  pagination.page * pagination.limit,
-                  pagination.total,
-                )}
-              </span>{" "}
-              trong tổng số{" "}
-              <span className="font-medium">{pagination.total}</span> bản
-              ghi
-            </p>
-            <div className="flex gap-2">
-              <button
-                onClick={() =>
-                  setPagination((prev) => ({
-                    ...prev,
-                    page: prev.page - 1,
-                  }))
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-700">Từ:</label>
+              <input
+                type="date"
+                value={filters.startDate}
+                onChange={(e) =>
+                  setFilters({ ...filters, startDate: e.target.value })
                 }
-                disabled={pagination.page <= 1}
-                className="px-3 py-1 border border-gray-300 rounded bg-white text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition"
-              >
-                Trước
-              </button>
-              <button
-                onClick={() =>
-                  setPagination((prev) => ({
-                    ...prev,
-                    page: prev.page + 1,
-                  }))
+                className="border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-700">Đến:</label>
+              <input
+                type="date"
+                value={filters.endDate}
+                onChange={(e) =>
+                  setFilters({ ...filters, endDate: e.target.value })
                 }
-                disabled={pagination.page >= pagination.totalPages}
-                className="px-3 py-1 border border-gray-300 rounded bg-white text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition"
+                className="border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div className="flex-1 flex gap-2">
+              <input
+                type="text"
+                placeholder="Tìm kiếm..."
+                value={filters.search}
+                onChange={(e) =>
+                  setFilters({ ...filters, search: e.target.value })
+                }
+                className="flex-1 border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <button
+                type="submit"
+                className="px-3 py-1.5 bg-gray-700 text-white rounded text-sm hover:bg-gray-800 transition"
               >
-                Sau
+                Tìm kiếm
               </button>
             </div>
+          </form>
+        </div>
+
+        {/* Table */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm min-w-max">
+            <thead className="bg-gray-100 text-gray-600 font-semibold uppercase text-xs">
+              <tr>
+                <th className="px-3 py-3 whitespace-nowrap">Mã sàn</th>
+                <th className="px-3 py-3 whitespace-nowrap">Mã nội bộ SP</th>
+                <th className="px-3 py-3 whitespace-nowrap">Ngày đối soát</th>
+                <th className="px-3 py-3 whitespace-nowrap">Mã đơn hàng hoàn</th>
+                <th className="px-3 py-3 whitespace-nowrap">Shop phát hành</th>
+                <th className="px-3 py-3 whitespace-nowrap text-right">Giá trị giảm giá CTKM</th>
+                <th className="px-3 py-3 whitespace-nowrap text-right">Doanh thu đơn hàng</th>
+                {/* Shopee Fees */}
+                <th className="px-3 py-3 whitespace-nowrap text-right">Phí cố định</th>
+                <th className="px-3 py-3 whitespace-nowrap text-right">Phí Dịch Vụ</th>
+                <th className="px-3 py-3 whitespace-nowrap text-right">Phí thanh toán</th>
+                <th className="px-3 py-3 whitespace-nowrap text-right">Phí hoa hồng TT</th>
+                <th className="px-3 py-3 whitespace-nowrap text-right">Shipping Fee Saver</th>
+                <th className="px-3 py-3 whitespace-nowrap text-right">Phí Pi Ship</th>
+                {/* TikTok Fees */}
+                <th className="px-3 py-3 whitespace-nowrap text-right">Phí giao dịch 5%</th>
+                <th className="px-3 py-3 whitespace-nowrap text-right">Phí hoa hồng Tiktok 4.54%</th>
+                <th className="px-3 py-3 whitespace-nowrap text-right">Phí hoa hồng TT 150050</th>
+                <th className="px-3 py-3 whitespace-nowrap text-right">Phí dịch vụ SFP 6%</th>
+                {/* Common */}
+                <th className="px-3 py-3 whitespace-nowrap">Mã tiếp thị liên kết</th>
+                <th className="px-3 py-3 whitespace-nowrap">Sàn TMĐT</th>
+                <th className="px-3 py-3 whitespace-nowrap">MKT 1</th>
+                <th className="px-3 py-3 whitespace-nowrap">MKT 2</th>
+                <th className="px-3 py-3 whitespace-nowrap">MKT 3</th>
+                <th className="px-3 py-3 whitespace-nowrap">MKT 4</th>
+                <th className="px-3 py-3 whitespace-nowrap">MKT 5</th>
+                <th className="px-3 py-3 whitespace-nowrap">Bộ phận</th>
+                {/* Lazada */}
+                <th className="px-3 py-3 whitespace-nowrap">Tên phí/doanh thu</th>
+                <th className="px-3 py-3 whitespace-nowrap">Quảng cáo TT</th>
+                <th className="px-3 py-3 whitespace-nowrap">Mã phí hạch toán</th>
+                <th className="px-3 py-3 whitespace-nowrap">Ghi chú</th>
+                {/* Generic Fees */}
+                <th className="px-3 py-3 whitespace-nowrap text-right">Phí 1</th>
+                <th className="px-3 py-3 whitespace-nowrap text-right">Phí 2</th>
+                <th className="px-3 py-3 whitespace-nowrap text-right">Phí 3</th>
+                <th className="px-3 py-3 whitespace-nowrap text-right">Phí 4</th>
+                <th className="px-3 py-3 whitespace-nowrap text-right">Phí 5</th>
+                <th className="px-3 py-3 whitespace-nowrap text-right">Phí 6</th>
+                {/* Metadata */}
+                <th className="px-3 py-3 whitespace-nowrap">Ngày import</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {listLoading ? (
+                <tr>
+                  <td
+                    colSpan={37}
+                    className="px-6 py-8 text-center text-gray-500"
+                  >
+                    <div className="flex justify-center items-center gap-2">
+                      <div className="animate-spin h-5 w-5 border-2 border-blue-500 rounded-full border-t-transparent"></div>
+                      Đang tải dữ liệu...
+                    </div>
+                  </td>
+                </tr>
+              ) : data.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={37}
+                    className="px-6 py-8 text-center text-gray-500"
+                  >
+                    Không có dữ liệu
+                  </td>
+                </tr>
+              ) : (
+                data.map((item) => (
+                  <tr
+                    key={item.id}
+                    className="hover:bg-gray-50 transition-colors"
+                  >
+                    <td className="px-3 py-3 font-mono text-gray-700 whitespace-nowrap">
+                      {item.maSan ?? "-"}
+                    </td>
+                    <td className="px-3 py-3 font-mono text-gray-700 whitespace-nowrap">
+                      {item.maNoiBoSp ?? "-"}
+                    </td>
+                    <td className="px-3 py-3 text-gray-500 whitespace-nowrap">
+                      {item.ngayDoiSoat
+                        ? format(new Date(item.ngayDoiSoat), "dd/MM/yyyy")
+                        : "-"}
+                    </td>
+                    <td className="px-3 py-3 font-mono text-gray-700 whitespace-nowrap">
+                      {item.maDonHangHoan ?? "-"}
+                    </td>
+                    <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
+                      {item.shopPhatHanhTrenSan ?? "-"}
+                    </td>
+                    <td className="px-3 py-3 text-right font-medium text-gray-900 whitespace-nowrap">
+                      {formatCurrency(item.giaTriGiamGiaCtkm)}
+                    </td>
+                    <td className="px-3 py-3 text-right font-medium text-gray-900 whitespace-nowrap">
+                      {formatCurrency(item.doanhThuDonHang)}
+                    </td>
+                    {/* Shopee Fees */}
+                    <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
+                      {formatCurrency(item.phiCoDinh605MaPhi164020)}
+                    </td>
+                    <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
+                      {formatCurrency(item.phiDichVu6MaPhi164020)}
+                    </td>
+                    <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
+                      {formatCurrency(item.phiThanhToan5MaPhi164020)}
+                    </td>
+                    <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
+                      {formatCurrency(item.phiHoaHongTiepThiLienKet21150050)}
+                    </td>
+                    <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
+                      {formatCurrency(item.chiPhiDichVuShippingFeeSaver164010)}
+                    </td>
+                    <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
+                      {formatCurrency(item.phiPiShipDoMktDangKy164010)}
+                    </td>
+                    {/* TikTok Fees */}
+                    <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
+                      {formatCurrency(item.phiGiaoDichTyLe5164020)}
+                    </td>
+                    <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
+                      {formatCurrency(item.phiHoaHongTraChoTiktok454164020)}
+                    </td>
+                    <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
+                      {formatCurrency(item.phiHoaHongTiepThiLienKet150050)}
+                    </td>
+                    <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
+                      {formatCurrency(item.phiDichVuSfp6164020)}
+                    </td>
+                    {/* Common */}
+                    <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
+                      {item.maCacBenTiepThiLienKet ?? "-"}
+                    </td>
+                    <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
+                      {item.sanTmdt ?? "-"}
+                    </td>
+                    <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
+                      {item.cotChoBsMkt1 ?? "-"}
+                    </td>
+                    <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
+                      {item.cotChoBsMkt2 ?? "-"}
+                    </td>
+                    <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
+                      {item.cotChoBsMkt3 ?? "-"}
+                    </td>
+                    <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
+                      {item.cotChoBsMkt4 ?? "-"}
+                    </td>
+                    <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
+                      {item.cotChoBsMkt5 ?? "-"}
+                    </td>
+                    <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
+                      {item.boPhan ?? "-"}
+                    </td>
+                    {/* Lazada */}
+                    <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
+                      {item.tenPhiDoanhThu ?? "-"}
+                    </td>
+                    <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
+                      {item.quangCaoTiepThiLienKet ?? "-"}
+                    </td>
+                    <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
+                      {item.maPhiNhanDienHachToan ?? "-"}
+                    </td>
+                    <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
+                      {item.ghiChu ?? "-"}
+                    </td>
+                    {/* Generic Fees */}
+                    <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
+                      {formatCurrency(item.phi1)}
+                    </td>
+                    <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
+                      {formatCurrency(item.phi2)}
+                    </td>
+                    <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
+                      {formatCurrency(item.phi3)}
+                    </td>
+                    <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
+                      {formatCurrency(item.phi4)}
+                    </td>
+                    <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
+                      {formatCurrency(item.phi5)}
+                    </td>
+                    <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
+                      {formatCurrency(item.phi6)}
+                    </td>
+                    {/* Metadata */}
+                    <td className="px-3 py-3 text-gray-500 whitespace-nowrap">
+                      {item.createdAt
+                        ? format(new Date(item.createdAt), "dd/MM/yyyy HH:mm")
+                        : "-"}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination */}
+        <div className="p-4 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
+          <p className="text-sm text-gray-600">
+            Hiển thị{" "}
+            <span className="font-medium">
+              {Math.min(
+                (pagination.page - 1) * pagination.limit + 1,
+                pagination.total,
+              )}
+            </span>{" "}
+            đến{" "}
+            <span className="font-medium">
+              {Math.min(
+                pagination.page * pagination.limit,
+                pagination.total,
+              )}
+            </span>{" "}
+            trong tổng số{" "}
+            <span className="font-medium">{pagination.total}</span> bản
+            ghi
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={() =>
+                setPagination((prev) => ({
+                  ...prev,
+                  page: prev.page - 1,
+                }))
+              }
+              disabled={pagination.page <= 1}
+              className="px-3 py-1 border border-gray-300 rounded bg-white text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition"
+            >
+              Trước
+            </button>
+            <button
+              onClick={() =>
+                setPagination((prev) => ({
+                  ...prev,
+                  page: prev.page + 1,
+                }))
+              }
+              disabled={pagination.page >= pagination.totalPages}
+              className="px-3 py-1 border border-gray-300 rounded bg-white text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition"
+            >
+              Sau
+            </button>
           </div>
         </div>
+      </div>
     );
   };
 
@@ -542,64 +690,14 @@ export default function PlatformFeeImportPage() {
     return new Intl.NumberFormat("vi-VN").format(value);
   };
 
-  const renderShopeeFeeTable = () => {
-    const feeDefs = [
-      {
-        key: "phiCoDinh605MaPhi164020",
-        maPhi: "164020",
-        loaiPhi: "Phí cố định",
-        getAmount: (item: any) => item.phiCoDinh605MaPhi164020,
-      },
-      {
-        key: "phiDichVu6MaPhi164020",
-        maPhi: "164020",
-        loaiPhi: "Phí dịch vụ",
-        getAmount: (item: any) => item.phiDichVu6MaPhi164020,
-      },
-      {
-        key: "phiThanhToan5MaPhi164020",
-        maPhi: "164020",
-        loaiPhi: "Phí thanh toán",
-        getAmount: (item: any) => item.phiThanhToan5MaPhi164020,
-      },
-      {
-        key: "phiHoaHongTiepThiLienKet21150050",
-        maPhi: "150050",
-        loaiPhi: "Phí hoa hồng Tiếp thị liên kết",
-        getAmount: (item: any) => item.phiHoaHongTiepThiLienKet21150050,
-      },
-      {
-        key: "chiPhiDichVuShippingFeeSaver164010",
-        maPhi: "164010",
-        loaiPhi: "Chi phí dịch vụ Shipping Fee Saver",
-        getAmount: (item: any) => item.chiPhiDichVuShippingFeeSaver164010,
-      },
-      {
-        key: "phiPiShipDoMktDangKy164010",
-        maPhi: "164010",
-        loaiPhi: "Phí Pi Ship (Do MKT đăng ký)",
-        getAmount: (item: any) => item.phiPiShipDoMktDangKy164010,
-      },
-    ] as const;
+  console.log("============ ", shopeeData);
 
-    const rows = shopeeData.flatMap((item, orderIdx) =>
-      feeDefs.map((def, feeIdx) => ({
-        stt:
-          (shopeePagination.page - 1) * shopeePagination.limit * feeDefs.length +
-          orderIdx * feeDefs.length +
-          feeIdx +
-          1,
-        ngayDoiSoat: item.ngayDoiSoat,
-        maDon: item.maSan,
-        maNoiBoSp: item.maNoiBoSp,
-        maPhiNhanDien: def.maPhi,
-        loaiPhi: def.loaiPhi,
-        soTien: def.getAmount(item),
-        maKol: item.maCacBenTiepThiLienKet,
-        maDonHangHoan: item.maDonHangHoan,
-        sanTmdt: item.sanTmdt,
-      })),
-    );
+  const renderShopeeFeeTable = () => {
+    // Modify to map directly, 1 row per order (horizontal)
+    const rows = shopeeData.map((item, idx) => ({
+      stt: (shopeePagination.page - 1) * shopeePagination.limit + idx + 1,
+      ...item,
+    }));
 
     return (
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -613,10 +711,10 @@ export default function PlatformFeeImportPage() {
               <label className="text-sm font-medium text-gray-700">Từ:</label>
               <input
                 type="date"
-                value={shopeeFilters.startDate}
+                value={shopeeInputs.startDate}
                 onChange={(e) =>
-                  setShopeeFilters({
-                    ...shopeeFilters,
+                  setShopeeInputs({
+                    ...shopeeInputs,
                     startDate: e.target.value,
                   })
                 }
@@ -627,10 +725,10 @@ export default function PlatformFeeImportPage() {
               <label className="text-sm font-medium text-gray-700">Đến:</label>
               <input
                 type="date"
-                value={shopeeFilters.endDate}
+                value={shopeeInputs.endDate}
                 onChange={(e) =>
-                  setShopeeFilters({
-                    ...shopeeFilters,
+                  setShopeeInputs({
+                    ...shopeeInputs,
                     endDate: e.target.value,
                   })
                 }
@@ -641,9 +739,9 @@ export default function PlatformFeeImportPage() {
               <input
                 type="text"
                 placeholder="Tìm kiếm..."
-                value={shopeeFilters.search}
+                value={shopeeInputs.search}
                 onChange={(e) =>
-                  setShopeeFilters({ ...shopeeFilters, search: e.target.value })
+                  setShopeeInputs({ ...shopeeInputs, search: e.target.value })
                 }
                 className="flex-1 border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
@@ -668,25 +766,51 @@ export default function PlatformFeeImportPage() {
                 <th className="px-3 py-3 whitespace-nowrap">
                   Mã sản phẩm của đơn hàng
                 </th>
-                <th className="px-3 py-3 whitespace-nowrap">
-                  Mã phí để nhận diện hạch toán
-                </th>
-                <th className="px-3 py-3 whitespace-nowrap">Loại phí</th>
+                <th className="px-3 py-3 whitespace-nowrap">Shop phát hành</th>
                 <th className="px-3 py-3 whitespace-nowrap text-right">
-                  Số tiền phí đã đối soát
+                  Giá trị giảm giá CTKM
                 </th>
+                <th className="px-3 py-3 whitespace-nowrap text-right">
+                  Doanh thu đơn hàng
+                </th>
+                {/* Shopee Fees */}
+                <th className="px-3 py-3 whitespace-nowrap text-right">
+                  Phí cố định
+                </th>
+                <th className="px-3 py-3 whitespace-nowrap text-right">
+                  Phí Dịch Vụ
+                </th>
+                <th className="px-3 py-3 whitespace-nowrap text-right">
+                  Phí thanh toán
+                </th>
+                <th className="px-3 py-3 whitespace-nowrap text-right">
+                  Phí hoa hồng TT
+                </th>
+                <th className="px-3 py-3 whitespace-nowrap text-right">
+                  Shipping Fee Saver
+                </th>
+                <th className="px-3 py-3 whitespace-nowrap text-right">
+                  Phí Pi Ship
+                </th>
+                {/* Common */}
                 <th className="px-3 py-3 whitespace-nowrap">Mã KOL</th>
                 <th className="px-3 py-3 whitespace-nowrap">
                   Mã đơn hàng hoàn/trả lại
                 </th>
                 <th className="px-3 py-3 whitespace-nowrap">Sàn TMĐT</th>
+                <th className="px-3 py-3 whitespace-nowrap">MKT 1</th>
+                <th className="px-3 py-3 whitespace-nowrap">MKT 2</th>
+                <th className="px-3 py-3 whitespace-nowrap">MKT 3</th>
+                <th className="px-3 py-3 whitespace-nowrap">MKT 4</th>
+                <th className="px-3 py-3 whitespace-nowrap">MKT 5</th>
+                <th className="px-3 py-3 whitespace-nowrap">Bộ phận</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {listLoading ? (
                 <tr>
                   <td
-                    colSpan={10}
+                    colSpan={22}
                     className="px-6 py-8 text-center text-gray-500"
                   >
                     <div className="flex justify-center items-center gap-2">
@@ -698,15 +822,19 @@ export default function PlatformFeeImportPage() {
               ) : rows.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={10}
+                    colSpan={22}
                     className="px-6 py-8 text-center text-gray-500"
                   >
                     Không có dữ liệu
                   </td>
                 </tr>
               ) : (
-                rows.map((r) => (
-                  <tr key={`${r.stt}`} className="hover:bg-gray-50 transition-colors">
+                rows.map((r: any) => (
+                  <tr
+                    key={`${r.id}`}
+                    className="hover:bg-gray-50 transition-colors cursor-pointer"
+                    onDoubleClick={() => handleSyncPOCharges(r, "shopee")}
+                  >
                     <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
                       {r.stt}
                     </td>
@@ -716,28 +844,66 @@ export default function PlatformFeeImportPage() {
                         : "-"}
                     </td>
                     <td className="px-3 py-3 font-mono text-gray-700 whitespace-nowrap">
-                      {r.maDon ?? "-"}
+                      {r.maSan ?? "-"}
                     </td>
                     <td className="px-3 py-3 font-mono text-gray-700 whitespace-nowrap">
                       {r.maNoiBoSp ?? "-"}
                     </td>
-                    <td className="px-3 py-3 font-mono text-gray-700 whitespace-nowrap">
-                      {r.maPhiNhanDien}
-                    </td>
                     <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
-                      {r.loaiPhi}
+                      {r.shopPhatHanhTrenSan ?? "-"}
+                    </td>
+                    <td className="px-3 py-3 text-right font-medium text-gray-900 whitespace-nowrap">
+                      {formatCurrency(r.giaTriGiamGiaCtkm)}
+                    </td>
+                    <td className="px-3 py-3 text-right font-medium text-gray-900 whitespace-nowrap">
+                      {formatCurrency(r.doanhThuDonHang)}
+                    </td>
+                    {/* Shopee Fees */}
+                    <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
+                      {formatCurrency(r.phiCoDinh605MaPhi164020)}
                     </td>
                     <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
-                      {formatCurrency(r.soTien)}
+                      {formatCurrency(r.phiDichVu6MaPhi164020)}
                     </td>
+                    <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
+                      {formatCurrency(r.phiThanhToan5MaPhi164020)}
+                    </td>
+                    <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
+                      {formatCurrency(r.phiHoaHongTiepThiLienKet21150050)}
+                    </td>
+                    <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
+                      {formatCurrency(r.chiPhiDichVuShippingFeeSaver164010)}
+                    </td>
+                    <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
+                      {formatCurrency(r.phiPiShipDoMktDangKy164010)}
+                    </td>
+                    {/* Common */}
                     <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
-                      {r.maKol ?? "-"}
+                      {r.maCacBenTiepThiLienKet ?? "-"}
                     </td>
                     <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
                       {r.maDonHangHoan ?? "-"}
                     </td>
                     <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
                       {r.sanTmdt ?? "-"}
+                    </td>
+                    <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
+                      {r.cotChoBsMkt1 ?? "-"}
+                    </td>
+                    <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
+                      {r.cotChoBsMkt2 ?? "-"}
+                    </td>
+                    <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
+                      {r.cotChoBsMkt3 ?? "-"}
+                    </td>
+                    <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
+                      {r.cotChoBsMkt4 ?? "-"}
+                    </td>
+                    <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
+                      {r.cotChoBsMkt5 ?? "-"}
+                    </td>
+                    <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
+                      {r.boPhan ?? "-"}
                     </td>
                   </tr>
                 ))
@@ -746,7 +912,7 @@ export default function PlatformFeeImportPage() {
           </table>
         </div>
 
-        {/* Pagination (by imported orders) */}
+        {/* Pagination */}
         <div className="p-4 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
           <p className="text-sm text-gray-600">
             Hiển thị{" "}
@@ -764,12 +930,16 @@ export default function PlatformFeeImportPage() {
               )}
             </span>{" "}
             trong tổng số{" "}
-            <span className="font-medium">{shopeePagination.total}</span> bản ghi
+            <span className="font-medium">{shopeePagination.total}</span> bản
+            ghi
           </p>
           <div className="flex gap-2">
             <button
               onClick={() =>
-                setShopeePagination((prev) => ({ ...prev, page: prev.page - 1 }))
+                setShopeePagination((prev) => ({
+                  ...prev,
+                  page: prev.page - 1,
+                }))
               }
               disabled={shopeePagination.page <= 1}
               className="px-3 py-1 border border-gray-300 rounded bg-white text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition"
@@ -778,7 +948,10 @@ export default function PlatformFeeImportPage() {
             </button>
             <button
               onClick={() =>
-                setShopeePagination((prev) => ({ ...prev, page: prev.page + 1 }))
+                setShopeePagination((prev) => ({
+                  ...prev,
+                  page: prev.page + 1,
+                }))
               }
               disabled={shopeePagination.page >= shopeePagination.totalPages}
               className="px-3 py-1 border border-gray-300 rounded bg-white text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition"
@@ -818,10 +991,10 @@ export default function PlatformFeeImportPage() {
               <label className="text-sm font-medium text-gray-700">Từ:</label>
               <input
                 type="date"
-                value={lazadaFilters.startDate}
+                value={lazadaInputs.startDate}
                 onChange={(e) =>
-                  setLazadaFilters({
-                    ...lazadaFilters,
+                  setLazadaInputs({
+                    ...lazadaInputs,
                     startDate: e.target.value,
                   })
                 }
@@ -832,10 +1005,10 @@ export default function PlatformFeeImportPage() {
               <label className="text-sm font-medium text-gray-700">Đến:</label>
               <input
                 type="date"
-                value={lazadaFilters.endDate}
+                value={lazadaInputs.endDate}
                 onChange={(e) =>
-                  setLazadaFilters({
-                    ...lazadaFilters,
+                  setLazadaInputs({
+                    ...lazadaInputs,
                     endDate: e.target.value,
                   })
                 }
@@ -846,9 +1019,9 @@ export default function PlatformFeeImportPage() {
               <input
                 type="text"
                 placeholder="Tìm kiếm..."
-                value={lazadaFilters.search}
+                value={lazadaInputs.search}
                 onChange={(e) =>
-                  setLazadaFilters({ ...lazadaFilters, search: e.target.value })
+                  setLazadaInputs({ ...lazadaInputs, search: e.target.value })
                 }
                 className="flex-1 border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
@@ -911,7 +1084,11 @@ export default function PlatformFeeImportPage() {
                 </tr>
               ) : (
                 rows.map((r) => (
-                  <tr key={`${r.stt}`} className="hover:bg-gray-50 transition-colors">
+                  <tr
+                    key={`${r.stt}`}
+                    className="hover:bg-gray-50 transition-colors cursor-pointer"
+                    onDoubleClick={() => handleSyncPOCharges(r, "lazada")}
+                  >
                     <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
                       {r.stt}
                     </td>
@@ -997,51 +1174,11 @@ export default function PlatformFeeImportPage() {
   };
 
   const renderTiktokFeeTable = () => {
-    const feeDefs = [
-      {
-        key: "phiGiaoDichTyLe5164020",
-        maPhi: "164020",
-        loaiPhi: "Phí giao dịch",
-        getAmount: (item: any) => item.phiGiaoDichTyLe5164020,
-      },
-      {
-        key: "phiHoaHongTraChoTiktok454164020",
-        maPhi: "164020",
-        loaiPhi: "Phí hoa hồng trả cho TikTok",
-        getAmount: (item: any) => item.phiHoaHongTraChoTiktok454164020,
-      },
-      {
-        key: "phiHoaHongTiepThiLienKet150050",
-        maPhi: "150050",
-        loaiPhi: "Phí hoa hồng Tiếp thị liên kết",
-        getAmount: (item: any) => item.phiHoaHongTiepThiLienKet150050,
-      },
-      {
-        key: "phiDichVuSfp6164020",
-        maPhi: "164020",
-        loaiPhi: "Phí dịch vụ",
-        getAmount: (item: any) => item.phiDichVuSfp6164020,
-      },
-    ] as const;
-
-    const rows = tiktokData.flatMap((item, orderIdx) =>
-      feeDefs.map((def, feeIdx) => ({
-        stt:
-          (tiktokPagination.page - 1) * tiktokPagination.limit * feeDefs.length +
-          orderIdx * feeDefs.length +
-          feeIdx +
-          1,
-        ngayDoiSoat: item.ngayDoiSoat,
-        maDon: item.maSan,
-        maNoiBoSp: item.maNoiBoSp,
-        maPhiNhanDien: def.maPhi,
-        loaiPhi: def.loaiPhi,
-        soTien: def.getAmount(item),
-        maKol: item.maCacBenTiepThiLienKet,
-        maDonHangHoan: item.maDonHangHoan,
-        sanTmdt: item.sanTmdt,
-      })),
-    );
+    // Modify to map directly, 1 row per order (horizontal)
+    const rows = tiktokData.map((item, idx) => ({
+      stt: (tiktokPagination.page - 1) * tiktokPagination.limit + idx + 1,
+      ...item,
+    }));
 
     return (
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -1055,10 +1192,10 @@ export default function PlatformFeeImportPage() {
               <label className="text-sm font-medium text-gray-700">Từ:</label>
               <input
                 type="date"
-                value={tiktokFilters.startDate}
+                value={tiktokInputs.startDate}
                 onChange={(e) =>
-                  setTiktokFilters({
-                    ...tiktokFilters,
+                  setTiktokInputs({
+                    ...tiktokInputs,
                     startDate: e.target.value,
                   })
                 }
@@ -1069,10 +1206,10 @@ export default function PlatformFeeImportPage() {
               <label className="text-sm font-medium text-gray-700">Đến:</label>
               <input
                 type="date"
-                value={tiktokFilters.endDate}
+                value={tiktokInputs.endDate}
                 onChange={(e) =>
-                  setTiktokFilters({
-                    ...tiktokFilters,
+                  setTiktokInputs({
+                    ...tiktokInputs,
                     endDate: e.target.value,
                   })
                 }
@@ -1083,9 +1220,9 @@ export default function PlatformFeeImportPage() {
               <input
                 type="text"
                 placeholder="Tìm kiếm..."
-                value={tiktokFilters.search}
+                value={tiktokInputs.search}
                 onChange={(e) =>
-                  setTiktokFilters({ ...tiktokFilters, search: e.target.value })
+                  setTiktokInputs({ ...tiktokInputs, search: e.target.value })
                 }
                 className="flex-1 border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
@@ -1110,25 +1247,45 @@ export default function PlatformFeeImportPage() {
                 <th className="px-3 py-3 whitespace-nowrap">
                   Mã sản phẩm của đơn hàng
                 </th>
-                <th className="px-3 py-3 whitespace-nowrap">
-                  Mã phí để nhận diện hạch toán
-                </th>
-                <th className="px-3 py-3 whitespace-nowrap">Loại phí</th>
+                <th className="px-3 py-3 whitespace-nowrap">Shop phát hành</th>
                 <th className="px-3 py-3 whitespace-nowrap text-right">
-                  Số tiền phí đã đối soát
+                  Giá trị giảm giá CTKM
                 </th>
+                <th className="px-3 py-3 whitespace-nowrap text-right">
+                  Doanh thu đơn hàng
+                </th>
+                {/* TikTok Fees */}
+                <th className="px-3 py-3 whitespace-nowrap text-right">
+                  Phí giao dịch Tỷ lệ
+                </th>
+                <th className="px-3 py-3 whitespace-nowrap text-right">
+                  Phí HH trả cho Tiktok
+                </th>
+                <th className="px-3 py-3 whitespace-nowrap text-right">
+                  Phí HH Tiếp thị liên kết
+                </th>
+                <th className="px-3 py-3 whitespace-nowrap text-right">
+                  Phí dịch vụ SFP
+                </th>
+                {/* Common */}
                 <th className="px-3 py-3 whitespace-nowrap">Mã KOL</th>
                 <th className="px-3 py-3 whitespace-nowrap">
                   Mã đơn hàng hoàn/trả lại
                 </th>
                 <th className="px-3 py-3 whitespace-nowrap">Sàn TMĐT</th>
+                <th className="px-3 py-3 whitespace-nowrap">MKT 1</th>
+                <th className="px-3 py-3 whitespace-nowrap">MKT 2</th>
+                <th className="px-3 py-3 whitespace-nowrap">MKT 3</th>
+                <th className="px-3 py-3 whitespace-nowrap">MKT 4</th>
+                <th className="px-3 py-3 whitespace-nowrap">MKT 5</th>
+                <th className="px-3 py-3 whitespace-nowrap">Bộ phận</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {listLoading ? (
                 <tr>
                   <td
-                    colSpan={10}
+                    colSpan={20}
                     className="px-6 py-8 text-center text-gray-500"
                   >
                     <div className="flex justify-center items-center gap-2">
@@ -1140,15 +1297,19 @@ export default function PlatformFeeImportPage() {
               ) : rows.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={10}
+                    colSpan={20}
                     className="px-6 py-8 text-center text-gray-500"
                   >
                     Không có dữ liệu
                   </td>
                 </tr>
               ) : (
-                rows.map((r) => (
-                  <tr key={`${r.stt}`} className="hover:bg-gray-50 transition-colors">
+                rows.map((r: any) => (
+                  <tr
+                    key={`${r.id}`}
+                    className="hover:bg-gray-50 transition-colors cursor-pointer"
+                    onDoubleClick={() => handleSyncPOCharges(r, "tiktok")}
+                  >
                     <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
                       {r.stt}
                     </td>
@@ -1158,28 +1319,60 @@ export default function PlatformFeeImportPage() {
                         : "-"}
                     </td>
                     <td className="px-3 py-3 font-mono text-gray-700 whitespace-nowrap">
-                      {r.maDon ?? "-"}
+                      {r.maSan ?? "-"}
                     </td>
                     <td className="px-3 py-3 font-mono text-gray-700 whitespace-nowrap">
                       {r.maNoiBoSp ?? "-"}
                     </td>
-                    <td className="px-3 py-3 font-mono text-gray-700 whitespace-nowrap">
-                      {r.maPhiNhanDien}
-                    </td>
                     <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
-                      {r.loaiPhi}
+                      {r.shopPhatHanhTrenSan ?? "-"}
+                    </td>
+                    <td className="px-3 py-3 text-right font-medium text-gray-900 whitespace-nowrap">
+                      {formatCurrency(r.giaTriGiamGiaCtkm)}
+                    </td>
+                    <td className="px-3 py-3 text-right font-medium text-gray-900 whitespace-nowrap">
+                      {formatCurrency(r.doanhThuDonHang)}
+                    </td>
+                    {/* TikTok Fees */}
+                    <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
+                      {formatCurrency(r.phiGiaoDichTyLe5164020)}
                     </td>
                     <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
-                      {formatCurrency(r.soTien)}
+                      {formatCurrency(r.phiHoaHongTraChoTiktok454164020)}
                     </td>
+                    <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
+                      {formatCurrency(r.phiHoaHongTiepThiLienKet150050)}
+                    </td>
+                    <td className="px-3 py-3 text-right text-gray-700 whitespace-nowrap">
+                      {formatCurrency(r.phiDichVuSfp6164020)}
+                    </td>
+                    {/* Common */}
                     <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
-                      {r.maKol ?? "-"}
+                      {r.maCacBenTiepThiLienKet ?? "-"}
                     </td>
                     <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
                       {r.maDonHangHoan ?? "-"}
                     </td>
                     <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
                       {r.sanTmdt ?? "-"}
+                    </td>
+                    <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
+                      {r.cotChoBsMkt1 ?? "-"}
+                    </td>
+                    <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
+                      {r.cotChoBsMkt2 ?? "-"}
+                    </td>
+                    <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
+                      {r.cotChoBsMkt3 ?? "-"}
+                    </td>
+                    <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
+                      {r.cotChoBsMkt4 ?? "-"}
+                    </td>
+                    <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
+                      {r.cotChoBsMkt5 ?? "-"}
+                    </td>
+                    <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
+                      {r.boPhan ?? "-"}
                     </td>
                   </tr>
                 ))
@@ -1249,41 +1442,37 @@ export default function PlatformFeeImportPage() {
         <nav className="-mb-px flex space-x-8">
           <button
             onClick={() => setActiveTab("import")}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === "import"
-                ? "border-blue-500 text-blue-600"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            }`}
+            className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === "import"
+              ? "border-blue-500 text-blue-600"
+              : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
           >
             Import
           </button>
           <button
             onClick={() => setActiveTab("shopee")}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === "shopee"
-                ? "border-blue-500 text-blue-600"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            }`}
+            className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === "shopee"
+              ? "border-blue-500 text-blue-600"
+              : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
           >
             Shopee
           </button>
           <button
             onClick={() => setActiveTab("tiktok")}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === "tiktok"
-                ? "border-blue-500 text-blue-600"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            }`}
+            className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === "tiktok"
+              ? "border-blue-500 text-blue-600"
+              : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
           >
             TikTok
           </button>
           <button
             onClick={() => setActiveTab("lazada")}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === "lazada"
-                ? "border-blue-500 text-blue-600"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            }`}
+            className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === "lazada"
+              ? "border-blue-500 text-blue-600"
+              : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
           >
             Lazada
           </button>
@@ -1310,11 +1499,10 @@ export default function PlatformFeeImportPage() {
                           setResult(null);
                           setError(null);
                         }}
-                        className={`w-full p-4 border-2 rounded-lg transition-all ${
-                          selectedPlatform === platform
-                            ? "border-blue-500 bg-blue-50"
-                            : "border-gray-200 hover:border-gray-300"
-                        }`}
+                        className={`w-full p-4 border-2 rounded-lg transition-all ${selectedPlatform === platform
+                          ? "border-blue-500 bg-blue-50"
+                          : "border-gray-200 hover:border-gray-300"
+                          }`}
                       >
                         <div className="text-left">
                           <div className="font-semibold text-gray-900">
@@ -1455,11 +1643,10 @@ export default function PlatformFeeImportPage() {
             {/* Result Message */}
             {result && (
               <div
-                className={`border px-4 py-3 rounded ${
-                  result.failed && result.failed > 0
-                    ? "bg-yellow-50 border-yellow-200 text-yellow-800"
-                    : "bg-green-50 border-green-200 text-green-800"
-                }`}
+                className={`border px-4 py-3 rounded ${result.failed && result.failed > 0
+                  ? "bg-yellow-50 border-yellow-200 text-yellow-800"
+                  : "bg-green-50 border-green-200 text-green-800"
+                  }`}
               >
                 <div className="font-semibold mb-2">{result.message}</div>
                 <div className="text-sm space-y-1">

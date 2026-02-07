@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { shopeeFeesApi } from "@/lib/api";
+import { shopeeFeesApi, fastApiInvoicesApi } from "@/lib/api";
 import Link from "next/link";
 import { format, subDays } from "date-fns";
 
@@ -73,6 +73,123 @@ export default function PlatformFeesPage() {
   const handlePageChange = (newPage: number) => {
     setPagination((prev) => ({ ...prev, page: newPage }));
   };
+
+  const handleSyncPOCharges = async (item: any) => {
+    if (!item) return;
+
+    // Validation basic
+    if (!item.erpOrderCode) {
+      alert("Đơn hàng chưa có ERP Order Code (dh_so)");
+      return;
+    }
+
+    // Construct Payload
+    const master = {
+      dh_so: item.erpOrderCode,
+      dh_ngay: item.orderCreatedAt ? new Date(item.orderCreatedAt).toISOString() : new Date().toISOString(),
+      dh_dvcs: "TTM", // Hardcoded or generic? User accepted TTM in examples.
+    };
+
+    // Standard Line Mapping for Merge Logic:
+    // Line 1: 164020 - Fixed Fee -> cp01
+    // Line 2: 164020 - Service Fee -> cp01
+    // Line 3: 164020 - Payment Fee -> cp01
+    // Line 4: 150050 - Affiliate -> cp01
+    // Line 5: 164010 - Shipping / Others -> cp01
+
+    const details: any[] = [];
+
+    // Line 1: Fixed
+    if (item.commissionFee) {
+      details.push({
+        dong: 1,
+        ma_cp: "164020",
+        cp01_nt: item.commissionFee, // Lần 1 -> cp01
+        cp02_nt: 0, cp03_nt: 0, cp04_nt: 0, cp05_nt: 0, cp06_nt: 0
+      });
+    }
+
+    // Line 2: Service
+    if (item.serviceFee) {
+      details.push({
+        dong: 2,
+        ma_cp: "164020",
+        cp01_nt: item.serviceFee, // Lần 1 -> cp01
+        cp02_nt: 0, cp03_nt: 0, cp04_nt: 0, cp05_nt: 0, cp06_nt: 0
+      });
+    }
+
+    // Line 3: Payment
+    if (item.paymentFee) {
+      details.push({
+        dong: 3,
+        ma_cp: "164020",
+        cp01_nt: item.paymentFee, // Lần 1 -> cp01
+        cp02_nt: 0, cp03_nt: 0, cp04_nt: 0, cp05_nt: 0, cp06_nt: 0
+      });
+    }
+
+    // Line 4: Affiliate (150050)
+    if (item.affiliateFee) {
+      details.push({
+        dong: 4,
+        ma_cp: "150050",
+        cp01_nt: item.affiliateFee,
+        cp02_nt: 0, cp03_nt: 0, cp04_nt: 0, cp05_nt: 0, cp06_nt: 0
+      });
+    }
+
+    // Line 5: Shipping Fee Saver (164010)
+    // Note: User mentioned cp02 in example, but standard flow uses cp01. 
+    // If merging logic handles it, cp01 should be fine.
+    if (item.shippingFeeSaver) {
+      details.push({
+        dong: 5,
+        ma_cp: "164010",
+        cp01_nt: 0,
+        cp02_nt: item.shippingFeeSaver, // Using cp02 as requested in example
+        cp03_nt: 0, cp04_nt: 0, cp05_nt: 0, cp06_nt: 0
+      });
+    } else if (item.marketingFee) {
+      // If standard marketing fee (164010) exists
+      details.push({
+        dong: 5,
+        ma_cp: "164010",
+        cp01_nt: item.marketingFee,
+        cp02_nt: 0, cp03_nt: 0, cp04_nt: 0, cp05_nt: 0, cp06_nt: 0
+      });
+    }
+
+    if (details.length === 0) {
+      alert("Không có dữ liệu phí (Shopee Fees) để đồng bộ");
+      return;
+    }
+
+    const payload = {
+      master,
+      detail: details
+    };
+
+    if (!confirm(`Bạn có chắc chắn muốn đẩy phí cho đơn ${master.dh_so} sang Fast?`)) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await fastApiInvoicesApi.syncPOCharges(payload);
+      if (res.data?.success || res.status === 200 || res.status === 201) {
+        alert(`Đồng bộ thành công! ${res.data?.message || ""}`);
+      } else {
+        alert(`Đồng bộ thất bại: ${res.data?.message}`);
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert(`Lỗi khi đồng bộ: ${err.message || "Unknown error"}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -213,17 +330,17 @@ export default function PlatformFeesPage() {
                 data.map((item) => (
                   <tr
                     key={item.id}
-                    className="hover:bg-gray-50 transition-colors"
+                    className="hover:bg-gray-50 transition-colors cursor-pointer"
+                    onDoubleClick={() => handleSyncPOCharges(item)}
                   >
                     <td className="px-6 py-4">
                       <span
-                        className={`px-2 py-1 rounded text-xs font-semibold ${
-                          item.brand === "menard"
-                            ? "bg-red-100 text-red-700"
-                            : item.brand === "yaman"
-                              ? "bg-blue-100 text-blue-700"
-                              : "bg-gray-100 text-gray-700"
-                        }`}
+                        className={`px-2 py-1 rounded text-xs font-semibold ${item.brand === "menard"
+                          ? "bg-red-100 text-red-700"
+                          : item.brand === "yaman"
+                            ? "bg-blue-100 text-blue-700"
+                            : "bg-gray-100 text-gray-700"
+                          }`}
                       >
                         {(item.brand || "N/A").toUpperCase()}
                       </span>
@@ -255,9 +372,9 @@ export default function PlatformFeesPage() {
                     <td className="px-6 py-4 text-gray-500">
                       {item.orderCreatedAt
                         ? format(
-                            new Date(item.orderCreatedAt),
-                            "dd/MM/yyyy HH:mm",
-                          )
+                          new Date(item.orderCreatedAt),
+                          "dd/MM/yyyy HH:mm",
+                        )
                         : "-"}
                     </td>
                     <td className="px-6 py-4 text-gray-500">
