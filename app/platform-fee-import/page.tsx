@@ -287,9 +287,9 @@ export default function PlatformFeeImportPage() {
 
     } else if (platform === "tiktok") {
       // Line 1: Transaction (Fixed/Rate?)
-      addDetail(1, "164020", item.phiGiaoDichTyLe5164020);
-      // Line 2: Commission (Service?)
-      addDetail(2, "164020", item.phiHoaHongTraChoTiktok454164020);
+      // addDetail(1, "164020", item.phiGiaoDichTyLe5164020);
+      // // Line 2: Commission (Service?)
+      // addDetail(2, "164020", item.phiHoaHongTraChoTiktok454164020);
       // Line 3: SFP (Payment?) or SFP=Line 4? 
       // Adjusting to fit standard if possible. If SFP is unique, maybe Line 3 for Tiktok?
       // Based on Shopee align: L3 = Payment. Tiktok SFP is separate?
