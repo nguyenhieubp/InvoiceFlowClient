@@ -871,6 +871,25 @@ export const platformFeeImportApi = {
   },
 };
 
+// Fast PO Audit Logs API
+export const fastPOApi = {
+  getAll: (params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    dateFrom?: string;
+    dateTo?: string;
+  }) => {
+    return api.get("/fast-integration/audit", { params });
+  },
+  getAudits: (dh_so?: string) => {
+    return api.get("/fast-integration/audit", { params: { dh_so } });
+  },
+  retry: (id: number) => {
+    return api.post(`/fast-integration/retry/${id}`);
+  },
+};
+
 // Fast API Invoices API (Bảng kê hóa đơn)
 
 export const fastApiInvoicesApi = {
@@ -886,6 +905,9 @@ export const fastApiInvoicesApi = {
     endDate?: string;
   }) => {
     return api.get("/fast-api-invoices", { params });
+  },
+  syncPOCharges: (data: any) => {
+    return api.post("/fast-integration/po-charges", data);
   },
   exportExcel: (params?: {
     status?: number;
@@ -1478,9 +1500,7 @@ export const fastApiInvoicesApi = {
         `/fast-api-invoices/doc-code/${docCode}/ma-dvcs/${maDvcs}/ma-kh/${maKh}/ten-kh/${tenKh}/status/${status}/start-date/${startDate}/end-date/${endDate}/page/${page}/limit/${limit}/search/${search}/sort-by/${sortBy}/sort-order/${sortOrder}/fields/${fields}/expand/${expand}/select/${select}/filter/${filter}/group-by/${groupBy}/aggregate/${aggregate}/count/${count}/distinct/${distinct}/format/${format}/callback/${callback}/skip/${skip}/top/${top}/inlinecount/${inlinecount}/order-by/${orderBy}/custom/${custom}/details`,
       );
     },
-  syncPOCharges: (data: any) => {
-    return api.post("/fast-integration/po-charges", data);
-  },
+
 };
 
 
