@@ -10,6 +10,7 @@ interface PlatformFeeMap {
   rawFeeName: string;
   normalizedFeeName?: string;
   internalCode: string;
+  systemCode?: string | null;
   accountCode: string;
   description?: string | null;
   active?: boolean;
@@ -23,6 +24,7 @@ const FIELD_LABELS: Record<keyof PlatformFeeMap, string> = {
   rawFeeName: "Tên phí gốc",
   normalizedFeeName: "Tên phí đã chuẩn hóa",
   internalCode: "Mã nội bộ",
+  systemCode: "Mã hệ thống",
   accountCode: "Mã tài khoản",
   description: "Mô tả",
   active: "Trạng thái",
@@ -32,9 +34,9 @@ const FIELD_LABELS: Record<keyof PlatformFeeMap, string> = {
 
 const MAIN_COLUMNS: (keyof PlatformFeeMap)[] = [
   "platform",
-  "rawFeeName",
   "accountCode",
   "internalCode",
+  "systemCode",
   "active",
 ];
 
@@ -44,8 +46,15 @@ export default function PlatformFeeMapPage() {
   const [feeMaps, setFeeMaps] = useState<PlatformFeeMap[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeSearchQuery, setActiveSearchQuery] = useState("");
+  // State for active filters (applied on search)
+  const [activePlatform, setActivePlatform] = useState<string>("");
+  const [activeActive, setActiveActive] = useState<string>("");
+
+  // State for UI inputs (temporary)
   const [selectedPlatform, setSelectedPlatform] = useState<string>("");
   const [selectedActive, setSelectedActive] = useState<string>("");
+
   const [selectedColumns, setSelectedColumns] = useState<
     (keyof PlatformFeeMap)[]
   >([...MAIN_COLUMNS]);
@@ -85,26 +94,15 @@ export default function PlatformFeeMapPage() {
     return () => clearTimeout(timer);
   }, [toast]);
 
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearchQuery(searchQuery);
-      setPagination((prev) => ({ ...prev, page: 1 }));
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
-
   useEffect(() => {
     loadFeeMaps();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     pagination.page,
     pagination.limit,
-    debouncedSearchQuery,
-    selectedPlatform,
-    selectedActive,
+    activeSearchQuery,
+    activePlatform, // Trigger on active platform change
+    activeActive,   // Trigger on active status change
   ]);
 
   const loadFeeMaps = async () => {
@@ -113,14 +111,14 @@ export default function PlatformFeeMapPage() {
       const response = await platformFeeImportApi.getFeeMaps({
         page: pagination.page,
         limit: pagination.limit,
-        search: debouncedSearchQuery || undefined,
-        platform: selectedPlatform || undefined,
+        search: activeSearchQuery || undefined,
+        platform: activePlatform || undefined, // Use active platform
         active:
-          selectedActive === "true"
+          activeActive === "true"
             ? true
-            : selectedActive === "false"
+            : activeActive === "false"
               ? false
-              : undefined,
+              : undefined, // Use active status
       });
       const data = response.data.data || response.data || [];
       setFeeMaps(data);
@@ -135,11 +133,18 @@ export default function PlatformFeeMapPage() {
       showToast(
         "error",
         "Lỗi khi tải danh sách map phí: " +
-          (error.response?.data?.message || error.message),
+        (error.response?.data?.message || error.message),
       );
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSearch = () => {
+    setActiveSearchQuery(searchQuery);
+    setActivePlatform(selectedPlatform);
+    setActiveActive(selectedActive);
+    setPagination((prev) => ({ ...prev, page: 1 }));
   };
 
   const toggleColumn = (field: keyof PlatformFeeMap) => {
@@ -219,6 +224,7 @@ export default function PlatformFeeMapPage() {
       platform: feeMap.platform,
       rawFeeName: feeMap.rawFeeName,
       internalCode: feeMap.internalCode,
+      systemCode: feeMap.systemCode,
       accountCode: feeMap.accountCode,
       description: feeMap.description || "",
       active: feeMap.active !== undefined ? feeMap.active : true,
@@ -247,6 +253,7 @@ export default function PlatformFeeMapPage() {
       platform?: string;
       rawFeeName?: string;
       internalCode?: string;
+      systemCode?: string | null;
       accountCode?: string;
       description?: string;
       active?: boolean;
@@ -254,6 +261,7 @@ export default function PlatformFeeMapPage() {
       platform: formData.platform,
       rawFeeName: formData.rawFeeName,
       internalCode: formData.internalCode,
+      systemCode: formData.systemCode || null,
       accountCode: formData.accountCode,
       description:
         formData.description === null
@@ -334,13 +342,26 @@ export default function PlatformFeeMapPage() {
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Tìm kiếm
           </label>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Tìm theo tên phí, mã nội bộ, mã tài khoản..."
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          />
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  handleSearch();
+                }
+              }}
+              placeholder="Tìm theo tên phí, mã nội bộ, mã tài khoản..."
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+            <button
+              onClick={handleSearch}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Tìm
+            </button>
+          </div>
         </div>
         <div className="w-48">
           <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -582,6 +603,19 @@ export default function PlatformFeeMapPage() {
                   }
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Mã hệ thống
+                </label>
+                <input
+                  type="text"
+                  value={formData.systemCode || ""}
+                  onChange={(e) =>
+                    setFormData({ ...formData, systemCode: e.target.value })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
               <div>

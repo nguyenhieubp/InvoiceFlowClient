@@ -8,6 +8,17 @@ type Platform = "shopee" | "tiktok" | "lazada";
 
 type TabType = "import" | "shopee" | "tiktok" | "lazada";
 
+interface PlatformFeeMap {
+  id: string;
+  platform: string;
+  rawFeeName: string;
+  normalizedFeeName: string;
+  internalCode: string;
+  systemCode: string | null;
+  accountCode: string;
+  active: boolean;
+}
+
 export default function PlatformFeeImportPage() {
   const [activeTab, setActiveTab] = useState<TabType>("import");
   const [selectedPlatform, setSelectedPlatform] = useState<Platform | "">("");
@@ -77,6 +88,44 @@ export default function PlatformFeeImportPage() {
     startDate: "",
     endDate: "",
   });
+
+  const [feeMaps, setFeeMaps] = useState<PlatformFeeMap[]>([]);
+
+  // Fetch fee maps configuration
+  useEffect(() => {
+    const fetchFeeMaps = async () => {
+      try {
+        const response = await platformFeeImportApi.getFeeMaps({
+          limit: 1000,
+          active: true,
+        });
+        if (response.data && response.data.data) {
+          setFeeMaps(response.data.data);
+        }
+      } catch (error) {
+        console.error("Error fetching fee maps:", error);
+      }
+    };
+    fetchFeeMaps();
+  }, []);
+
+  const getSystemCode = (
+    platform: string,
+    rawName: string,
+    defaultCode: string,
+  ): string => {
+    if (!rawName) return defaultCode;
+    const map = feeMaps.find(
+      (m) =>
+        m.platform === platform &&
+        m.rawFeeName.toLowerCase().trim() === rawName.toLowerCase().trim(),
+    );
+
+    if (map && map.systemCode) {
+      return map.systemCode;
+    }
+    return defaultCode;
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -234,10 +283,12 @@ export default function PlatformFeeImportPage() {
     // Construct Payload
     const master = {
       dh_so: item.maSan || "",
-      // Format date to ISO string if exists, else current date or empty? 
+      // Format date to ISO string if exists, else current date or empty?
       // User example: "2026-01-15T06:36:04.292Z"
-      dh_ngay: item.ngayDoiSoat ? new Date(item.ngayDoiSoat).toISOString() : new Date().toISOString(),
-      dh_dvcs: item.boPhan || "TTM", // Default to TTM if empty as per user example? Or just use boPhan.
+      dh_ngay: item.ngayDoiSoat
+        ? new Date(item.ngayDoiSoat).toISOString()
+        : new Date().toISOString(),
+      dh_dvcs: item.boPhan || "TTM", // Default to TTM if empty as per user example
     };
 
     const details: any[] = [];
@@ -250,7 +301,10 @@ export default function PlatformFeeImportPage() {
           ma_cp: code,
           cp01_nt: 0,
           cp02_nt: value, // Lần 2 -> cp02
-          cp03_nt: 0, cp04_nt: 0, cp05_nt: 0, cp06_nt: 0
+          cp03_nt: 0,
+          cp04_nt: 0,
+          cp05_nt: 0,
+          cp06_nt: 0,
         });
       }
     };
@@ -262,68 +316,104 @@ export default function PlatformFeeImportPage() {
       const serviceFee = Number(item.phiDichVu6MaPhi164020 || 0);
       const paymentFee = Number(item.phiThanhToan5MaPhi164020 || 0);
       const affiliateFee = Number(item.phiHoaHongTiepThiLienKet21150050 || 0);
-      const shippingFeeSaver = Number(item.chiPhiDichVuShippingFeeSaver164010 || 0);
+      const shippingFeeSaver = Number(
+        item.chiPhiDichVuShippingFeeSaver164010 || 0,
+      );
       const mktShippingFee = Number(item.phiPiShipDoMktDangKy164010 || 0);
 
       // Line 1: Fixed
-      addDetail(1, "164020", fixedFee);
+      const fixedCode = getSystemCode(
+        "shopee",
+        "Phí cố định 6.05% Mã phí 164020",
+        "164020",
+      );
+      addDetail(1, fixedCode, fixedFee);
+
       // Line 2: Service
-      addDetail(2, "164020", serviceFee);
+      const serviceCode = getSystemCode(
+        "shopee",
+        "Phí Dịch Vụ 6% Mã phí 164020",
+        "164020",
+      );
+      addDetail(2, serviceCode, serviceFee);
+
       // Line 3: Payment
-      addDetail(3, "164020", paymentFee);
+      const paymentCode = getSystemCode(
+        "shopee",
+        "Phí thanh toán 5% Mã phí 164020",
+        "164020",
+      );
+      addDetail(3, paymentCode, paymentFee);
 
       // Line 4: Affiliate
-      addDetail(4, "150050", affiliateFee);
+      const affiliateCode = getSystemCode(
+        "shopee",
+        "Phí hoa hồng Tiếp thị liên kết 21% 150050",
+        "150050",
+      );
+      addDetail(4, affiliateCode, affiliateFee);
 
       // Line 5: Shipping Fee Saver (164010)
       if (shippingFeeSaver !== 0) {
-        addDetail(5, "164010", shippingFeeSaver);
+        const saverCode = getSystemCode(
+          "shopee",
+          "Chi phí dịch vụ Shipping Fee Saver 164010",
+          "164010",
+        );
+        addDetail(5, saverCode, shippingFeeSaver);
       }
 
       // Line 6: Pi Ship (164010)
       if (mktShippingFee !== 0) {
-        addDetail(6, "164010", mktShippingFee);
+        const piCode = getSystemCode(
+          "shopee",
+          "Phí Pi Ship ( Do MKT đăng ký) 164010",
+          "164010",
+        );
+        addDetail(6, piCode, mktShippingFee);
       }
-
     } else if (platform === "tiktok") {
       // Line 1: Transaction (Fixed/Rate?)
-      // addDetail(1, "164020", item.phiGiaoDichTyLe5164020);
-      // // Line 2: Commission (Service?)
-      // addDetail(2, "164020", item.phiHoaHongTraChoTiktok454164020);
-      // Line 3: SFP (Payment?) or SFP=Line 4? 
-      // Adjusting to fit standard if possible. If SFP is unique, maybe Line 3 for Tiktok?
-      // Based on Shopee align: L3 = Payment. Tiktok SFP is separate?
-      // Let's use Line 3 for SFP for now to map somewhere. 
-      // Or Line 6?
-      // User didn't specify strict Tiktok alignment, but "Làm tương tự".
-      // Let's map SFP to Line 3 (slot shared with Payment) or Line 2/1 if appropriate.
-      // Tiktok Transaction Fee -> Line 3 (Payment)? 
-      // Tiktok Commission -> Line 1/2?
-      // Let's just use: 
-      // 1. Transaction -> Line 3 (Payment equivalent)
-      // 2. Commission -> Line 2 (Service equivalent)
-      // 3. SFP -> Line 1 (Fixed equivalent??) or Line 5?
-      // To correspond to Shopee:
-      // Shopee Fixed -> Line 1
-      // Shopee Service -> Line 2
-      // Shopee Payment -> Line 3
+      const transactionCode = getSystemCode(
+        "tiktok",
+        "Phí giao dịch Tỷ lệ 5% 164020",
+        "164020",
+      );
+      addDetail(1, transactionCode, item.phiGiaoDichTyLe5164020);
 
-      // Tiktok Transaction ~ Payment -> Line 3
-      // Tiktok Commission ~ Service -> Line 2
-      // Tiktok SFP ~ Service -> ....
-      // For now I will blindly map 1, 2, 3 as per variable order to keep it simple unless specified.
+      // Line 2: Commission (Service?)
+      const commissionCode = getSystemCode(
+        "tiktok",
+        "Phí hoa hồng trả cho Tiktok 4.54% 164020",
+        "164020",
+      );
+      addDetail(2, commissionCode, item.phiHoaHongTraChoTiktok454164020);
 
-      addDetail(1, "164020", item.phiGiaoDichTyLe5164020); // Transaction
-      addDetail(2, "164020", item.phiHoaHongTraChoTiktok454164020); // Commission
-      addDetail(3, "164020", item.phiDichVuSfp6164020); // SFP
+      // Line 3: SFP
+      const sfpCode = getSystemCode(
+        "tiktok",
+        "Phí dịch vụ SFP 6% 164020",
+        "164020",
+      );
+      addDetail(3, sfpCode, item.phiDichVuSfp6164020);
 
       // Line 4: Affiliate
-      addDetail(4, "150050", item.phiHoaHongTiepThiLienKet150050);
-
+      const affCode = getSystemCode(
+        "tiktok",
+        "Phí hoa hồng Tiếp thị liên kết 150050",
+        "150050",
+      );
+      addDetail(4, affCode, item.phiHoaHongTiepThiLienKet150050);
     } else if (platform === "lazada") {
       if (item.maPhiNhanDienHachToan) {
+        const rawName = item.tenPhiDoanhThu;
+        const systemCode = getSystemCode(
+          "lazada",
+          rawName,
+          item.maPhiNhanDienHachToan || "164020",
+        );
         const value = item.soTien || item.phi1 || 0;
-        addDetail(1, item.maPhiNhanDienHachToan, value);
+        addDetail(1, systemCode, value);
       }
     }
 
@@ -334,12 +424,16 @@ export default function PlatformFeeImportPage() {
 
     const payload = {
       master,
-      detail: details
+      detail: details,
     };
 
-    if (!confirm(`Bạn có chắc chắn muốn đẩy phí cho đơn ${master.dh_so} sang Fast?`)) {
-      return;
-    }
+    // if (
+    //   !confirm(
+    //     `Bạn có chắc chắn muốn đẩy phí cho đơn ${master.dh_so} sang Fast?`
+    //   )
+    // ) {
+    //   return;
+    // }
 
     setLoading(true);
     try {

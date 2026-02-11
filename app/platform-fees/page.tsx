@@ -1,10 +1,20 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { shopeeFeesApi, fastApiInvoicesApi } from "@/lib/api";
+import { shopeeFeesApi, fastApiInvoicesApi, platformFeeImportApi } from "@/lib/api";
 import Link from "next/link";
 import { format, subDays } from "date-fns";
 
+interface PlatformFeeMap {
+  id: string;
+  platform: string;
+  rawFeeName: string;
+  normalizedFeeName: string;
+  internalCode: string;
+  systemCode: string | null;
+  accountCode: string;
+  active: boolean;
+}
 export default function PlatformFeesPage() {
   const formatCurrency = (value: number | string | undefined) => {
     if (value === undefined || value === null) return "-";
@@ -31,6 +41,44 @@ export default function PlatformFeesPage() {
     startDate: format(subDays(new Date(), 30), "yyyy-MM-dd"),
     endDate: format(new Date(), "yyyy-MM-dd"),
   });
+
+  const [feeMaps, setFeeMaps] = useState<PlatformFeeMap[]>([]);
+
+  // Fetch fee maps configuration
+  useEffect(() => {
+    const fetchFeeMaps = async () => {
+      try {
+        const response = await platformFeeImportApi.getFeeMaps({
+          limit: 1000,
+          active: true,
+        });
+        if (response.data && response.data.data) {
+          setFeeMaps(response.data.data);
+        }
+      } catch (error) {
+        console.error("Error fetching fee maps:", error);
+      }
+    };
+    fetchFeeMaps();
+  }, []);
+
+  const getSystemCode = (
+    platform: string,
+    rawName: string,
+    defaultCode: string,
+  ): string => {
+    if (!rawName) return defaultCode;
+    const map = feeMaps.find(
+      (m) =>
+        m.platform === platform &&
+        m.rawFeeName.toLowerCase().trim() === rawName.toLowerCase().trim(),
+    );
+
+    if (map && map.systemCode) {
+      return map.systemCode;
+    }
+    return defaultCode;
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -86,77 +134,125 @@ export default function PlatformFeesPage() {
     // Construct Payload
     const master = {
       dh_so: item.erpOrderCode,
-      dh_ngay: item.orderCreatedAt ? new Date(item.orderCreatedAt).toISOString() : new Date().toISOString(),
+      dh_ngay: item.orderCreatedAt
+        ? new Date(item.orderCreatedAt).toISOString()
+        : new Date().toISOString(),
       dh_dvcs: "TTM", // Hardcoded or generic? User accepted TTM in examples.
     };
-
-    // Standard Line Mapping for Merge Logic:
-    // Line 1: 164020 - Fixed Fee -> cp01
-    // Line 2: 164020 - Service Fee -> cp01
-    // Line 3: 164020 - Payment Fee -> cp01
-    // Line 4: 150050 - Affiliate -> cp01
-    // Line 5: 164010 - Shipping / Others -> cp01
 
     const details: any[] = [];
 
     // Line 1: Fixed
     if (item.commissionFee) {
+      const code = getSystemCode(
+        "shopee",
+        "Phí cố định 6.05% Mã phí 164020",
+        "164020",
+      );
       details.push({
         dong: 1,
-        ma_cp: "164020",
-        cp01_nt: item.commissionFee, // Lần 1 -> cp01
-        cp02_nt: 0, cp03_nt: 0, cp04_nt: 0, cp05_nt: 0, cp06_nt: 0
+        ma_cp: code,
+        cp01_nt: Number(item.commissionFee), // Lần 1 -> cp01
+        cp02_nt: 0,
+        cp03_nt: 0,
+        cp04_nt: 0,
+        cp05_nt: 0,
+        cp06_nt: 0,
       });
     }
 
     // Line 2: Service
     if (item.serviceFee) {
+      const code = getSystemCode(
+        "shopee",
+        "Phí Dịch Vụ 6% Mã phí 164020",
+        "164020",
+      );
       details.push({
         dong: 2,
-        ma_cp: "164020",
-        cp01_nt: item.serviceFee, // Lần 1 -> cp01
-        cp02_nt: 0, cp03_nt: 0, cp04_nt: 0, cp05_nt: 0, cp06_nt: 0
+        ma_cp: code,
+        cp01_nt: Number(item.serviceFee), // Lần 1 -> cp01
+        cp02_nt: 0,
+        cp03_nt: 0,
+        cp04_nt: 0,
+        cp05_nt: 0,
+        cp06_nt: 0,
       });
     }
 
     // Line 3: Payment
     if (item.paymentFee) {
+      const code = getSystemCode(
+        "shopee",
+        "Phí thanh toán 5% Mã phí 164020",
+        "164020",
+      );
       details.push({
         dong: 3,
-        ma_cp: "164020",
-        cp01_nt: item.paymentFee, // Lần 1 -> cp01
-        cp02_nt: 0, cp03_nt: 0, cp04_nt: 0, cp05_nt: 0, cp06_nt: 0
+        ma_cp: code,
+        cp01_nt: Number(item.paymentFee), // Lần 1 -> cp01
+        cp02_nt: 0,
+        cp03_nt: 0,
+        cp04_nt: 0,
+        cp05_nt: 0,
+        cp06_nt: 0,
       });
     }
 
     // Line 4: Affiliate (150050)
     if (item.affiliateFee) {
+      const code = getSystemCode(
+        "shopee",
+        "Phí hoa hồng Tiếp thị liên kết 21% 150050",
+        "150050",
+      );
       details.push({
         dong: 4,
-        ma_cp: "150050",
-        cp01_nt: item.affiliateFee,
-        cp02_nt: 0, cp03_nt: 0, cp04_nt: 0, cp05_nt: 0, cp06_nt: 0
+        ma_cp: code,
+        cp01_nt: Number(item.affiliateFee),
+        cp02_nt: 0,
+        cp03_nt: 0,
+        cp04_nt: 0,
+        cp05_nt: 0,
+        cp06_nt: 0,
       });
     }
 
     // Line 5: Shipping Fee Saver (164010)
-    // Note: User mentioned cp02 in example, but standard flow uses cp01. 
-    // If merging logic handles it, cp01 should be fine.
     if (item.shippingFeeSaver) {
+      const code = getSystemCode(
+        "shopee",
+        "Chi phí dịch vụ Shipping Fee Saver 164010",
+        "164010",
+      );
       details.push({
         dong: 5,
-        ma_cp: "164010",
+        ma_cp: code,
         cp01_nt: 0,
-        cp02_nt: item.shippingFeeSaver, // Using cp02 as requested in example
-        cp03_nt: 0, cp04_nt: 0, cp05_nt: 0, cp06_nt: 0
+        cp02_nt: Number(item.shippingFeeSaver), // Using cp02 as requested in example
+        cp03_nt: 0,
+        cp04_nt: 0,
+        cp05_nt: 0,
+        cp06_nt: 0,
       });
     } else if (item.marketingFee) {
       // If standard marketing fee (164010) exists
+      // Assuming mapping to "Phí Pi Ship..." but not sure if standard "Marketing Fee" maps to that.
+      // But let's assume it maps to 164010 generic if not found.
+      const code = getSystemCode(
+        "shopee",
+        "Phí Pi Ship ( Do MKT đăng ký) 164010",
+        "164010",
+      );
       details.push({
         dong: 5,
-        ma_cp: "164010",
-        cp01_nt: item.marketingFee,
-        cp02_nt: 0, cp03_nt: 0, cp04_nt: 0, cp05_nt: 0, cp06_nt: 0
+        ma_cp: code,
+        cp01_nt: Number(item.marketingFee),
+        cp02_nt: 0,
+        cp03_nt: 0,
+        cp04_nt: 0,
+        cp05_nt: 0,
+        cp06_nt: 0,
       });
     }
 
@@ -167,12 +263,16 @@ export default function PlatformFeesPage() {
 
     const payload = {
       master,
-      detail: details
+      detail: details,
     };
 
-    if (!confirm(`Bạn có chắc chắn muốn đẩy phí cho đơn ${master.dh_so} sang Fast?`)) {
-      return;
-    }
+    // if (
+    //   !confirm(
+    //     `Bạn có chắc chắn muốn đẩy phí cho đơn ${master.dh_so} sang Fast?`
+    //   )
+    // ) {
+    //   return;
+    // }
 
     setLoading(true);
     try {
