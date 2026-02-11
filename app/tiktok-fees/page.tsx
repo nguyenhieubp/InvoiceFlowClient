@@ -1,8 +1,21 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { tiktokFeesApi } from "@/lib/api";
+import { tiktokFeesApi, fastApiInvoicesApi, platformFeeImportApi } from "@/lib/api";
 import { format, subDays } from "date-fns";
+import { TIKTOK_FEE_CONFIG } from "@/lib/fee-config";
+import { Toast } from "@/components/Toast";
+
+interface PlatformFeeMap {
+  id: string;
+  platform: string;
+  rawFeeName: string;
+  normalizedFeeName: string;
+  internalCode: string;
+  systemCode: string | null;
+  accountCode: string;
+  active: boolean;
+}
 
 export default function TikTokFeesPage() {
   const formatCurrency = (value: number | string | undefined) => {
@@ -32,6 +45,51 @@ export default function TikTokFeesPage() {
     startDate: format(subDays(new Date(), 30), "yyyy-MM-dd"),
     endDate: format(new Date(), "yyyy-MM-dd"),
   });
+
+  const [feeMaps, setFeeMaps] = useState<PlatformFeeMap[]>([]);
+  const [toast, setToast] = useState<{
+    type: "success" | "error" | "info";
+    message: string;
+  } | null>(null);
+  const showToast = (type: "success" | "error" | "info", message: string) => {
+    setToast({ type, message });
+  };
+
+  // Fetch fee maps configuration
+  useEffect(() => {
+    const fetchFeeMaps = async () => {
+      try {
+        const response = await platformFeeImportApi.getFeeMaps({
+          limit: 1000,
+          active: true,
+        });
+        if (response.data && response.data.data) {
+          setFeeMaps(response.data.data);
+        }
+      } catch (error) {
+        console.error("Error fetching fee maps:", error);
+      }
+    };
+    fetchFeeMaps();
+  }, []);
+
+  const getSystemCode = (
+    platform: string,
+    rawName: string,
+    defaultCode: string,
+  ): string => {
+    if (!rawName) return defaultCode;
+    const map = feeMaps.find(
+      (m) =>
+        m.platform === platform &&
+        m.rawFeeName.toLowerCase().trim() === rawName.toLowerCase().trim(),
+    );
+
+    if (map && map.systemCode) {
+      return map.systemCode;
+    }
+    return defaultCode;
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -76,8 +134,109 @@ export default function TikTokFeesPage() {
     setPagination((prev) => ({ ...prev, page: newPage }));
   };
 
+  const handleSyncPOCharges = async (item: any) => {
+    console.log("handleSyncPOCharges", item);
+    if (!item) return;
+
+    if (!item.erpOrderCode) {
+      showToast("error", "Đơn hàng chưa có ERP Order Code (dh_so)");
+      return;
+    }
+
+    const master = {
+      dh_so: item.erpOrderCode,
+      dh_ngay: item.orderCreatedAt
+        ? new Date(item.orderCreatedAt).toISOString()
+        : new Date().toISOString(),
+      dh_dvcs: "TTM",
+    };
+
+    const details: any[] = [];
+
+    TIKTOK_FEE_CONFIG.forEach((rule) => {
+      const value = Number(item[rule.field]);
+      if (value && value !== 0) {
+        const code = getSystemCode(
+          "tiktok",
+          rule.rawName,
+          rule.defaultCode
+        );
+
+        const detail = {
+          dong: rule.row,
+          ma_cp: code,
+          cp01_nt: 0,
+          cp02_nt: 0,
+          cp03_nt: 0,
+          cp04_nt: 0,
+          cp05_nt: 0,
+          cp06_nt: 0,
+        };
+
+        if (rule.targetCol === "cp02_nt") {
+          detail.cp02_nt = value;
+        } else {
+          detail.cp01_nt = value;
+        }
+        details.push(detail);
+      }
+    });
+
+    if (details.length === 0) {
+      showToast("info", "Không có dữ liệu phí (TikTok Fees) để đồng bộ");
+      return;
+    }
+
+    const payload = {
+      master,
+      detail: details,
+    };
+
+    setLoading(true);
+    try {
+      const res = await fastApiInvoicesApi.syncPOCharges(payload);
+      if (res.data?.success || res.status === 200 || res.status === 201) {
+        showToast("success", `Đồng bộ thành công! ${res.data?.message || ""}`);
+      } else {
+        let errorMessage = res.data?.message || "Đồng bộ thất bại";
+        if (Array.isArray(res.data) && res.data.length > 0) {
+          errorMessage = res.data[0].message || errorMessage;
+        } else if (res.data?.result && Array.isArray(res.data.result) && res.data.result.length > 0) {
+          errorMessage = res.data.result[0].message || errorMessage;
+        }
+        showToast("error", errorMessage);
+      }
+    } catch (err: any) {
+      console.error(err);
+      let errorMessage = err.message || "Unknown error";
+      if (err.response?.data) {
+        const data = err.response.data;
+        if (Array.isArray(data) && data.length > 0) {
+          errorMessage = data[0].message || errorMessage;
+        } else if (data.message) {
+          errorMessage = data.message;
+        }
+      }
+      showToast("error", `Lỗi khi đồng bộ: ${errorMessage}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
   return (
     <div className="container mx-auto px-4 py-8">
+      {/* Toast notifications */}
+      <div className="fixed top-4 right-4 z-50 space-y-3">
+        {toast && (
+          <Toast
+            type={toast.type}
+            message={toast.message}
+            onClose={() => setToast(null)}
+          />
+        )}
+      </div>
+
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
@@ -222,15 +381,16 @@ export default function TikTokFeesPage() {
                 data.map((item) => (
                   <tr
                     key={item.id}
-                    className="hover:bg-gray-50 transition-colors"
+                    className="hover:bg-gray-50 transition-colors cursor-pointer"
+                    onDoubleClick={() => handleSyncPOCharges(item)}
                   >
                     <td className="px-6 py-4">
                       <span
                         className={`px-2 py-1 rounded text-xs font-semibold ${item.brand === "menard"
-                            ? "bg-red-100 text-red-700"
-                            : item.brand === "yaman"
-                              ? "bg-blue-100 text-blue-700"
-                              : "bg-gray-100 text-gray-700"
+                          ? "bg-red-100 text-red-700"
+                          : item.brand === "yaman"
+                            ? "bg-blue-100 text-blue-700"
+                            : "bg-gray-100 text-gray-700"
                           }`}
                       >
                         {(item.brand || "N/A").toUpperCase()}

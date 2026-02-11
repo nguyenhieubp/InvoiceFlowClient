@@ -108,6 +108,32 @@ export const TIKTOK_IMPORT_FEE_CONFIG: FeeMappingRule[] = [
     {
         field: "phiHoaHongTiepThiLienKet150050",
         rawName: "Phí hoa hồng Tiếp thị liên kết 150050",
+        defaultCode: "164020",
+        row: 4,
+    },
+];
+export const TIKTOK_FEE_CONFIG: FeeMappingRule[] = [
+    {
+        field: "subTotal",
+        rawName: "Phí hoa hồng trả cho Tiktok 4.54% 164020",
+        defaultCode: "164020",
+        row: 1,
+    },
+    {
+        field: "totalAmount",
+        rawName: "Phí giao dịch Tỷ lệ 5% 164020",
+        defaultCode: "164020",
+        row: 2,
+    },
+    {
+        field: "sellerDiscount",
+        rawName: "Phí dịch vụ SFP 6% 164020",
+        defaultCode: "164020",
+        row: 3,
+    },
+    {
+        field: "affiliateCommission",
+        rawName: "Phí hoa hồng Tiếp thị liên kết 150050",
         defaultCode: "150050",
         row: 4,
     },
