@@ -3,6 +3,11 @@
 import { useState, useEffect } from "react";
 import { platformFeeImportApi, fastApiInvoicesApi } from "@/lib/api";
 import { format } from "date-fns";
+import {
+  SHOPEE_IMPORT_FEE_CONFIG,
+  TIKTOK_IMPORT_FEE_CONFIG,
+} from "@/lib/fee-config";
+import { Toast } from "@/components/Toast";
 
 type Platform = "shopee" | "tiktok" | "lazada";
 
@@ -90,6 +95,14 @@ export default function PlatformFeeImportPage() {
   });
 
   const [feeMaps, setFeeMaps] = useState<PlatformFeeMap[]>([]);
+  const [toast, setToast] = useState<{
+    type: "success" | "error" | "info";
+    message: string;
+  } | null>(null);
+
+  const showToast = (type: "success" | "error" | "info", message: string) => {
+    setToast({ type, message });
+  };
 
   // Fetch fee maps configuration
   useEffect(() => {
@@ -193,13 +206,15 @@ export default function PlatformFeeImportPage() {
   };
 
   const handleDownloadTemplate = async (platform: Platform) => {
+    let url = "";
+    let link: HTMLAnchorElement | null = null;
     try {
       const response = await platformFeeImportApi.downloadTemplate(platform);
       const blob = new Blob([response.data], {
         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
+      url = window.URL.createObjectURL(blob);
+      link = document.createElement("a");
       link.href = url;
       link.download = `Mau_Import_Phi_San_${platform.toUpperCase()}.xlsx`;
       document.body.appendChild(link);
@@ -207,7 +222,16 @@ export default function PlatformFeeImportPage() {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
     } catch (err: any) {
-      alert("Lỗi khi tải file mẫu: " + (err.message || "Unknown error"));
+      if (link && document.body.contains(link)) {
+        document.body.removeChild(link);
+      }
+      if (url) {
+        window.URL.revokeObjectURL(url);
+      }
+      showToast(
+        "error",
+        "Lỗi khi tải file mẫu: " + (err.message || "Unknown error"),
+      );
     }
   };
 
@@ -312,98 +336,35 @@ export default function PlatformFeeImportPage() {
     if (platform === "shopee") {
       console.log("============= ", item);
 
-      const fixedFee = Number(item.phiCoDinh605MaPhi164020 || 0);
-      const serviceFee = Number(item.phiDichVu6MaPhi164020 || 0);
-      const paymentFee = Number(item.phiThanhToan5MaPhi164020 || 0);
-      const affiliateFee = Number(item.phiHoaHongTiepThiLienKet21150050 || 0);
-      const shippingFeeSaver = Number(
-        item.chiPhiDichVuShippingFeeSaver164010 || 0,
-      );
-      const mktShippingFee = Number(item.phiPiShipDoMktDangKy164010 || 0);
+      console.log("============= ", item);
 
-      // Line 1: Fixed
-      const fixedCode = getSystemCode(
-        "shopee",
-        "Phí cố định 6.05% Mã phí 164020",
-        "164020",
-      );
-      addDetail(1, fixedCode, fixedFee);
-
-      // Line 2: Service
-      const serviceCode = getSystemCode(
-        "shopee",
-        "Phí Dịch Vụ 6% Mã phí 164020",
-        "164020",
-      );
-      addDetail(2, serviceCode, serviceFee);
-
-      // Line 3: Payment
-      const paymentCode = getSystemCode(
-        "shopee",
-        "Phí thanh toán 5% Mã phí 164020",
-        "164020",
-      );
-      addDetail(3, paymentCode, paymentFee);
-
-      // Line 4: Affiliate
-      const affiliateCode = getSystemCode(
-        "shopee",
-        "Phí hoa hồng Tiếp thị liên kết 21% 150050",
-        "150050",
-      );
-      addDetail(4, affiliateCode, affiliateFee);
-
-      // Line 5: Shipping Fee Saver (164010)
-      if (shippingFeeSaver !== 0) {
-        const saverCode = getSystemCode(
-          "shopee",
-          "Chi phí dịch vụ Shipping Fee Saver 164010",
-          "164010",
-        );
-        addDetail(5, saverCode, shippingFeeSaver);
-      }
-
-      // Line 6: Pi Ship (164010)
-      if (mktShippingFee !== 0) {
-        const piCode = getSystemCode(
-          "shopee",
-          "Phí Pi Ship ( Do MKT đăng ký) 164010",
-          "164010",
-        );
-        addDetail(6, piCode, mktShippingFee);
-      }
+      SHOPEE_IMPORT_FEE_CONFIG.forEach((rule) => {
+        const value = Number(item[rule.field]);
+        if (value && value !== 0) {
+          const code = getSystemCode("shopee", rule.rawName, rule.defaultCode);
+          if (rule.targetCol === "cp02_nt") {
+            // Special case for cp02 (e.g. Shipping Fee Saver)
+            details.push({
+              dong: rule.row,
+              ma_cp: code,
+              cp01_nt: 0,
+              cp02_nt: value,
+              cp03_nt: 0, cp04_nt: 0, cp05_nt: 0, cp06_nt: 0
+            });
+          } else {
+            addDetail(rule.row, code, value);
+          }
+        }
+      });
     } else if (platform === "tiktok") {
-      // Line 1: Transaction (Fixed/Rate?)
-      const transactionCode = getSystemCode(
-        "tiktok",
-        "Phí giao dịch Tỷ lệ 5% 164020",
-        "164020",
-      );
-      addDetail(1, transactionCode, item.phiGiaoDichTyLe5164020);
+      TIKTOK_IMPORT_FEE_CONFIG.forEach((rule) => {
+        const value = Number(item[rule.field]);
+        if (value && value !== 0) {
+          const code = getSystemCode("tiktok", rule.rawName, rule.defaultCode);
+          addDetail(rule.row, code, value);
+        }
+      });
 
-      // Line 2: Commission (Service?)
-      const commissionCode = getSystemCode(
-        "tiktok",
-        "Phí hoa hồng trả cho Tiktok 4.54% 164020",
-        "164020",
-      );
-      addDetail(2, commissionCode, item.phiHoaHongTraChoTiktok454164020);
-
-      // Line 3: SFP
-      const sfpCode = getSystemCode(
-        "tiktok",
-        "Phí dịch vụ SFP 6% 164020",
-        "164020",
-      );
-      addDetail(3, sfpCode, item.phiDichVuSfp6164020);
-
-      // Line 4: Affiliate
-      const affCode = getSystemCode(
-        "tiktok",
-        "Phí hoa hồng Tiếp thị liên kết 150050",
-        "150050",
-      );
-      addDetail(4, affCode, item.phiHoaHongTiepThiLienKet150050);
     } else if (platform === "lazada") {
       if (item.maPhiNhanDienHachToan) {
         const rawName = item.tenPhiDoanhThu;
@@ -418,7 +379,7 @@ export default function PlatformFeeImportPage() {
     }
 
     if (details.length === 0) {
-      alert("Không có dữ liệu phí để đồng bộ (hoặc phí = 0)");
+      showToast("info", "Không có dữ liệu phí để đồng bộ (hoặc phí = 0)");
       return;
     }
 
@@ -439,13 +400,28 @@ export default function PlatformFeeImportPage() {
     try {
       const res = await fastApiInvoicesApi.syncPOCharges(payload);
       if (res.data?.success || res.status === 200 || res.status === 201) {
-        alert(`Đồng bộ thành công! ${res.data?.message || ""}`);
+        showToast("success", `Đồng bộ thành công! ${res.data?.message || ""}`);
       } else {
-        alert(`Đồng bộ thất bại: ${res.data?.message}`);
+        let errorMessage = res.data?.message || "Đồng bộ thất bại";
+        if (Array.isArray(res.data) && res.data.length > 0) {
+          errorMessage = res.data[0].message || errorMessage;
+        } else if (res.data?.result && Array.isArray(res.data.result) && res.data.result.length > 0) {
+          errorMessage = res.data.result[0].message || errorMessage;
+        }
+        showToast("error", errorMessage);
       }
     } catch (err: any) {
       console.error(err);
-      alert(`Lỗi khi đồng bộ: ${err.message || "Unknown error"}`);
+      let errorMessage = err.message || "Unknown error";
+      if (err.response?.data) {
+        const data = err.response.data;
+        if (Array.isArray(data) && data.length > 0) {
+          errorMessage = data[0].message || errorMessage;
+        } else if (data.message) {
+          errorMessage = data.message;
+        }
+      }
+      showToast("error", `Lỗi khi đồng bộ: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
@@ -1522,6 +1498,16 @@ export default function PlatformFeeImportPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
+      {/* Toast notifications */}
+      <div className="fixed top-4 right-4 z-50 space-y-3">
+        {toast && (
+          <Toast
+            type={toast.type}
+            message={toast.message}
+            onClose={() => setToast(null)}
+          />
+        )}
+      </div>
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">
           Import phí sàn chính thức

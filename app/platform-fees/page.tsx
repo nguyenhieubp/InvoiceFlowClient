@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { shopeeFeesApi, fastApiInvoicesApi, platformFeeImportApi } from "@/lib/api";
+import { SHOPEE_FEE_CONFIG } from "@/lib/fee-config";
+import { Toast } from "@/components/Toast";
 import Link from "next/link";
 import { format, subDays } from "date-fns";
 
@@ -43,6 +45,14 @@ export default function PlatformFeesPage() {
   });
 
   const [feeMaps, setFeeMaps] = useState<PlatformFeeMap[]>([]);
+  const [toast, setToast] = useState<{
+    type: "success" | "error" | "info";
+    message: string;
+  } | null>(null);
+
+  const showToast = (type: "success" | "error" | "info", message: string) => {
+    setToast({ type, message });
+  };
 
   // Fetch fee maps configuration
   useEffect(() => {
@@ -127,7 +137,7 @@ export default function PlatformFeesPage() {
 
     // Validation basic
     if (!item.erpOrderCode) {
-      alert("Đơn hàng chưa có ERP Order Code (dh_so)");
+      showToast("error", "Đơn hàng chưa có ERP Order Code (dh_so)");
       return;
     }
 
@@ -142,122 +152,37 @@ export default function PlatformFeesPage() {
 
     const details: any[] = [];
 
-    // Line 1: Fixed
-    if (item.commissionFee) {
-      const code = getSystemCode(
-        "shopee",
-        "Phí cố định 6.05% Mã phí 164020",
-        "164020",
-      );
-      details.push({
-        dong: 1,
-        ma_cp: code,
-        cp01_nt: Number(item.commissionFee), // Lần 1 -> cp01
-        cp02_nt: 0,
-        cp03_nt: 0,
-        cp04_nt: 0,
-        cp05_nt: 0,
-        cp06_nt: 0,
-      });
-    }
+    SHOPEE_FEE_CONFIG.forEach((rule) => {
+      const value = Number(item[rule.field]);
+      if (value && value !== 0) {
+        const code = getSystemCode(
+          "shopee",
+          rule.rawName,
+          rule.defaultCode
+        );
 
-    // Line 2: Service
-    if (item.serviceFee) {
-      const code = getSystemCode(
-        "shopee",
-        "Phí Dịch Vụ 6% Mã phí 164020",
-        "164020",
-      );
-      details.push({
-        dong: 2,
-        ma_cp: code,
-        cp01_nt: Number(item.serviceFee), // Lần 1 -> cp01
-        cp02_nt: 0,
-        cp03_nt: 0,
-        cp04_nt: 0,
-        cp05_nt: 0,
-        cp06_nt: 0,
-      });
-    }
+        const detail = {
+          dong: rule.row,
+          ma_cp: code,
+          cp01_nt: 0,
+          cp02_nt: 0,
+          cp03_nt: 0,
+          cp04_nt: 0,
+          cp05_nt: 0,
+          cp06_nt: 0,
+        };
 
-    // Line 3: Payment
-    if (item.paymentFee) {
-      const code = getSystemCode(
-        "shopee",
-        "Phí thanh toán 5% Mã phí 164020",
-        "164020",
-      );
-      details.push({
-        dong: 3,
-        ma_cp: code,
-        cp01_nt: Number(item.paymentFee), // Lần 1 -> cp01
-        cp02_nt: 0,
-        cp03_nt: 0,
-        cp04_nt: 0,
-        cp05_nt: 0,
-        cp06_nt: 0,
-      });
-    }
-
-    // Line 4: Affiliate (150050)
-    if (item.affiliateFee) {
-      const code = getSystemCode(
-        "shopee",
-        "Phí hoa hồng Tiếp thị liên kết 21% 150050",
-        "150050",
-      );
-      details.push({
-        dong: 4,
-        ma_cp: code,
-        cp01_nt: Number(item.affiliateFee),
-        cp02_nt: 0,
-        cp03_nt: 0,
-        cp04_nt: 0,
-        cp05_nt: 0,
-        cp06_nt: 0,
-      });
-    }
-
-    // Line 5: Shipping Fee Saver (164010)
-    if (item.shippingFeeSaver) {
-      const code = getSystemCode(
-        "shopee",
-        "Chi phí dịch vụ Shipping Fee Saver 164010",
-        "164010",
-      );
-      details.push({
-        dong: 5,
-        ma_cp: code,
-        cp01_nt: 0,
-        cp02_nt: Number(item.shippingFeeSaver), // Using cp02 as requested in example
-        cp03_nt: 0,
-        cp04_nt: 0,
-        cp05_nt: 0,
-        cp06_nt: 0,
-      });
-    } else if (item.marketingFee) {
-      // If standard marketing fee (164010) exists
-      // Assuming mapping to "Phí Pi Ship..." but not sure if standard "Marketing Fee" maps to that.
-      // But let's assume it maps to 164010 generic if not found.
-      const code = getSystemCode(
-        "shopee",
-        "Phí Pi Ship ( Do MKT đăng ký) 164010",
-        "164010",
-      );
-      details.push({
-        dong: 5,
-        ma_cp: code,
-        cp01_nt: Number(item.marketingFee),
-        cp02_nt: 0,
-        cp03_nt: 0,
-        cp04_nt: 0,
-        cp05_nt: 0,
-        cp06_nt: 0,
-      });
-    }
+        if (rule.targetCol === "cp02_nt") {
+          detail.cp02_nt = value;
+        } else {
+          detail.cp01_nt = value;
+        }
+        details.push(detail);
+      }
+    });
 
     if (details.length === 0) {
-      alert("Không có dữ liệu phí (Shopee Fees) để đồng bộ");
+      showToast("info", "Không có dữ liệu phí (Shopee Fees) để đồng bộ");
       return;
     }
 
@@ -278,13 +203,28 @@ export default function PlatformFeesPage() {
     try {
       const res = await fastApiInvoicesApi.syncPOCharges(payload);
       if (res.data?.success || res.status === 200 || res.status === 201) {
-        alert(`Đồng bộ thành công! ${res.data?.message || ""}`);
+        showToast("success", `Đồng bộ thành công! ${res.data?.message || ""}`);
       } else {
-        alert(`Đồng bộ thất bại: ${res.data?.message}`);
+        let errorMessage = res.data?.message || "Đồng bộ thất bại";
+        if (Array.isArray(res.data) && res.data.length > 0) {
+          errorMessage = res.data[0].message || errorMessage;
+        } else if (res.data?.result && Array.isArray(res.data.result) && res.data.result.length > 0) {
+          errorMessage = res.data.result[0].message || errorMessage;
+        }
+        showToast("error", errorMessage);
       }
     } catch (err: any) {
       console.error(err);
-      alert(`Lỗi khi đồng bộ: ${err.message || "Unknown error"}`);
+      let errorMessage = err.message || "Unknown error";
+      if (err.response?.data) {
+        const data = err.response.data;
+        if (Array.isArray(data) && data.length > 0) {
+          errorMessage = data[0].message || errorMessage;
+        } else if (data.message) {
+          errorMessage = data.message;
+        }
+      }
+      showToast("error", `Lỗi khi đồng bộ: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
@@ -293,6 +233,16 @@ export default function PlatformFeesPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
+      {/* Toast notifications */}
+      <div className="fixed top-4 right-4 z-50 space-y-3">
+        {toast && (
+          <Toast
+            type={toast.type}
+            message={toast.message}
+            onClose={() => setToast(null)}
+          />
+        )}
+      </div>
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
