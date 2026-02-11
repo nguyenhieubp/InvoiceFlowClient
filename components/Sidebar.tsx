@@ -469,82 +469,7 @@ export default function Sidebar({
               ),
             },
 
-            {
-              href: "/platform-fees",
-              label: "Chi phí Shopee",
-              icon: (
-                <svg
-                  className="w-3.5 h-3.5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-              ),
-            },
-            {
-              href: "/tiktok-fees",
-              label: "Chi phí TikTok",
-              icon: (
-                <svg
-                  className="w-3.5 h-3.5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-              ),
-            },
-            {
-              href: "/platform-fee-import",
-              label: "Import phí sàn chính thức",
-              icon: (
-                <svg
-                  className="w-3.5 h-3.5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                  />
-                </svg>
-              ),
-            },
-            {
-              href: "/platform-fee-map",
-              label: "Quản lý map phí",
-              icon: (
-                <svg
-                  className="w-3.5 h-3.5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
-                  />
-                </svg>
-              ),
-            },
+
           ],
         },
       ],
@@ -666,6 +591,121 @@ export default function Sidebar({
       ],
     },
     {
+      label: "TMĐT",
+      icon: (
+        <svg
+          className="w-4 h-4"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
+          />
+        </svg>
+      ),
+      children: [
+        {
+          href: "/platform-fees",
+          label: "Chi phí Shopee",
+          icon: (
+            <svg
+              className="w-3.5 h-3.5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+          ),
+        },
+        {
+          href: "/tiktok-fees",
+          label: "Chi phí TikTok",
+          icon: (
+            <svg
+              className="w-3.5 h-3.5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+          ),
+        },
+        {
+          href: "/platform-fee-import",
+          label: "Import phí sàn chính thức",
+          icon: (
+            <svg
+              className="w-3.5 h-3.5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+              />
+            </svg>
+          ),
+        },
+        {
+          href: "/platform-fee-map",
+          label: "Quản lý map phí",
+          icon: (
+            <svg
+              className="w-3.5 h-3.5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
+              />
+            </svg>
+          ),
+        },
+        {
+          href: "/fast-po",
+          label: "Lịch sử Fast PO",
+          icon: (
+            <svg
+              className="w-3.5 h-3.5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+          ),
+        },
+      ],
+    },
+    {
       href: "/sync",
       label: "Đồng bộ",
       icon: (
@@ -752,17 +792,15 @@ export default function Sidebar({
           {hasChildren ? (
             <button
               onClick={() => toggleExpand(item.label)}
-              className={`flex items-center justify-center w-full px-2 py-1.5 rounded-md transition-all duration-200 ${
-                active
-                  ? "bg-blue-500 text-white"
-                  : "text-gray-700 hover:bg-blue-50"
-              }`}
+              className={`flex items-center justify-center w-full px-2 py-1.5 rounded-md transition-all duration-200 ${active
+                ? "bg-blue-500 text-white"
+                : "text-gray-700 hover:bg-blue-50"
+                }`}
               title={item.label}
             >
               <span
-                className={`flex-shrink-0 ${
-                  active ? "text-white" : "text-gray-500"
-                }`}
+                className={`flex-shrink-0 ${active ? "text-white" : "text-gray-500"
+                  }`}
               >
                 {item.icon}
               </span>
@@ -775,17 +813,15 @@ export default function Sidebar({
                   onToggle();
                 }
               }}
-              className={`flex items-center justify-center px-2 py-1.5 rounded-md transition-all duration-200 ${
-                active
-                  ? "bg-blue-500 text-white"
-                  : "text-gray-700 hover:bg-blue-50"
-              }`}
+              className={`flex items-center justify-center px-2 py-1.5 rounded-md transition-all duration-200 ${active
+                ? "bg-blue-500 text-white"
+                : "text-gray-700 hover:bg-blue-50"
+                }`}
               title={item.label}
             >
               <span
-                className={`flex-shrink-0 ${
-                  active ? "text-white" : "text-gray-500"
-                }`}
+                className={`flex-shrink-0 ${active ? "text-white" : "text-gray-500"
+                  }`}
               >
                 {item.icon}
               </span>
@@ -800,16 +836,14 @@ export default function Sidebar({
         <div key={item.label} className="space-y-0.5">
           <button
             onClick={() => toggleExpand(item.label)}
-            className={`flex items-center w-full gap-2 px-2.5 py-1.5 rounded-md transition-all duration-200 ${
-              active
-                ? "bg-blue-500 text-white"
-                : "text-gray-700 hover:bg-blue-50"
-            }`}
+            className={`flex items-center w-full gap-2 px-2.5 py-1.5 rounded-md transition-all duration-200 ${active
+              ? "bg-blue-500 text-white"
+              : "text-gray-700 hover:bg-blue-50"
+              }`}
           >
             <span
-              className={`flex-shrink-0 ${
-                active ? "text-white" : "text-gray-500"
-              }`}
+              className={`flex-shrink-0 ${active ? "text-white" : "text-gray-500"
+                }`}
             >
               {item.icon}
             </span>
@@ -817,9 +851,8 @@ export default function Sidebar({
               {item.label}
             </span>
             <svg
-              className={`w-3.5 h-3.5 transition-transform ${
-                isExpanded ? "rotate-90" : ""
-              } ${active ? "text-white" : "text-gray-400"}`}
+              className={`w-3.5 h-3.5 transition-transform ${isExpanded ? "rotate-90" : ""
+                } ${active ? "text-white" : "text-gray-400"}`}
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -850,9 +883,8 @@ export default function Sidebar({
             onToggle();
           }
         }}
-        className={`flex items-center gap-2 px-2.5 py-1.5 rounded-md transition-all duration-200 ${
-          active ? "bg-blue-500 text-white" : "text-gray-700 hover:bg-blue-50"
-        }`}
+        className={`flex items-center gap-2 px-2.5 py-1.5 rounded-md transition-all duration-200 ${active ? "bg-blue-500 text-white" : "text-gray-700 hover:bg-blue-50"
+          }`}
       >
         <span
           className={`flex-shrink-0 ${active ? "text-white" : "text-gray-500"}`}
@@ -860,9 +892,8 @@ export default function Sidebar({
           {item.icon}
         </span>
         <span
-          className={`font-medium text-xs ${
-            level > 0 ? "" : "whitespace-nowrap"
-          }`}
+          className={`font-medium text-xs ${level > 0 ? "" : "whitespace-nowrap"
+            }`}
         >
           {item.label}
         </span>
@@ -882,9 +913,8 @@ export default function Sidebar({
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 left-0 h-full bg-white border-r border-gray-200 z-50 transform transition-all duration-300 ease-in-out ${
-          isOpen ? "translate-x-0" : "-translate-x-full"
-        } lg:translate-x-0 ${collapsed ? "w-16" : "w-64"} shadow-sm`}
+        className={`fixed top-0 left-0 h-full bg-white border-r border-gray-200 z-50 transform transition-all duration-300 ease-in-out ${isOpen ? "translate-x-0" : "-translate-x-full"
+          } lg:translate-x-0 ${collapsed ? "w-16" : "w-64"} shadow-sm`}
       >
         <div className="flex flex-col h-full">
           {/* Logo và header */}
@@ -892,9 +922,8 @@ export default function Sidebar({
             <div className="flex items-center justify-between">
               <Link
                 href="/"
-                className={`flex items-center ${
-                  collapsed ? "justify-center" : "gap-2"
-                }`}
+                className={`flex items-center ${collapsed ? "justify-center" : "gap-2"
+                  }`}
               >
                 <div className="w-7 h-7 rounded flex items-center justify-center flex-shrink-0 overflow-hidden">
                   <Image

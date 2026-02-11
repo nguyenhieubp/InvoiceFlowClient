@@ -226,13 +226,12 @@ export default function TikTokFeesPage() {
                   >
                     <td className="px-6 py-4">
                       <span
-                        className={`px-2 py-1 rounded text-xs font-semibold ${
-                          item.brand === "menard"
+                        className={`px-2 py-1 rounded text-xs font-semibold ${item.brand === "menard"
                             ? "bg-red-100 text-red-700"
                             : item.brand === "yaman"
                               ? "bg-blue-100 text-blue-700"
                               : "bg-gray-100 text-gray-700"
-                        }`}
+                          }`}
                       >
                         {(item.brand || "N/A").toUpperCase()}
                       </span>
@@ -251,9 +250,9 @@ export default function TikTokFeesPage() {
                     <td className="px-6 py-4 text-gray-500">
                       {item.orderCreatedAt
                         ? format(
-                            new Date(item.orderCreatedAt),
-                            "dd/MM/yyyy HH:mm",
-                          )
+                          new Date(item.orderCreatedAt),
+                          "dd/MM/yyyy HH:mm",
+                        )
                         : "-"}
                     </td>
                     <td className="px-6 py-4 text-gray-500">
