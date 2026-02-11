@@ -15,6 +15,11 @@ export default function FastPOPage() {
         totalPages: 0,
     });
     const [search, setSearch] = useState("");
+    const [dateFrom, setDateFrom] = useState("");
+    const [dateTo, setDateTo] = useState("");
+    const [retryingId, setRetryingId] = useState<number | null>(null);
+
+    const [selectedAudit, setSelectedAudit] = useState<any | null>(null);
 
     const [toast, setToast] = useState<{
         type: "success" | "error" | "info";
@@ -29,16 +34,27 @@ export default function FastPOPage() {
                 page: pagination.page,
                 limit: pagination.limit,
                 search: search || undefined,
+                dateFrom: dateFrom || undefined,
+                dateTo: dateTo || undefined,
             });
             if (response.data) {
-                setData(response.data.data);
-                const meta = response.data.meta;
-                setPagination({
-                    page: Number(meta.page),
-                    limit: Number(meta.limit),
-                    total: Number(meta.total),
-                    totalPages: Number(meta.last_page),
-                });
+                // If the response is a direct array (as in getAuditLogs), or nested
+                const logs = Array.isArray(response.data) ? response.data : response.data.data || [];
+                setData(logs);
+
+                // If there's metadata for pagination
+                if (response.data.meta) {
+                    const meta = response.data.meta;
+                    setPagination({
+                        page: Number(meta.page),
+                        limit: Number(meta.limit),
+                        total: Number(meta.total),
+                        totalPages: Number(meta.last_page),
+                    });
+                } else {
+                    // No meta from simple getMany() call without pagination logic
+                    setPagination(prev => ({ ...prev, total: logs.length, totalPages: 1 }));
+                }
             }
         } catch (error) {
             console.error("Error fetching logs:", error);
@@ -67,6 +83,27 @@ export default function FastPOPage() {
         }
     };
 
+    const handleRetry = async (id: number) => {
+        setRetryingId(id);
+        try {
+            await fastPOApi.retry(id);
+            setToast({
+                type: "success",
+                message: `Đã gửi yêu cầu chạy lại đồng bộ #${id} thành công!`,
+            });
+            // Refresh data after a small delay to see the new audit log
+            setTimeout(fetchData, 1000);
+        } catch (error: any) {
+            console.error("Error retrying sync:", error);
+            setToast({
+                type: "error",
+                message: error.response?.data?.message || "Lỗi khi chạy lại đồng bộ",
+            });
+        } finally {
+            setRetryingId(null);
+        }
+    };
+
     return (
         <div className="container mx-auto px-4 py-8">
             {/* Toast notifications */}
@@ -87,27 +124,63 @@ export default function FastPOPage() {
             </div>
 
             {/* Filters */}
-            <div className="bg-white p-4 rounded-lg shadow-sm mb-6 border border-gray-200">
-                <div className="flex flex-col md:flex-row gap-4 items-end">
-                    <div className="flex-1 w-full md:w-auto">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Tìm kiếm
-                        </label>
+            <div className="bg-white p-6 rounded-xl shadow-sm mb-8 border border-gray-100">
+                <div className="flex flex-wrap items-end gap-6">
+                    <div className="flex-1 min-w-[250px]">
+                        <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider">Tìm kiếm mã PO</label>
                         <input
                             type="text"
-                            placeholder="Tìm kiếm theo Mã đơn hàng..."
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                            onKeyDown={(e) => e.key === "Enter" && fetchData()}
+                            placeholder="Nhập mã đơn hàng..."
+                            className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all placeholder:text-gray-400"
                         />
                     </div>
-                    <button
-                        onClick={handleSearch}
-                        className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                    >
-                        Tìm kiếm
-                    </button>
+
+                    <div className="w-full md:w-auto">
+                        <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider">Từ ngày</label>
+                        <input
+                            type="date"
+                            value={dateFrom}
+                            onChange={(e) => setDateFrom(e.target.value)}
+                            className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                        />
+                    </div>
+
+                    <div className="w-full md:w-auto">
+                        <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider">Đến ngày</label>
+                        <input
+                            type="date"
+                            value={dateTo}
+                            onChange={(e) => setDateTo(e.target.value)}
+                            className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                        />
+                    </div>
+
+                    <div className="flex gap-3">
+                        <button
+                            onClick={() => {
+                                setPagination(prev => ({ ...prev, page: 1 }));
+                                fetchData();
+                            }}
+                            className="px-8 py-2.5 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 active:transform active:scale-95"
+                        >
+                            Lọc
+                        </button>
+
+                        <button
+                            onClick={() => {
+                                setSearch("");
+                                setDateFrom("");
+                                setDateTo("");
+                                setPagination(prev => ({ ...prev, page: 1 }));
+                            }}
+                            className="px-6 py-2.5 text-gray-500 hover:text-gray-900 font-bold rounded-lg hover:bg-gray-50 transition-all"
+                        >
+                            Làm mới
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -118,19 +191,23 @@ export default function FastPOPage() {
                         <thead className="text-xs text-gray-700 uppercase bg-gray-50 border-b border-gray-200">
                             <tr>
                                 <th className="px-6 py-3">Mã đơn hàng</th>
-                                <th className="px-6 py-3">Lần đồng bộ cuối</th>
+                                <th className="px-6 py-3">Ngày đơn hàng</th>
+                                <th className="px-6 py-3">Hành động</th>
+                                <th className="px-6 py-3">Trạng thái</th>
+                                <th className="px-6 py-3">Thời gian log</th>
+                                <th className="px-6 py-3">Thao tác</th>
                             </tr>
                         </thead>
                         <tbody>
                             {loading ? (
                                 <tr>
-                                    <td colSpan={2} className="px-6 py-8 text-center text-gray-500">
+                                    <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
                                         Đang tải dữ liệu...
                                     </td>
                                 </tr>
                             ) : data.length === 0 ? (
                                 <tr>
-                                    <td colSpan={2} className="px-6 py-8 text-center text-gray-500">
+                                    <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
                                         Không có dữ liệu
                                     </td>
                                 </tr>
@@ -141,12 +218,42 @@ export default function FastPOPage() {
                                         className="bg-white border-b hover:bg-gray-50 transition-colors"
                                     >
                                         <td className="px-6 py-4 font-mono text-gray-900">
-                                            {item.orderCode}
+                                            {item.dh_so || item.orderCode || "-"}
+                                        </td>
+                                        <td className="px-6 py-4 text-gray-700">
+                                            {item.dh_ngay ? format(new Date(item.dh_ngay), "dd/MM/yyyy") : "-"}
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <span className="text-xs font-semibold px-2 py-1 bg-gray-100 text-gray-600 rounded uppercase">
+                                                {item.action || "SYNC"}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <span className={`text-xs font-semibold px-2 py-1 rounded uppercase ${item.status === 'SUCCESS' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                                                }`}>
+                                                {item.status}
+                                            </span>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-gray-500">
-                                            {item.lastSync
-                                                ? format(new Date(item.lastSync), "dd/MM/yyyy HH:mm:ss")
-                                                : "-"}
+                                            {format(new Date(item.created_at || item.lastSync), "dd/MM/yyyy HH:mm:ss")}
+                                        </td>
+                                        <td className="px-6 py-4 space-x-3">
+                                            <button
+                                                onClick={() => setSelectedAudit(item)}
+                                                className="text-blue-600 hover:text-blue-800 font-medium"
+                                            >
+                                                Chi tiết
+                                            </button>
+                                            <button
+                                                onClick={() => handleRetry(item.id)}
+                                                disabled={retryingId === item.id}
+                                                className={`font-medium ${retryingId === item.id
+                                                    ? 'text-gray-400 cursor-not-allowed'
+                                                    : 'text-orange-600 hover:text-orange-800'
+                                                    }`}
+                                            >
+                                                {retryingId === item.id ? "Đang chạy..." : "Chạy lại"}
+                                            </button>
                                         </td>
                                     </tr>
                                 ))
@@ -178,6 +285,71 @@ export default function FastPOPage() {
                     </div>
                 </div>
             </div>
+
+            {/* Audit Detail Modal */}
+            {selectedAudit && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+                        <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+                            <div>
+                                <h3 className="text-xl font-bold text-gray-900">Chi tiết Audit</h3>
+                                <p className="text-sm text-gray-500">PO: {selectedAudit.dh_so} | ID: #{selectedAudit.id}</p>
+                            </div>
+                            <button
+                                onClick={() => setSelectedAudit(null)}
+                                className="text-gray-400 hover:text-gray-600"
+                            >
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        <div className="p-6 overflow-y-auto space-y-6">
+                            {selectedAudit.error && (
+                                <div className="bg-red-50 border border-red-200 p-4 rounded-lg">
+                                    <h4 className="text-sm font-bold text-red-800 mb-1 uppercase">Lỗi</h4>
+                                    <p className="text-sm text-red-700 font-mono whitespace-pre-wrap">{selectedAudit.error}</p>
+                                </div>
+                            )}
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <h4 className="text-sm font-bold text-gray-700 mb-2 uppercase flex items-center">
+                                        <span className="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
+                                        Payload (Gửi đi)
+                                    </h4>
+                                    <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                        <pre className="text-[11px] font-mono leading-relaxed overflow-x-auto text-gray-800">
+                                            {JSON.stringify(selectedAudit.payload, null, 2)}
+                                        </pre>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h4 className="text-sm font-bold text-gray-700 mb-2 uppercase flex items-center">
+                                        <span className={`w-2 h-2 rounded-full mr-2 ${selectedAudit.status === 'SUCCESS' ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                                        Response (Phản hồi)
+                                    </h4>
+                                    <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                        <pre className="text-[11px] font-mono leading-relaxed overflow-x-auto text-gray-800">
+                                            {JSON.stringify(selectedAudit.response, null, 2)}
+                                        </pre>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="p-6 border-t border-gray-100 bg-gray-50 flex justify-end rounded-b-xl">
+                            <button
+                                onClick={() => setSelectedAudit(null)}
+                                className="px-6 py-2 bg-white border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-100 transition-colors"
+                            >
+                                Đóng
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
