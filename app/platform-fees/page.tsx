@@ -144,9 +144,11 @@ export default function PlatformFeesPage() {
     // Construct Payload
     const master = {
       dh_so: item.erpOrderCode,
-      dh_ngay: item.orderCreatedAt
-        ? new Date(item.orderCreatedAt).toISOString()
-        : new Date().toISOString(),
+      dh_ngay: item.invoiceDate
+        ? format(new Date(item.invoiceDate), "yyyy-MM-dd'T'HH:mm:ss")
+        : item.orderCreatedAt
+          ? format(new Date(item.orderCreatedAt), "yyyy-MM-dd'T'HH:mm:ss")
+          : new Date().toISOString(),
       dh_dvcs: "TTM", // Hardcoded or generic? User accepted TTM in examples.
     };
 
@@ -349,7 +351,7 @@ export default function PlatformFeesPage() {
                 <th className="px-6 py-4 text-right">Phí cố định</th>
                 <th className="px-6 py-4 text-right">Phí dịch vụ</th>
                 <th className="px-6 py-4 text-right">Phí thanh toán</th>
-
+                <th className="px-6 py-4">Ngày hoá đơn</th>
                 <th className="px-6 py-4">Ngày tạo đơn</th>
                 <th className="px-6 py-4">Ngày đồng bộ</th>
               </tr>
@@ -417,6 +419,15 @@ export default function PlatformFeesPage() {
                     </td>
                     <td className="px-6 py-4 text-right font-medium text-gray-900">
                       {formatCurrency(item.paymentFee)}
+                    </td>
+
+                    <td className="px-6 py-4 text-gray-500">
+                      {item.invoiceDate
+                        ? format(
+                          new Date(item.invoiceDate),
+                          "dd/MM/yyyy HH:mm",
+                        )
+                        : "-"}
                     </td>
 
                     <td className="px-6 py-4 text-gray-500">

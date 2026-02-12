@@ -306,12 +306,14 @@ export default function PlatformFeeImportPage() {
 
     // Construct Payload
     const master = {
-      dh_so: item.maSan || "",
+      dh_so: item.erpOrderCode || "",
       // Format date to ISO string if exists, else current date or empty?
       // User example: "2026-01-15T06:36:04.292Z"
-      dh_ngay: item.ngayDoiSoat
-        ? new Date(item.ngayDoiSoat).toISOString()
-        : new Date().toISOString(),
+      dh_ngay: item.orderDate
+        ? new Date(item.orderDate).toISOString()
+        : item.ngayDoiSoat
+          ? new Date(item.ngayDoiSoat).toISOString()
+          : new Date().toISOString(),
       dh_dvcs: item.boPhan || "TTM", // Default to TTM if empty as per user example
     };
 
@@ -740,12 +742,12 @@ export default function PlatformFeeImportPage() {
   const platformInfo = {
     shopee: {
       name: "Shopee",
-      columns: 21,
+      columns: 24,
       description: "Mẫu Shopee bao gồm 21 cột",
     },
     tiktok: {
       name: "TikTok",
-      columns: 19,
+      columns: 22,
       description: "Mẫu TikTok bao gồm 19 cột",
     },
     lazada: {
@@ -836,6 +838,8 @@ export default function PlatformFeeImportPage() {
                 <th className="px-3 py-3 whitespace-nowrap">
                   Mã sản phẩm của đơn hàng
                 </th>
+                <th className="px-3 py-3 whitespace-nowrap">Mã đơn hàng</th>
+                <th className="px-3 py-3 whitespace-nowrap">Ngày đơn hàng</th>
                 <th className="px-3 py-3 whitespace-nowrap">Shop phát hành</th>
                 <th className="px-3 py-3 whitespace-nowrap text-right">
                   Giá trị giảm giá CTKM
@@ -880,7 +884,7 @@ export default function PlatformFeeImportPage() {
               {listLoading ? (
                 <tr>
                   <td
-                    colSpan={22}
+                    colSpan={24}
                     className="px-6 py-8 text-center text-gray-500"
                   >
                     <div className="flex justify-center items-center gap-2">
@@ -892,7 +896,7 @@ export default function PlatformFeeImportPage() {
               ) : rows.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={22}
+                    colSpan={24}
                     className="px-6 py-8 text-center text-gray-500"
                   >
                     Không có dữ liệu
@@ -918,6 +922,14 @@ export default function PlatformFeeImportPage() {
                     </td>
                     <td className="px-3 py-3 font-mono text-gray-700 whitespace-nowrap">
                       {r.maNoiBoSp ?? "-"}
+                    </td>
+                    <td className="px-3 py-3 font-mono text-blue-600 font-medium whitespace-nowrap">
+                      {r.erpOrderCode ?? "-"}
+                    </td>
+                    <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
+                      {r.orderDate
+                        ? format(new Date(r.orderDate), "dd/MM/yyyy HH:mm")
+                        : "-"}
                     </td>
                     <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
                       {r.shopPhatHanhTrenSan ?? "-"}
@@ -1317,6 +1329,8 @@ export default function PlatformFeeImportPage() {
                 <th className="px-3 py-3 whitespace-nowrap">
                   Mã sản phẩm của đơn hàng
                 </th>
+                <th className="px-3 py-3 whitespace-nowrap">Mã đơn hàng</th>
+                <th className="px-3 py-3 whitespace-nowrap">Ngày đơn hàng</th>
                 <th className="px-3 py-3 whitespace-nowrap">Shop phát hành</th>
                 <th className="px-3 py-3 whitespace-nowrap text-right">
                   Giá trị giảm giá CTKM
@@ -1355,7 +1369,7 @@ export default function PlatformFeeImportPage() {
               {listLoading ? (
                 <tr>
                   <td
-                    colSpan={20}
+                    colSpan={22}
                     className="px-6 py-8 text-center text-gray-500"
                   >
                     <div className="flex justify-center items-center gap-2">
@@ -1367,7 +1381,7 @@ export default function PlatformFeeImportPage() {
               ) : rows.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={20}
+                    colSpan={22}
                     className="px-6 py-8 text-center text-gray-500"
                   >
                     Không có dữ liệu
@@ -1393,6 +1407,14 @@ export default function PlatformFeeImportPage() {
                     </td>
                     <td className="px-3 py-3 font-mono text-gray-700 whitespace-nowrap">
                       {r.maNoiBoSp ?? "-"}
+                    </td>
+                    <td className="px-3 py-3 font-mono text-blue-600 font-medium whitespace-nowrap">
+                      {r.erpOrderCode ?? "-"}
+                    </td>
+                    <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
+                      {r.orderDate
+                        ? format(new Date(r.orderDate), "dd/MM/yyyy HH:mm")
+                        : "-"}
                     </td>
                     <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
                       {r.shopPhatHanhTrenSan ?? "-"}
