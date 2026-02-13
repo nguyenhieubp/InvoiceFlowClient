@@ -24,6 +24,8 @@ interface PlatformFeeMap {
   active: boolean;
 }
 
+import { EditFeeModal } from "./EditFeeModal";
+
 export default function PlatformFeeImportPage() {
   const [activeTab, setActiveTab] = useState<TabType>("import");
   const [selectedPlatform, setSelectedPlatform] = useState<Platform | "">("");
@@ -37,6 +39,11 @@ export default function PlatformFeeImportPage() {
     errors?: Array<{ row: number; error: string }>;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Edit Modal State
+  const [editingItem, setEditingItem] = useState<any>(null);
+  const [editingPlatform, setEditingPlatform] = useState<Platform | "">("");
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   // List state for each platform
   const [shopeeData, setShopeeData] = useState<any[]>([]);
@@ -298,6 +305,32 @@ export default function PlatformFeeImportPage() {
     } else {
       setLazadaFilters(lazadaInputs);
       setLazadaPagination((prev) => ({ ...prev, page: 1 }));
+    }
+  };
+
+  const handleEdit = (item: any, platform: string) => {
+    setEditingItem(item);
+    setEditingPlatform(platform as Platform);
+    setIsEditModalOpen(true);
+  };
+
+  const handleUpdate = async (data: any) => {
+    if (!editingItem || !editingPlatform) return;
+
+    try {
+      await platformFeeImportApi.updateFee(
+        editingPlatform,
+        editingItem.id,
+        data,
+      );
+      showToast("success", "Cập nhật thành công");
+      setIsEditModalOpen(false);
+      setEditingItem(null);
+      // Refresh list
+      fetchPlatformData(editingPlatform);
+    } catch (err: any) {
+      console.error(err);
+      throw new Error(err.response?.data?.message || err.message);
     }
   };
 
@@ -878,13 +911,14 @@ export default function PlatformFeeImportPage() {
                 <th className="px-3 py-3 whitespace-nowrap">MKT 4</th>
                 <th className="px-3 py-3 whitespace-nowrap">MKT 5</th>
                 <th className="px-3 py-3 whitespace-nowrap">Bộ phận</th>
+                <th className="px-3 py-3 whitespace-nowrap">Thao tác</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {listLoading ? (
                 <tr>
                   <td
-                    colSpan={24}
+                    colSpan={25}
                     className="px-6 py-8 text-center text-gray-500"
                   >
                     <div className="flex justify-center items-center gap-2">
@@ -896,7 +930,7 @@ export default function PlatformFeeImportPage() {
               ) : rows.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={24}
+                    colSpan={25}
                     className="px-6 py-8 text-center text-gray-500"
                   >
                     Không có dữ liệu
@@ -987,6 +1021,17 @@ export default function PlatformFeeImportPage() {
                     <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
                       {r.boPhan ?? "-"}
                     </td>
+                    <td className="px-3 py-3 whitespace-nowrap">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEdit(r, "shopee");
+                        }}
+                        className="text-blue-600 hover:text-blue-800 font-medium"
+                      >
+                        Sửa
+                      </button>
+                    </td>
                   </tr>
                 ))
               )}
@@ -1049,6 +1094,7 @@ export default function PlatformFeeImportPage() {
   const renderLazadaFeeTable = () => {
     // Lazada data is already in row format (each row = 1 fee), so no need to flatMap
     const rows = lazadaData.map((item, idx) => ({
+      ...item, // Include all original fields (including id)
       stt: (lazadaPagination.page - 1) * lazadaPagination.limit + idx + 1,
       ngayDoiSoat: item.ngayDoiSoat,
       maDon: item.maSan,
@@ -1140,13 +1186,14 @@ export default function PlatformFeeImportPage() {
                   Mã đơn hàng hoàn/trả lại
                 </th>
                 <th className="px-3 py-3 whitespace-nowrap">Sàn TMĐT</th>
+                <th className="px-3 py-3 whitespace-nowrap">Thao tác</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {listLoading ? (
                 <tr>
                   <td
-                    colSpan={10}
+                    colSpan={11}
                     className="px-6 py-8 text-center text-gray-500"
                   >
                     <div className="flex justify-center items-center gap-2">
@@ -1158,7 +1205,7 @@ export default function PlatformFeeImportPage() {
               ) : rows.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={10}
+                    colSpan={11}
                     className="px-6 py-8 text-center text-gray-500"
                   >
                     Không có dữ liệu
@@ -1202,6 +1249,23 @@ export default function PlatformFeeImportPage() {
                     </td>
                     <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
                       {r.sanTmdt ?? "-"}
+                    </td>
+                    <td className="px-3 py-3 whitespace-nowrap">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEdit(r, "lazada"); // Note: r is constructed in renderLazadaFeeTable, make sure it has 'id' if 'handleEdit' expects it. 
+                          // Wait, 'rows' in renderLazadaFeeTable maps original item to 'r', but 'r' in lines 1051-1062 does NOT have 'id'.
+                          // I must add 'id' and other fields to 'rows' map in Lazada table.
+                          // Actually handleEdit expects 'item'. 'r' is a transformed object.
+                          // I should probably pass the original item or ensure 'r' has 'id'.
+                          // In Shopee table, 'r' was { ...item }, so it had 'id'.
+                          // In Lazada table, 'r' is mapped explicitly. I need to fix this.
+                        }}
+                        className="text-blue-600 hover:text-blue-800 font-medium"
+                      >
+                        Sửa
+                      </button>
                     </td>
                   </tr>
                 ))
@@ -1363,13 +1427,14 @@ export default function PlatformFeeImportPage() {
                 <th className="px-3 py-3 whitespace-nowrap">MKT 4</th>
                 <th className="px-3 py-3 whitespace-nowrap">MKT 5</th>
                 <th className="px-3 py-3 whitespace-nowrap">Bộ phận</th>
+                <th className="px-3 py-3 whitespace-nowrap">Thao tác</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {listLoading ? (
                 <tr>
                   <td
-                    colSpan={22}
+                    colSpan={23}
                     className="px-6 py-8 text-center text-gray-500"
                   >
                     <div className="flex justify-center items-center gap-2">
@@ -1381,7 +1446,7 @@ export default function PlatformFeeImportPage() {
               ) : rows.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={22}
+                    colSpan={23}
                     className="px-6 py-8 text-center text-gray-500"
                   >
                     Không có dữ liệu
@@ -1465,6 +1530,17 @@ export default function PlatformFeeImportPage() {
                     </td>
                     <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
                       {r.boPhan ?? "-"}
+                    </td>
+                    <td className="px-3 py-3 whitespace-nowrap">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEdit(r, "tiktok");
+                        }}
+                        className="text-blue-600 hover:text-blue-800 font-medium"
+                      >
+                        Sửa
+                      </button>
                     </td>
                   </tr>
                 ))
@@ -1832,6 +1908,14 @@ export default function PlatformFeeImportPage() {
 
       {/* Platform Tabs - Lazada */}
       {activeTab === "lazada" && renderLazadaFeeTable()}
+      {/* Modal chỉnh sửa */}
+      <EditFeeModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        onSave={handleUpdate}
+        item={editingItem}
+        platform={editingPlatform}
+      />
     </div>
   );
 }

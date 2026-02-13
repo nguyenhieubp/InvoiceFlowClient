@@ -787,6 +787,9 @@ export const platformFeesApi = {
   delete: (id: string) => {
     return api.delete(`/platform-fees/${id}`);
   },
+  updateFee: (platform: string, id: string, data: any) => {
+    return api.put(`/platform-fee-import/fee/${platform}/${id}`, data);
+  },
 };
 
 // Shopee Fees API
@@ -817,6 +820,9 @@ export const platformFeeImportApi = {
         "Content-Type": "multipart/form-data",
       },
     });
+  },
+  updateFee: (platform: string, id: string, data: any) => {
+    return api.put(`/platform-fee-import/fee/${platform}/${id}`, data);
   },
   getAll: (params?: {
     platform?: string;
