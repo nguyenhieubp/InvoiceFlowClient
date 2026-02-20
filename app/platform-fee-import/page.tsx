@@ -191,8 +191,8 @@ export default function PlatformFeeImportPage() {
     } catch (err: any) {
       setError(
         err.response?.data?.message ||
-        err.message ||
-        "Lỗi khi import file. Vui lòng thử lại.",
+          err.message ||
+          "Lỗi khi import file. Vui lòng thử lại.",
       );
     } finally {
       setLoading(false);
@@ -204,9 +204,7 @@ export default function PlatformFeeImportPage() {
     setSelectedPlatform("");
     setResult(null);
     setError(null);
-    const fileInput = document.getElementById(
-      "file-input",
-    ) as HTMLInputElement;
+    const fileInput = document.getElementById("file-input") as HTMLInputElement;
     if (fileInput) {
       fileInput.value = "";
     }
@@ -292,7 +290,15 @@ export default function PlatformFeeImportPage() {
     } else if (activeTab === "lazada") {
       fetchPlatformData("lazada");
     }
-  }, [activeTab, shopeePagination.page, tiktokPagination.page, lazadaPagination.page, shopeeFilters, tiktokFilters, lazadaFilters]);
+  }, [
+    activeTab,
+    shopeePagination.page,
+    tiktokPagination.page,
+    lazadaPagination.page,
+    shopeeFilters,
+    tiktokFilters,
+    lazadaFilters,
+  ]);
 
   const handlePlatformSearch = (e: React.FormEvent, platform: Platform) => {
     e.preventDefault();
@@ -339,13 +345,12 @@ export default function PlatformFeeImportPage() {
 
     // Construct Payload
     const master = {
-      dh_so: item.erpOrderCode || "",
-      // Format date to ISO string if exists, else current date or empty?
-      // User example: "2026-01-15T06:36:04.292Z"
-      dh_ngay: item.orderDate
-        ? new Date(item.orderDate).toISOString()
-        : item.ngayDoiSoat
-          ? new Date(item.ngayDoiSoat).toISOString()
+      dh_so: (item.erpOrderCode || "").trim(),
+      // Fix: Prioritize ngayDoiSoat (Reconciliation Date) over orderDate
+      dh_ngay: item.ngayDoiSoat
+        ? new Date(item.ngayDoiSoat).toISOString()
+        : item.orderDate
+          ? new Date(item.orderDate).toISOString()
           : new Date().toISOString(),
       dh_dvcs: item.boPhan || "TTM", // Default to TTM if empty as per user example
     };
@@ -384,7 +389,10 @@ export default function PlatformFeeImportPage() {
               ma_cp: code,
               cp01_nt: 0,
               cp02_nt: value,
-              cp03_nt: 0, cp04_nt: 0, cp05_nt: 0, cp06_nt: 0
+              cp03_nt: 0,
+              cp04_nt: 0,
+              cp05_nt: 0,
+              cp06_nt: 0,
             });
           } else {
             addDetail(rule.row, code, value);
@@ -399,7 +407,6 @@ export default function PlatformFeeImportPage() {
           addDetail(rule.row, code, value);
         }
       });
-
     } else if (platform === "lazada") {
       if (item.maPhiNhanDienHachToan) {
         const rawName = item.tenPhiDoanhThu;
@@ -440,7 +447,11 @@ export default function PlatformFeeImportPage() {
         let errorMessage = res.data?.message || "Đồng bộ thất bại";
         if (Array.isArray(res.data) && res.data.length > 0) {
           errorMessage = res.data[0].message || errorMessage;
-        } else if (res.data?.result && Array.isArray(res.data.result) && res.data.result.length > 0) {
+        } else if (
+          res.data?.result &&
+          Array.isArray(res.data.result) &&
+          res.data.result.length > 0
+        ) {
           errorMessage = res.data.result[0].message || errorMessage;
         }
         showToast("error", errorMessage);
@@ -469,13 +480,18 @@ export default function PlatformFeeImportPage() {
     pagination: typeof shopeePagination,
     filters: typeof shopeeFilters,
     setFilters: React.Dispatch<React.SetStateAction<typeof shopeeFilters>>,
-    setPagination: React.Dispatch<React.SetStateAction<typeof shopeePagination>>,
+    setPagination: React.Dispatch<
+      React.SetStateAction<typeof shopeePagination>
+    >,
   ) => {
     return (
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         {/* Filters */}
         <div className="p-4 border-b border-gray-200 bg-gray-50">
-          <form onSubmit={(e) => handlePlatformSearch(e, platform)} className="flex flex-col md:flex-row gap-4">
+          <form
+            onSubmit={(e) => handlePlatformSearch(e, platform)}
+            className="flex flex-col md:flex-row gap-4"
+          >
             <div className="flex items-center gap-2">
               <label className="text-sm font-medium text-gray-700">Từ:</label>
               <input
@@ -526,24 +542,52 @@ export default function PlatformFeeImportPage() {
                 <th className="px-3 py-3 whitespace-nowrap">Mã sàn</th>
                 <th className="px-3 py-3 whitespace-nowrap">Mã nội bộ SP</th>
                 <th className="px-3 py-3 whitespace-nowrap">Ngày đối soát</th>
-                <th className="px-3 py-3 whitespace-nowrap">Mã đơn hàng hoàn</th>
+                <th className="px-3 py-3 whitespace-nowrap">
+                  Mã đơn hàng hoàn
+                </th>
                 <th className="px-3 py-3 whitespace-nowrap">Shop phát hành</th>
-                <th className="px-3 py-3 whitespace-nowrap text-right">Giá trị giảm giá CTKM</th>
-                <th className="px-3 py-3 whitespace-nowrap text-right">Doanh thu đơn hàng</th>
+                <th className="px-3 py-3 whitespace-nowrap text-right">
+                  Giá trị giảm giá CTKM
+                </th>
+                <th className="px-3 py-3 whitespace-nowrap text-right">
+                  Doanh thu đơn hàng
+                </th>
                 {/* Shopee Fees */}
-                <th className="px-3 py-3 whitespace-nowrap text-right">Phí cố định</th>
-                <th className="px-3 py-3 whitespace-nowrap text-right">Phí Dịch Vụ</th>
-                <th className="px-3 py-3 whitespace-nowrap text-right">Phí thanh toán</th>
-                <th className="px-3 py-3 whitespace-nowrap text-right">Phí hoa hồng TT</th>
-                <th className="px-3 py-3 whitespace-nowrap text-right">Shipping Fee Saver</th>
-                <th className="px-3 py-3 whitespace-nowrap text-right">Phí Pi Ship</th>
+                <th className="px-3 py-3 whitespace-nowrap text-right">
+                  Phí cố định
+                </th>
+                <th className="px-3 py-3 whitespace-nowrap text-right">
+                  Phí Dịch Vụ
+                </th>
+                <th className="px-3 py-3 whitespace-nowrap text-right">
+                  Phí thanh toán
+                </th>
+                <th className="px-3 py-3 whitespace-nowrap text-right">
+                  Phí hoa hồng TT
+                </th>
+                <th className="px-3 py-3 whitespace-nowrap text-right">
+                  Shipping Fee Saver
+                </th>
+                <th className="px-3 py-3 whitespace-nowrap text-right">
+                  Phí Pi Ship
+                </th>
                 {/* TikTok Fees */}
-                <th className="px-3 py-3 whitespace-nowrap text-right">Phí giao dịch 5%</th>
-                <th className="px-3 py-3 whitespace-nowrap text-right">Phí hoa hồng Tiktok 4.54%</th>
-                <th className="px-3 py-3 whitespace-nowrap text-right">Phí hoa hồng TT 150050</th>
-                <th className="px-3 py-3 whitespace-nowrap text-right">Phí dịch vụ SFP 6%</th>
+                <th className="px-3 py-3 whitespace-nowrap text-right">
+                  Phí giao dịch 5%
+                </th>
+                <th className="px-3 py-3 whitespace-nowrap text-right">
+                  Phí hoa hồng Tiktok 4.54%
+                </th>
+                <th className="px-3 py-3 whitespace-nowrap text-right">
+                  Phí hoa hồng TT 150050
+                </th>
+                <th className="px-3 py-3 whitespace-nowrap text-right">
+                  Phí dịch vụ SFP 6%
+                </th>
                 {/* Common */}
-                <th className="px-3 py-3 whitespace-nowrap">Mã tiếp thị liên kết</th>
+                <th className="px-3 py-3 whitespace-nowrap">
+                  Mã tiếp thị liên kết
+                </th>
                 <th className="px-3 py-3 whitespace-nowrap">Sàn TMĐT</th>
                 <th className="px-3 py-3 whitespace-nowrap">MKT 1</th>
                 <th className="px-3 py-3 whitespace-nowrap">MKT 2</th>
@@ -552,17 +596,33 @@ export default function PlatformFeeImportPage() {
                 <th className="px-3 py-3 whitespace-nowrap">MKT 5</th>
                 <th className="px-3 py-3 whitespace-nowrap">Bộ phận</th>
                 {/* Lazada */}
-                <th className="px-3 py-3 whitespace-nowrap">Tên phí/doanh thu</th>
+                <th className="px-3 py-3 whitespace-nowrap">
+                  Tên phí/doanh thu
+                </th>
                 <th className="px-3 py-3 whitespace-nowrap">Quảng cáo TT</th>
-                <th className="px-3 py-3 whitespace-nowrap">Mã phí hạch toán</th>
+                <th className="px-3 py-3 whitespace-nowrap">
+                  Mã phí hạch toán
+                </th>
                 <th className="px-3 py-3 whitespace-nowrap">Ghi chú</th>
                 {/* Generic Fees */}
-                <th className="px-3 py-3 whitespace-nowrap text-right">Phí 1</th>
-                <th className="px-3 py-3 whitespace-nowrap text-right">Phí 2</th>
-                <th className="px-3 py-3 whitespace-nowrap text-right">Phí 3</th>
-                <th className="px-3 py-3 whitespace-nowrap text-right">Phí 4</th>
-                <th className="px-3 py-3 whitespace-nowrap text-right">Phí 5</th>
-                <th className="px-3 py-3 whitespace-nowrap text-right">Phí 6</th>
+                <th className="px-3 py-3 whitespace-nowrap text-right">
+                  Phí 1
+                </th>
+                <th className="px-3 py-3 whitespace-nowrap text-right">
+                  Phí 2
+                </th>
+                <th className="px-3 py-3 whitespace-nowrap text-right">
+                  Phí 3
+                </th>
+                <th className="px-3 py-3 whitespace-nowrap text-right">
+                  Phí 4
+                </th>
+                <th className="px-3 py-3 whitespace-nowrap text-right">
+                  Phí 5
+                </th>
+                <th className="px-3 py-3 whitespace-nowrap text-right">
+                  Phí 6
+                </th>
                 {/* Metadata */}
                 <th className="px-3 py-3 whitespace-nowrap">Ngày import</th>
               </tr>
@@ -732,14 +792,10 @@ export default function PlatformFeeImportPage() {
             </span>{" "}
             đến{" "}
             <span className="font-medium">
-              {Math.min(
-                pagination.page * pagination.limit,
-                pagination.total,
-              )}
+              {Math.min(pagination.page * pagination.limit, pagination.total)}
             </span>{" "}
             trong tổng số{" "}
-            <span className="font-medium">{pagination.total}</span> bản
-            ghi
+            <span className="font-medium">{pagination.total}</span> bản ghi
           </p>
           <div className="flex gap-2">
             <button
@@ -1254,7 +1310,7 @@ export default function PlatformFeeImportPage() {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleEdit(r, "lazada"); // Note: r is constructed in renderLazadaFeeTable, make sure it has 'id' if 'handleEdit' expects it. 
+                          handleEdit(r, "lazada"); // Note: r is constructed in renderLazadaFeeTable, make sure it has 'id' if 'handleEdit' expects it.
                           // Wait, 'rows' in renderLazadaFeeTable maps original item to 'r', but 'r' in lines 1051-1062 does NOT have 'id'.
                           // I must add 'id' and other fields to 'rows' map in Lazada table.
                           // Actually handleEdit expects 'item'. 'r' is a transformed object.
@@ -1292,12 +1348,16 @@ export default function PlatformFeeImportPage() {
               )}
             </span>{" "}
             trong tổng số{" "}
-            <span className="font-medium">{lazadaPagination.total}</span> bản ghi
+            <span className="font-medium">{lazadaPagination.total}</span> bản
+            ghi
           </p>
           <div className="flex gap-2">
             <button
               onClick={() =>
-                setLazadaPagination((prev) => ({ ...prev, page: prev.page - 1 }))
+                setLazadaPagination((prev) => ({
+                  ...prev,
+                  page: prev.page - 1,
+                }))
               }
               disabled={lazadaPagination.page <= 1}
               className="px-3 py-1 border border-gray-300 rounded bg-white text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition"
@@ -1306,7 +1366,10 @@ export default function PlatformFeeImportPage() {
             </button>
             <button
               onClick={() =>
-                setLazadaPagination((prev) => ({ ...prev, page: prev.page + 1 }))
+                setLazadaPagination((prev) => ({
+                  ...prev,
+                  page: prev.page + 1,
+                }))
               }
               disabled={lazadaPagination.page >= lazadaPagination.totalPages}
               className="px-3 py-1 border border-gray-300 rounded bg-white text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition"
@@ -1567,12 +1630,16 @@ export default function PlatformFeeImportPage() {
               )}
             </span>{" "}
             trong tổng số{" "}
-            <span className="font-medium">{tiktokPagination.total}</span> bản ghi
+            <span className="font-medium">{tiktokPagination.total}</span> bản
+            ghi
           </p>
           <div className="flex gap-2">
             <button
               onClick={() =>
-                setTiktokPagination((prev) => ({ ...prev, page: prev.page - 1 }))
+                setTiktokPagination((prev) => ({
+                  ...prev,
+                  page: prev.page - 1,
+                }))
               }
               disabled={tiktokPagination.page <= 1}
               className="px-3 py-1 border border-gray-300 rounded bg-white text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition"
@@ -1581,7 +1648,10 @@ export default function PlatformFeeImportPage() {
             </button>
             <button
               onClick={() =>
-                setTiktokPagination((prev) => ({ ...prev, page: prev.page + 1 }))
+                setTiktokPagination((prev) => ({
+                  ...prev,
+                  page: prev.page + 1,
+                }))
               }
               disabled={tiktokPagination.page >= tiktokPagination.totalPages}
               className="px-3 py-1 border border-gray-300 rounded bg-white text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition"
@@ -1620,37 +1690,41 @@ export default function PlatformFeeImportPage() {
         <nav className="-mb-px flex space-x-8">
           <button
             onClick={() => setActiveTab("import")}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === "import"
-              ? "border-blue-500 text-blue-600"
-              : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
+            className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              activeTab === "import"
+                ? "border-blue-500 text-blue-600"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+            }`}
           >
             Import
           </button>
           <button
             onClick={() => setActiveTab("shopee")}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === "shopee"
-              ? "border-blue-500 text-blue-600"
-              : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
+            className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              activeTab === "shopee"
+                ? "border-blue-500 text-blue-600"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+            }`}
           >
             Shopee
           </button>
           <button
             onClick={() => setActiveTab("tiktok")}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === "tiktok"
-              ? "border-blue-500 text-blue-600"
-              : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
+            className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              activeTab === "tiktok"
+                ? "border-blue-500 text-blue-600"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+            }`}
           >
             TikTok
           </button>
           <button
             onClick={() => setActiveTab("lazada")}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === "lazada"
-              ? "border-blue-500 text-blue-600"
-              : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
+            className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              activeTab === "lazada"
+                ? "border-blue-500 text-blue-600"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+            }`}
           >
             Lazada
           </button>
@@ -1677,10 +1751,11 @@ export default function PlatformFeeImportPage() {
                           setResult(null);
                           setError(null);
                         }}
-                        className={`w-full p-4 border-2 rounded-lg transition-all ${selectedPlatform === platform
-                          ? "border-blue-500 bg-blue-50"
-                          : "border-gray-200 hover:border-gray-300"
-                          }`}
+                        className={`w-full p-4 border-2 rounded-lg transition-all ${
+                          selectedPlatform === platform
+                            ? "border-blue-500 bg-blue-50"
+                            : "border-gray-200 hover:border-gray-300"
+                        }`}
                       >
                         <div className="text-left">
                           <div className="font-semibold text-gray-900">
@@ -1821,10 +1896,11 @@ export default function PlatformFeeImportPage() {
             {/* Result Message */}
             {result && (
               <div
-                className={`border px-4 py-3 rounded ${result.failed && result.failed > 0
-                  ? "bg-yellow-50 border-yellow-200 text-yellow-800"
-                  : "bg-green-50 border-green-200 text-green-800"
-                  }`}
+                className={`border px-4 py-3 rounded ${
+                  result.failed && result.failed > 0
+                    ? "bg-yellow-50 border-yellow-200 text-yellow-800"
+                    : "bg-green-50 border-green-200 text-green-800"
+                }`}
               >
                 <div className="font-semibold mb-2">{result.message}</div>
                 <div className="text-sm space-y-1">
