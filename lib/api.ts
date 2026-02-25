@@ -875,6 +875,15 @@ export const platformFeeImportApi = {
   deleteFeeMap: (id: string) => {
     return api.delete(`/platform-fee-import/fee-map/${id}`);
   },
+  deleteFee: (platform: string, id: string) => {
+    return api.delete(`/platform-fee-import/fee/${platform}/${id}`);
+  },
+  deleteFeesByBatch: (platform: string, batchId: string) => {
+    return api.delete(`/platform-fee-import/fee/${platform}/batch/${batchId}`);
+  },
+  markSynced: (platform: string, id: string) => {
+    return api.post(`/platform-fee-import/fee/${platform}/${id}/mark-synced`);
+  },
 };
 
 // Fast PO Audit Logs API

@@ -44,6 +44,7 @@ export default function PlatformFeeImportPage() {
   const [editingItem, setEditingItem] = useState<any>(null);
   const [editingPlatform, setEditingPlatform] = useState<Platform | "">("");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // List state for each platform
   const [shopeeData, setShopeeData] = useState<any[]>([]);
@@ -101,7 +102,6 @@ export default function PlatformFeeImportPage() {
     endDate: "",
   });
 
-  const [feeMaps, setFeeMaps] = useState<PlatformFeeMap[]>([]);
   const [toast, setToast] = useState<{
     type: "success" | "error" | "info";
     message: string;
@@ -109,42 +109,6 @@ export default function PlatformFeeImportPage() {
 
   const showToast = (type: "success" | "error" | "info", message: string) => {
     setToast({ type, message });
-  };
-
-  // Fetch fee maps configuration
-  useEffect(() => {
-    const fetchFeeMaps = async () => {
-      try {
-        const response = await platformFeeImportApi.getFeeMaps({
-          limit: 1000,
-          active: true,
-        });
-        if (response.data && response.data.data) {
-          setFeeMaps(response.data.data);
-        }
-      } catch (error) {
-        console.error("Error fetching fee maps:", error);
-      }
-    };
-    fetchFeeMaps();
-  }, []);
-
-  const getSystemCode = (
-    platform: string,
-    rawName: string,
-    defaultCode: string,
-  ): string => {
-    if (!rawName) return defaultCode;
-    const map = feeMaps.find(
-      (m) =>
-        m.platform === platform &&
-        m.rawFeeName.toLowerCase().trim() === rawName.toLowerCase().trim(),
-    );
-
-    if (map && map.systemCode) {
-      return map.systemCode;
-    }
-    return defaultCode;
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -191,8 +155,8 @@ export default function PlatformFeeImportPage() {
     } catch (err: any) {
       setError(
         err.response?.data?.message ||
-          err.message ||
-          "Lỗi khi import file. Vui lòng thử lại.",
+        err.message ||
+        "Lỗi khi import file. Vui lòng thử lại.",
       );
     } finally {
       setLoading(false);
@@ -340,8 +304,51 @@ export default function PlatformFeeImportPage() {
     }
   };
 
+  const handleDeleteFee = async (item: any, platform: Platform) => {
+    if (item.isSynced) {
+      showToast("error", "Bản ghi đã được đẩy sang Fast, không thể xoá");
+      return;
+    }
+    if (!confirm(`Xoá bản ghi mã sàn "${item.maSan || item.id}"? Không thể hoàn tác!`)) return;
+    setDeletingId(item.id);
+    try {
+      await platformFeeImportApi.deleteFee(platform, item.id);
+      showToast("success", "Xoá thành công");
+      fetchPlatformData(platform);
+    } catch (err: any) {
+      showToast("error", err.response?.data?.message || "Lỗi khi xoá");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const handleToggleSynced = async (item: any, platform: Platform) => {
+    const newStatus = !item.isSynced;
+    const confirmMsg = newStatus
+      ? `Đánh dấu "${item.maSan || item.id}" là ĐÃ ĐẨY sang Fast?`
+      : `Hoàn tác trạng thái — đặt lại "${item.maSan || item.id}" thành CHƯA ĐẨY?`;
+    if (!confirm(confirmMsg)) return;
+    try {
+      if (newStatus) {
+        await platformFeeImportApi.markSynced(platform, item.id);
+      } else {
+        await platformFeeImportApi.updateFee(platform, item.id, { isSynced: false, syncedAt: null });
+      }
+      showToast("success", newStatus ? "Đã đánh dấu là Đã đẩy" : "Đã hoàn tác về Chưa đẩy");
+      fetchPlatformData(platform);
+    } catch (err: any) {
+      showToast("error", err.response?.data?.message || "Lỗi khi thay đổi trạng thái");
+    }
+  };
+
   const handleSyncPOCharges = async (item: any, platform: string) => {
     if (!item) return;
+
+    // Guard: prevent double-sync
+    if (item.isSynced) {
+      showToast("error", `Bản ghi này đã được đẩy sang Fast lúc ${item.syncedAt ? new Date(item.syncedAt).toLocaleString("vi-VN") : "trước đó"}, không cần đẩy lại.`);
+      return;
+    }
 
     // Construct Payload
     const master = {
@@ -357,71 +364,41 @@ export default function PlatformFeeImportPage() {
 
     const details: any[] = [];
 
-    // Helper to add detail
-    const addDetail = (dong: number, code: string, value: number) => {
-      if (value && value !== 0) {
-        details.push({
-          dong: dong,
-          ma_cp: code,
-          cp01_nt: 0,
-          cp02_nt: value, // Lần 2 -> cp02
-          cp03_nt: 0,
-          cp04_nt: 0,
-          cp05_nt: 0,
-          cp06_nt: 0,
-        });
-      }
-    };
+    // Helper to build a blank detail row
+    const makeRow = (dong: number, code: string, value: number) => ({
+      dong,
+      ma_cp: code,
+      cp01_nt: value,
+      cp02_nt: 0,
+      cp03_nt: 0,
+      cp04_nt: 0,
+      cp05_nt: 0,
+      cp06_nt: 0,
+    });
 
     if (platform === "shopee") {
-      console.log("============= ", item);
-
-      console.log("============= ", item);
-
+      // Always send all rows, value = 0 if not present
       SHOPEE_IMPORT_FEE_CONFIG.forEach((rule) => {
-        const value = Number(item[rule.field]);
-        if (value && value !== 0) {
-          const code = getSystemCode("shopee", rule.rawName, rule.defaultCode);
-          if (rule.targetCol === "cp02_nt") {
-            // Special case for cp02 (e.g. Shipping Fee Saver)
-            details.push({
-              dong: rule.row,
-              ma_cp: code,
-              cp01_nt: 0,
-              cp02_nt: value,
-              cp03_nt: 0,
-              cp04_nt: 0,
-              cp05_nt: 0,
-              cp06_nt: 0,
-            });
-          } else {
-            addDetail(rule.row, code, value);
-          }
-        }
+        const value = Number(item[rule.field]) || 0;
+        details.push(makeRow(rule.row, rule.code, value));
       });
     } else if (platform === "tiktok") {
+      // Always send all rows
       TIKTOK_IMPORT_FEE_CONFIG.forEach((rule) => {
-        const value = Number(item[rule.field]);
-        if (value && value !== 0) {
-          const code = getSystemCode("tiktok", rule.rawName, rule.defaultCode);
-          addDetail(rule.row, code, value);
-        }
+        const value = Number(item[rule.field]) || 0;
+        details.push(makeRow(rule.row, rule.code, value));
       });
     } else if (platform === "lazada") {
       if (item.maPhiNhanDienHachToan) {
         const rawName = item.tenPhiDoanhThu;
-        const systemCode = getSystemCode(
-          "lazada",
-          rawName,
-          item.maPhiNhanDienHachToan || "164020",
-        );
-        const value = item.soTien || item.phi1 || 0;
-        addDetail(1, systemCode, value);
+        const systemCode = item.maPhiNhanDienHachToan || "164020";
+        const value = Number(item.soTien || item.phi1) || 0;
+        details.push(makeRow(1, systemCode, value));
       }
     }
 
     if (details.length === 0) {
-      showToast("info", "Không có dữ liệu phí để đồng bộ (hoặc phí = 0)");
+      showToast("info", "Không có dữ liệu phí để đồng bộ");
       return;
     }
 
@@ -443,6 +420,9 @@ export default function PlatformFeeImportPage() {
       const res = await fastApiInvoicesApi.syncPOCharges(payload);
       if (res.data?.success || res.status === 200 || res.status === 201) {
         showToast("success", `Đồng bộ thành công! ${res.data?.message || ""}`);
+        // Mark as synced in DB
+        try { await platformFeeImportApi.markSynced(platform, item.id); } catch (_) { }
+        fetchPlatformData(platform as Platform);
       } else {
         let errorMessage = res.data?.message || "Đồng bộ thất bại";
         if (Array.isArray(res.data) && res.data.length > 0) {
@@ -539,6 +519,8 @@ export default function PlatformFeeImportPage() {
           <table className="w-full text-left text-sm min-w-max">
             <thead className="bg-gray-100 text-gray-600 font-semibold uppercase text-xs">
               <tr>
+                <th className="px-3 py-3 whitespace-nowrap">Trạng thái</th>
+                <th className="px-3 py-3 whitespace-nowrap">Thao tác</th>
                 <th className="px-3 py-3 whitespace-nowrap">Mã sàn</th>
                 <th className="px-3 py-3 whitespace-nowrap">Mã nội bộ SP</th>
                 <th className="px-3 py-3 whitespace-nowrap">Ngày đối soát</th>
@@ -631,7 +613,7 @@ export default function PlatformFeeImportPage() {
               {listLoading ? (
                 <tr>
                   <td
-                    colSpan={37}
+                    colSpan={39}
                     className="px-6 py-8 text-center text-gray-500"
                   >
                     <div className="flex justify-center items-center gap-2">
@@ -643,7 +625,7 @@ export default function PlatformFeeImportPage() {
               ) : data.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={37}
+                    colSpan={39}
                     className="px-6 py-8 text-center text-gray-500"
                   >
                     Không có dữ liệu
@@ -653,8 +635,48 @@ export default function PlatformFeeImportPage() {
                 data.map((item) => (
                   <tr
                     key={item.id}
-                    className="hover:bg-gray-50 transition-colors"
+                    className={`hover:bg-gray-50 transition-colors ${item.isSynced ? "bg-green-50/40" : ""}`}
                   >
+                    {/* Status badge */}
+                    <td className="px-3 py-3 whitespace-nowrap">
+                      {item.isSynced ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+                          <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                          Đã đẩy
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-500">Chưa đẩy</span>
+                      )}
+                    </td>
+                    {/* Action buttons */}
+                    <td className="px-3 py-3 whitespace-nowrap">
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => handleEdit(item, platform)}
+                          disabled={item.isSynced}
+                          title={item.isSynced ? "Đã đẩy, không thể sửa" : "Chỉnh sửa"}
+                          className="px-2 py-1 text-xs rounded bg-blue-50 text-blue-600 hover:bg-blue-100 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                        >
+                          Sửa
+                        </button>
+                        <button
+                          onClick={() => handleDeleteFee(item, platform)}
+                          disabled={item.isSynced || deletingId === item.id}
+                          title={item.isSynced ? "Đã đẩy, không thể xoá" : "Xoá"}
+                          className="px-2 py-1 text-xs rounded bg-red-50 text-red-600 hover:bg-red-100 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                        >
+                          {deletingId === item.id ? "..." : "Xoá"}
+                        </button>
+                        <button
+                          onDoubleClick={() => handleSyncPOCharges(item, platform)}
+                          disabled={item.isSynced}
+                          title={item.isSynced ? "Đã đẩy sang Fast" : "Double click để đẩy sang Fast"}
+                          className="px-2 py-1 text-xs rounded bg-purple-50 text-purple-600 hover:bg-purple-100 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                        >
+                          {item.isSynced ? "✓ Synced" : "Đẩy Fast"}
+                        </button>
+                      </div>
+                    </td>
                     <td className="px-3 py-3 font-mono text-gray-700 whitespace-nowrap">
                       {item.maSan ?? "-"}
                     </td>
@@ -916,6 +938,20 @@ export default function PlatformFeeImportPage() {
           </form>
         </div>
 
+        {/* Action Legend - compact */}
+        <div className="px-4 py-1.5 bg-gray-50 border-b border-gray-200 flex items-center gap-2 text-[11px] text-gray-500">
+          <span className="font-semibold text-gray-600">Thao tác:</span>
+          <span className="px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-medium">Sửa</span><span>chỉ khi chưa đẩy</span>
+          <span className="text-gray-300">|</span>
+          <span className="px-1.5 py-0.5 rounded bg-red-100 text-red-600 font-medium">Xoá</span><span>chỉ khi chưa đẩy</span>
+          <span className="text-gray-300">|</span>
+          <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-medium">✔ Đánh dấu</span><span>thủ công mark đã đẩy</span>
+          <span className="text-gray-300">|</span>
+          <span className="px-1.5 py-0.5 rounded bg-orange-100 text-orange-600 font-medium">↩ Hoàn tác</span><span>đặt lại chưa đẩy</span>
+          <span className="text-gray-300">|</span>
+          <span className="px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 font-medium">Đẩy Fast</span><span>double-click để gửi Fast</span>
+        </div>
+
         {/* Table */}
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm min-w-max">
@@ -960,13 +996,14 @@ export default function PlatformFeeImportPage() {
                 <th className="px-3 py-3 whitespace-nowrap">
                   Mã đơn hàng hoàn/trả lại
                 </th>
-                <th className="px-3 py-3 whitespace-nowrap">Sàn TMĐT</th>
+                <th className="px-3 py-3 whitespace-nowrap">Sàn TMDĐT</th>
                 <th className="px-3 py-3 whitespace-nowrap">MKT 1</th>
                 <th className="px-3 py-3 whitespace-nowrap">MKT 2</th>
                 <th className="px-3 py-3 whitespace-nowrap">MKT 3</th>
                 <th className="px-3 py-3 whitespace-nowrap">MKT 4</th>
                 <th className="px-3 py-3 whitespace-nowrap">MKT 5</th>
                 <th className="px-3 py-3 whitespace-nowrap">Bộ phận</th>
+                <th className="px-3 py-3 whitespace-nowrap">Trạng thái</th>
                 <th className="px-3 py-3 whitespace-nowrap">Thao tác</th>
               </tr>
             </thead>
@@ -974,7 +1011,7 @@ export default function PlatformFeeImportPage() {
               {listLoading ? (
                 <tr>
                   <td
-                    colSpan={25}
+                    colSpan={26}
                     className="px-6 py-8 text-center text-gray-500"
                   >
                     <div className="flex justify-center items-center gap-2">
@@ -986,7 +1023,7 @@ export default function PlatformFeeImportPage() {
               ) : rows.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={25}
+                    colSpan={26}
                     className="px-6 py-8 text-center text-gray-500"
                   >
                     Không có dữ liệu
@@ -996,8 +1033,7 @@ export default function PlatformFeeImportPage() {
                 rows.map((r: any) => (
                   <tr
                     key={`${r.id}`}
-                    className="hover:bg-gray-50 transition-colors cursor-pointer"
-                    onDoubleClick={() => handleSyncPOCharges(r, "shopee")}
+                    className={`hover:bg-gray-50 transition-colors ${r.isSynced ? "bg-green-50/40" : ""}`}
                   >
                     <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
                       {r.stt}
@@ -1078,15 +1114,41 @@ export default function PlatformFeeImportPage() {
                       {r.boPhan ?? "-"}
                     </td>
                     <td className="px-3 py-3 whitespace-nowrap">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEdit(r, "shopee");
-                        }}
-                        className="text-blue-600 hover:text-blue-800 font-medium"
-                      >
-                        Sửa
-                      </button>
+                      {r.isSynced ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+                          <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                          Đã đẩy
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-500">Chưa đẩy</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-3 whitespace-nowrap">
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleEdit(r, "shopee"); }}
+                          disabled={r.isSynced}
+                          title={r.isSynced ? "Đã đẩy, không thể sửa" : "Chỉnh sửa"}
+                          className="px-2 py-1 text-xs rounded bg-blue-50 text-blue-600 hover:bg-blue-100 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                        >Sửa</button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDeleteFee(r, "shopee"); }}
+                          disabled={r.isSynced || deletingId === r.id}
+                          title={r.isSynced ? "Đã đẩy, không thể xoá" : "Xoá"}
+                          className="px-2 py-1 text-xs rounded bg-red-50 text-red-600 hover:bg-red-100 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                        >{deletingId === r.id ? "..." : "Xoá"}</button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleToggleSynced(r, "shopee"); }}
+                          title={r.isSynced ? "Hoàn tác về Chưa đẩy" : "Đánh dấu đã đẩy"}
+                          className={`px-2 py-1 text-xs rounded transition ${r.isSynced ? "bg-orange-50 text-orange-600 hover:bg-orange-100" : "bg-emerald-50 text-emerald-600 hover:bg-emerald-100"}`}
+                        >{r.isSynced ? "↩ Hoàn tác" : "✔ Đánh dấu"}</button>
+                        <button
+                          onDoubleClick={(e) => { e.stopPropagation(); handleSyncPOCharges(r, "shopee"); }}
+                          disabled={r.isSynced}
+                          title={r.isSynced ? "Đã đẩy sang Fast" : "Double click để đẩy"}
+                          className="px-2 py-1 text-xs rounded bg-purple-50 text-purple-600 hover:bg-purple-100 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                        >{r.isSynced ? "✓ Synced" : "Đẩy Fast"}</button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -1219,6 +1281,20 @@ export default function PlatformFeeImportPage() {
           </form>
         </div>
 
+        {/* Action Legend - compact */}
+        <div className="px-4 py-1.5 bg-gray-50 border-b border-gray-200 flex items-center gap-2 text-[11px] text-gray-500">
+          <span className="font-semibold text-gray-600">Thao tác:</span>
+          <span className="px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-medium">Sửa</span><span>chỉ khi chưa đẩy</span>
+          <span className="text-gray-300">|</span>
+          <span className="px-1.5 py-0.5 rounded bg-red-100 text-red-600 font-medium">Xoá</span><span>chỉ khi chưa đẩy</span>
+          <span className="text-gray-300">|</span>
+          <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-medium">✔ Đánh dấu</span><span>thủ công mark đã đẩy</span>
+          <span className="text-gray-300">|</span>
+          <span className="px-1.5 py-0.5 rounded bg-orange-100 text-orange-600 font-medium">↩ Hoàn tác</span><span>đặt lại chưa đẩy</span>
+          <span className="text-gray-300">|</span>
+          <span className="px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 font-medium">Đẩy Fast</span><span>double-click để gửi Fast</span>
+        </div>
+
         {/* Table */}
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm min-w-max">
@@ -1241,7 +1317,8 @@ export default function PlatformFeeImportPage() {
                 <th className="px-3 py-3 whitespace-nowrap">
                   Mã đơn hàng hoàn/trả lại
                 </th>
-                <th className="px-3 py-3 whitespace-nowrap">Sàn TMĐT</th>
+                <th className="px-3 py-3 whitespace-nowrap">Sàn TMDĐT</th>
+                <th className="px-3 py-3 whitespace-nowrap">Trạng thái</th>
                 <th className="px-3 py-3 whitespace-nowrap">Thao tác</th>
               </tr>
             </thead>
@@ -1249,7 +1326,7 @@ export default function PlatformFeeImportPage() {
               {listLoading ? (
                 <tr>
                   <td
-                    colSpan={11}
+                    colSpan={12}
                     className="px-6 py-8 text-center text-gray-500"
                   >
                     <div className="flex justify-center items-center gap-2">
@@ -1261,7 +1338,7 @@ export default function PlatformFeeImportPage() {
               ) : rows.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={11}
+                    colSpan={12}
                     className="px-6 py-8 text-center text-gray-500"
                   >
                     Không có dữ liệu
@@ -1271,8 +1348,7 @@ export default function PlatformFeeImportPage() {
                 rows.map((r) => (
                   <tr
                     key={`${r.stt}`}
-                    className="hover:bg-gray-50 transition-colors cursor-pointer"
-                    onDoubleClick={() => handleSyncPOCharges(r, "lazada")}
+                    className={`hover:bg-gray-50 transition-colors ${r.isSynced ? "bg-green-50/40" : ""}`}
                   >
                     <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
                       {r.stt}
@@ -1307,21 +1383,41 @@ export default function PlatformFeeImportPage() {
                       {r.sanTmdt ?? "-"}
                     </td>
                     <td className="px-3 py-3 whitespace-nowrap">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEdit(r, "lazada"); // Note: r is constructed in renderLazadaFeeTable, make sure it has 'id' if 'handleEdit' expects it.
-                          // Wait, 'rows' in renderLazadaFeeTable maps original item to 'r', but 'r' in lines 1051-1062 does NOT have 'id'.
-                          // I must add 'id' and other fields to 'rows' map in Lazada table.
-                          // Actually handleEdit expects 'item'. 'r' is a transformed object.
-                          // I should probably pass the original item or ensure 'r' has 'id'.
-                          // In Shopee table, 'r' was { ...item }, so it had 'id'.
-                          // In Lazada table, 'r' is mapped explicitly. I need to fix this.
-                        }}
-                        className="text-blue-600 hover:text-blue-800 font-medium"
-                      >
-                        Sửa
-                      </button>
+                      {r.isSynced ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+                          <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                          Đã đẩy
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-500">Chưa đẩy</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-3 whitespace-nowrap">
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleEdit(r, "lazada"); }}
+                          disabled={r.isSynced}
+                          title={r.isSynced ? "Đã đẩy, không thể sửa" : "Chỉnh sửa"}
+                          className="px-2 py-1 text-xs rounded bg-blue-50 text-blue-600 hover:bg-blue-100 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                        >Sửa</button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDeleteFee(r, "lazada"); }}
+                          disabled={r.isSynced || deletingId === r.id}
+                          title={r.isSynced ? "Đã đẩy, không thể xoá" : "Xoá"}
+                          className="px-2 py-1 text-xs rounded bg-red-50 text-red-600 hover:bg-red-100 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                        >{deletingId === r.id ? "..." : "Xoá"}</button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleToggleSynced(r, "lazada"); }}
+                          title={r.isSynced ? "Hoàn tác về Chưa đẩy" : "Đánh dấu đã đẩy"}
+                          className={`px-2 py-1 text-xs rounded transition ${r.isSynced ? "bg-orange-50 text-orange-600 hover:bg-orange-100" : "bg-emerald-50 text-emerald-600 hover:bg-emerald-100"}`}
+                        >{r.isSynced ? "↩ Hoàn tác" : "✔ Đánh dấu"}</button>
+                        <button
+                          onDoubleClick={(e) => { e.stopPropagation(); handleSyncPOCharges(r, "lazada"); }}
+                          disabled={r.isSynced}
+                          title={r.isSynced ? "Đã đẩy sang Fast" : "Double click để đẩy"}
+                          className="px-2 py-1 text-xs rounded bg-purple-50 text-purple-600 hover:bg-purple-100 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                        >{r.isSynced ? "✓ Synced" : "Đẩy Fast"}</button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -1445,6 +1541,20 @@ export default function PlatformFeeImportPage() {
           </form>
         </div>
 
+        {/* Action Legend - compact */}
+        <div className="px-4 py-1.5 bg-gray-50 border-b border-gray-200 flex items-center gap-2 text-[11px] text-gray-500">
+          <span className="font-semibold text-gray-600">Thao tác:</span>
+          <span className="px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-medium">Sửa</span><span>chỉ khi chưa đẩy</span>
+          <span className="text-gray-300">|</span>
+          <span className="px-1.5 py-0.5 rounded bg-red-100 text-red-600 font-medium">Xoá</span><span>chỉ khi chưa đẩy</span>
+          <span className="text-gray-300">|</span>
+          <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-medium">✔ Đánh dấu</span><span>thủ công mark đã đẩy</span>
+          <span className="text-gray-300">|</span>
+          <span className="px-1.5 py-0.5 rounded bg-orange-100 text-orange-600 font-medium">↩ Hoàn tác</span><span>đặt lại chưa đẩy</span>
+          <span className="text-gray-300">|</span>
+          <span className="px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 font-medium">Đẩy Fast</span><span>double-click để gửi Fast</span>
+        </div>
+
         {/* Table */}
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm min-w-max">
@@ -1490,6 +1600,7 @@ export default function PlatformFeeImportPage() {
                 <th className="px-3 py-3 whitespace-nowrap">MKT 4</th>
                 <th className="px-3 py-3 whitespace-nowrap">MKT 5</th>
                 <th className="px-3 py-3 whitespace-nowrap">Bộ phận</th>
+                <th className="px-3 py-3 whitespace-nowrap">Trạng thái</th>
                 <th className="px-3 py-3 whitespace-nowrap">Thao tác</th>
               </tr>
             </thead>
@@ -1497,7 +1608,7 @@ export default function PlatformFeeImportPage() {
               {listLoading ? (
                 <tr>
                   <td
-                    colSpan={23}
+                    colSpan={24}
                     className="px-6 py-8 text-center text-gray-500"
                   >
                     <div className="flex justify-center items-center gap-2">
@@ -1509,7 +1620,7 @@ export default function PlatformFeeImportPage() {
               ) : rows.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={23}
+                    colSpan={24}
                     className="px-6 py-8 text-center text-gray-500"
                   >
                     Không có dữ liệu
@@ -1519,8 +1630,7 @@ export default function PlatformFeeImportPage() {
                 rows.map((r: any) => (
                   <tr
                     key={`${r.id}`}
-                    className="hover:bg-gray-50 transition-colors cursor-pointer"
-                    onDoubleClick={() => handleSyncPOCharges(r, "tiktok")}
+                    className={`hover:bg-gray-50 transition-colors ${r.isSynced ? "bg-green-50/40" : ""}`}
                   >
                     <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
                       {r.stt}
@@ -1595,15 +1705,41 @@ export default function PlatformFeeImportPage() {
                       {r.boPhan ?? "-"}
                     </td>
                     <td className="px-3 py-3 whitespace-nowrap">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEdit(r, "tiktok");
-                        }}
-                        className="text-blue-600 hover:text-blue-800 font-medium"
-                      >
-                        Sửa
-                      </button>
+                      {r.isSynced ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+                          <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                          Đã đẩy
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-500">Chưa đẩy</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-3 whitespace-nowrap">
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleEdit(r, "tiktok"); }}
+                          disabled={r.isSynced}
+                          title={r.isSynced ? "Đã đẩy, không thể sửa" : "Chỉnh sửa"}
+                          className="px-2 py-1 text-xs rounded bg-blue-50 text-blue-600 hover:bg-blue-100 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                        >Sửa</button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDeleteFee(r, "tiktok"); }}
+                          disabled={r.isSynced || deletingId === r.id}
+                          title={r.isSynced ? "Đã đẩy, không thể xoá" : "Xoá"}
+                          className="px-2 py-1 text-xs rounded bg-red-50 text-red-600 hover:bg-red-100 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                        >{deletingId === r.id ? "..." : "Xoá"}</button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleToggleSynced(r, "tiktok"); }}
+                          title={r.isSynced ? "Hoàn tác về Chưa đẩy" : "Đánh dấu đã đẩy"}
+                          className={`px-2 py-1 text-xs rounded transition ${r.isSynced ? "bg-orange-50 text-orange-600 hover:bg-orange-100" : "bg-emerald-50 text-emerald-600 hover:bg-emerald-100"}`}
+                        >{r.isSynced ? "↩ Hoàn tác" : "✔ Đánh dấu"}</button>
+                        <button
+                          onDoubleClick={(e) => { e.stopPropagation(); handleSyncPOCharges(r, "tiktok"); }}
+                          disabled={r.isSynced}
+                          title={r.isSynced ? "Đã đẩy sang Fast" : "Double click để đẩy"}
+                          className="px-2 py-1 text-xs rounded bg-purple-50 text-purple-600 hover:bg-purple-100 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                        >{r.isSynced ? "✓ Synced" : "Đẩy Fast"}</button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -1690,41 +1826,37 @@ export default function PlatformFeeImportPage() {
         <nav className="-mb-px flex space-x-8">
           <button
             onClick={() => setActiveTab("import")}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === "import"
-                ? "border-blue-500 text-blue-600"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            }`}
+            className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === "import"
+              ? "border-blue-500 text-blue-600"
+              : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
           >
             Import
           </button>
           <button
             onClick={() => setActiveTab("shopee")}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === "shopee"
-                ? "border-blue-500 text-blue-600"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            }`}
+            className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === "shopee"
+              ? "border-blue-500 text-blue-600"
+              : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
           >
             Shopee
           </button>
           <button
             onClick={() => setActiveTab("tiktok")}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === "tiktok"
-                ? "border-blue-500 text-blue-600"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            }`}
+            className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === "tiktok"
+              ? "border-blue-500 text-blue-600"
+              : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
           >
             TikTok
           </button>
           <button
             onClick={() => setActiveTab("lazada")}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === "lazada"
-                ? "border-blue-500 text-blue-600"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            }`}
+            className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === "lazada"
+              ? "border-blue-500 text-blue-600"
+              : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
           >
             Lazada
           </button>
@@ -1751,11 +1883,10 @@ export default function PlatformFeeImportPage() {
                           setResult(null);
                           setError(null);
                         }}
-                        className={`w-full p-4 border-2 rounded-lg transition-all ${
-                          selectedPlatform === platform
-                            ? "border-blue-500 bg-blue-50"
-                            : "border-gray-200 hover:border-gray-300"
-                        }`}
+                        className={`w-full p-4 border-2 rounded-lg transition-all ${selectedPlatform === platform
+                          ? "border-blue-500 bg-blue-50"
+                          : "border-gray-200 hover:border-gray-300"
+                          }`}
                       >
                         <div className="text-left">
                           <div className="font-semibold text-gray-900">
@@ -1896,11 +2027,10 @@ export default function PlatformFeeImportPage() {
             {/* Result Message */}
             {result && (
               <div
-                className={`border px-4 py-3 rounded ${
-                  result.failed && result.failed > 0
-                    ? "bg-yellow-50 border-yellow-200 text-yellow-800"
-                    : "bg-green-50 border-green-200 text-green-800"
-                }`}
+                className={`border px-4 py-3 rounded ${result.failed && result.failed > 0
+                  ? "bg-yellow-50 border-yellow-200 text-yellow-800"
+                  : "bg-green-50 border-green-200 text-green-800"
+                  }`}
               >
                 <div className="font-semibold mb-2">{result.message}</div>
                 <div className="text-sm space-y-1">
