@@ -1,22 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { shopeeFeesApi, fastApiInvoicesApi, platformFeeImportApi } from "@/lib/api";
-import { SHOPEE_FEE_CONFIG } from "@/lib/fee-config";
+import { shopeeFeesApi, fastApiInvoicesApi } from "@/lib/api";
 import { Toast } from "@/components/Toast";
 import Link from "next/link";
 import { format, subDays } from "date-fns";
 
-interface PlatformFeeMap {
-  id: string;
-  platform: string;
-  rawFeeName: string;
-  normalizedFeeName: string;
-  internalCode: string;
-  systemCode: string | null;
-  accountCode: string;
-  active: boolean;
-}
+
 export default function PlatformFeesPage() {
   const formatCurrency = (value: number | string | undefined) => {
     if (value === undefined || value === null) return "-";
@@ -44,9 +34,7 @@ export default function PlatformFeesPage() {
     endDate: format(new Date(), "yyyy-MM-dd"),
   });
 
-  const [feeMaps, setFeeMaps] = useState<PlatformFeeMap[]>([]);
 
-  // Batch Sync Settings
   const [showBatchModal, setShowBatchModal] = useState(false);
   const [batchDateFrom, setBatchDateFrom] = useState(
     format(subDays(new Date(), 30), "yyyy-MM-dd")
@@ -67,42 +55,6 @@ export default function PlatformFeesPage() {
 
   const showToast = (type: "success" | "error" | "info", message: string) => {
     setToast({ type, message });
-  };
-
-  // Fetch fee maps configuration
-  useEffect(() => {
-    const fetchFeeMaps = async () => {
-      try {
-        const response = await platformFeeImportApi.getFeeMaps({
-          limit: 1000,
-          active: true,
-        });
-        if (response.data && response.data.data) {
-          setFeeMaps(response.data.data);
-        }
-      } catch (error) {
-        console.error("Error fetching fee maps:", error);
-      }
-    };
-    fetchFeeMaps();
-  }, []);
-
-  const getSystemCode = (
-    platform: string,
-    rawName: string,
-    defaultCode: string,
-  ): string => {
-    if (!rawName) return defaultCode;
-    const map = feeMaps.find(
-      (m) =>
-        m.platform === platform &&
-        m.rawFeeName.toLowerCase().trim() === rawName.toLowerCase().trim(),
-    );
-
-    if (map && map.systemCode) {
-      return map.systemCode;
-    }
-    return defaultCode;
   };
 
   const fetchData = async () => {
@@ -194,54 +146,31 @@ export default function PlatformFeesPage() {
       dh_dvcs: "TTM", // Hardcoded or generic? User accepted TTM in examples.
     };
 
-    const details: any[] = [];
-
-    SHOPEE_FEE_CONFIG.forEach((rule) => {
-      const value = Number(item[rule.field]);
-      if (value && value !== 0) {
-        const code = getSystemCode(
-          "shopee",
-          rule.rawName,
-          rule.defaultCode
-        );
-
-        const detail = {
-          dong: rule.row,
-          ma_cp: code,
-          cp01_nt: 0,
-          cp02_nt: 0,
-          cp03_nt: 0,
-          cp04_nt: 0,
-          cp05_nt: 0,
-          cp06_nt: 0,
-        };
-
-        if (rule.targetCol === "cp02_nt") {
-          detail.cp02_nt = value;
-        } else {
-          detail.cp01_nt = value;
-        }
-        details.push(detail);
-      }
+    // Chỉ lấy 3 loại phí từ shopee_fee entity — đúng nguồn dữ liệu
+    const makeRow = (dong: number, code: string, value: number) => ({
+      dong,
+      ma_cp: code,
+      cp01_nt: value,
+      cp02_nt: 0,
+      cp03_nt: 0,
+      cp04_nt: 0,
+      cp05_nt: 0,
+      cp06_nt: 0,
     });
 
-    if (details.length === 0) {
-      showToast("info", "Không có dữ liệu phí (Shopee Fees) để đồng bộ");
+    const details = [
+      makeRow(1, "SPFIXED", Number(item.commissionFee) || 0),
+      makeRow(2, "SPSERVICE", Number(item.serviceFee) || 0),
+      makeRow(3, "SPPAY5", Number(item.paymentFee) || 0),
+    ];
+
+    const allZero = details.every((d) => d.cp01_nt === 0);
+    if (allZero) {
+      showToast("info", "Tất cả phí đều = 0, không gửi");
       return;
     }
 
-    const payload = {
-      master,
-      detail: details,
-    };
-
-    // if (
-    //   !confirm(
-    //     `Bạn có chắc chắn muốn đẩy phí cho đơn ${master.dh_so} sang Fast?`
-    //   )
-    // ) {
-    //   return;
-    // }
+    const payload = { master, detail: details };
 
     setLoading(true);
     try {
