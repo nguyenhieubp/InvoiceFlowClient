@@ -894,6 +894,14 @@ export const fastPOApi = {
   retry: (id: number) => {
     return api.post(`/fast-integration/retry/${id}`);
   },
+  deleteLog: (id: number) => {
+    return api.delete(`/fast-integration/audit/${id}`);
+  },
+  deleteLogsByDateRange: (data: { startDate: string; endDate: string; status?: string }) => {
+    const params: any = { startDate: data.startDate, endDate: data.endDate };
+    if (data.status) params.status = data.status;
+    return api.delete(`/fast-integration/audit`, { params });
+  },
 };
 
 // Fast API Invoices API (Bảng kê hóa đơn)
@@ -914,6 +922,9 @@ export const fastApiInvoicesApi = {
   },
   syncPOCharges: (data: any) => {
     return api.post("/fast-integration/po-charges", data);
+  },
+  batchSyncPOCharges: (data: { startDate: string; endDate: string; platform?: string }) => {
+    return api.post("/fast-integration/po-charges/batch-sync", data);
   },
   exportExcel: (params?: {
     status?: number;

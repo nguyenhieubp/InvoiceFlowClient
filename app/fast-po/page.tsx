@@ -18,6 +18,13 @@ export default function FastPOPage() {
     const [dateFrom, setDateFrom] = useState("");
     const [dateTo, setDateTo] = useState("");
     const [retryingId, setRetryingId] = useState<number | null>(null);
+    const [deletingId, setDeletingId] = useState<number | null>(null);
+    const [deletingAll, setDeletingAll] = useState(false);
+    const [statusFilter, setStatusFilter] = useState("");
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [deleteFromDate, setDeleteFromDate] = useState("");
+    const [deleteToDate, setDeleteToDate] = useState("");
+    const [deleteStatusFilter, setDeleteStatusFilter] = useState("");
 
     const [selectedAudit, setSelectedAudit] = useState<any | null>(null);
 
@@ -36,7 +43,8 @@ export default function FastPOPage() {
                 search: search || undefined,
                 dateFrom: dateFrom || undefined,
                 dateTo: dateTo || undefined,
-            });
+                status: statusFilter || undefined,
+            } as any);
             if (response.data) {
                 // If the response is a direct array (as in getAuditLogs), or nested
                 const logs = Array.isArray(response.data) ? response.data : response.data.data || [];
@@ -104,6 +112,49 @@ export default function FastPOPage() {
         }
     };
 
+    const handleDeleteLog = async (id: number) => {
+        if (!confirm(`Bạn có chắc chắn muốn xoá log #${id}?`)) return;
+        setDeletingId(id);
+        try {
+            await fastPOApi.deleteLog(id);
+            setToast({ type: "success", message: `Đã xoá log #${id}` });
+            fetchData();
+        } catch (error: any) {
+            setToast({
+                type: "error",
+                message: error.response?.data?.message || "Lỗi khi xoá log",
+            });
+        } finally {
+            setDeletingId(null);
+        }
+    };
+
+    const handleDeleteByDateRange = async () => {
+        if (!deleteFromDate || !deleteToDate) {
+            setToast({ type: "error", message: "Vui lòng chọn khoảng ngày cần xoá" });
+            return;
+        }
+        if (!confirm(`Xoá tất cả log từ ${deleteFromDate} đến ${deleteToDate}${deleteStatusFilter ? ` (${deleteStatusFilter})` : ""}? Không thể hoàn tác!`)) return;
+        setDeletingAll(true);
+        try {
+            const res = await fastPOApi.deleteLogsByDateRange({
+                startDate: deleteFromDate,
+                endDate: deleteToDate,
+                status: deleteStatusFilter || undefined,
+            });
+            setToast({ type: "success", message: res.data?.message || "Đã xoá log" });
+            setShowDeleteModal(false);
+            fetchData();
+        } catch (error: any) {
+            setToast({
+                type: "error",
+                message: error.response?.data?.message || "Lỗi khi xoá log",
+            });
+        } finally {
+            setDeletingAll(false);
+        }
+    };
+
     return (
         <div className="container mx-auto px-4 py-8">
             {/* Toast notifications */}
@@ -121,6 +172,15 @@ export default function FastPOPage() {
                 <h1 className="text-2xl font-bold text-gray-800">
                     Lịch sử đồng bộ Fast PO
                 </h1>
+                <button
+                    onClick={() => setShowDeleteModal(true)}
+                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition flex items-center gap-2 text-sm font-medium"
+                >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    Xoá log theo ngày
+                </button>
             </div>
 
             {/* Filters */}
@@ -158,6 +218,19 @@ export default function FastPOPage() {
                         />
                     </div>
 
+                    <div className="w-full md:w-auto">
+                        <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider">Trạng thái</label>
+                        <select
+                            value={statusFilter}
+                            onChange={(e) => setStatusFilter(e.target.value)}
+                            className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all bg-white"
+                        >
+                            <option value="">Tất cả</option>
+                            <option value="SUCCESS">SUCCESS</option>
+                            <option value="ERROR">ERROR</option>
+                        </select>
+                    </div>
+
                     <div className="flex gap-3">
                         <button
                             onClick={() => {
@@ -174,6 +247,7 @@ export default function FastPOPage() {
                                 setSearch("");
                                 setDateFrom("");
                                 setDateTo("");
+                                setStatusFilter("");
                                 setPagination(prev => ({ ...prev, page: 1 }));
                             }}
                             className="px-6 py-2.5 text-gray-500 hover:text-gray-900 font-bold rounded-lg hover:bg-gray-50 transition-all"
@@ -253,6 +327,16 @@ export default function FastPOPage() {
                                                     }`}
                                             >
                                                 {retryingId === item.id ? "Đang chạy..." : "Chạy lại"}
+                                            </button>
+                                            <button
+                                                onClick={() => handleDeleteLog(item.id)}
+                                                disabled={deletingId === item.id}
+                                                className={`font-medium ${deletingId === item.id
+                                                    ? 'text-gray-400 cursor-not-allowed'
+                                                    : 'text-red-600 hover:text-red-800'
+                                                    }`}
+                                            >
+                                                {deletingId === item.id ? "Đang xoá..." : "Xoá"}
                                             </button>
                                         </td>
                                     </tr>
@@ -345,6 +429,68 @@ export default function FastPOPage() {
                                 className="px-6 py-2 bg-white border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-100 transition-colors"
                             >
                                 Đóng
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete by Date Range Modal */}
+            {showDeleteModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6">
+                        <h3 className="text-lg font-bold text-gray-900 mb-4">Xoá log theo khoảng ngày</h3>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Từ ngày (ngày tạo log)</label>
+                                <input
+                                    type="date"
+                                    value={deleteFromDate}
+                                    onChange={(e) => setDeleteFromDate(e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-400 outline-none"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Đến ngày</label>
+                                <input
+                                    type="date"
+                                    value={deleteToDate}
+                                    onChange={(e) => setDeleteToDate(e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-400 outline-none"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Trạng thái (tuùy chọn)</label>
+                                <select
+                                    value={deleteStatusFilter}
+                                    onChange={(e) => setDeleteStatusFilter(e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-400 outline-none bg-white"
+                                >
+                                    <option value="">Tất cả</option>
+                                    <option value="SUCCESS">SUCCESS</option>
+                                    <option value="ERROR">ERROR</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div className="mt-6 flex justify-end gap-3">
+                            <button
+                                onClick={() => setShowDeleteModal(false)}
+                                disabled={deletingAll}
+                                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 font-medium"
+                            >
+                                Hủy
+                            </button>
+                            <button
+                                onClick={handleDeleteByDateRange}
+                                disabled={deletingAll}
+                                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium flex items-center gap-2 disabled:opacity-50"
+                            >
+                                {deletingAll ? (
+                                    <>
+                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                        Đang xoá...
+                                    </>
+                                ) : "Xoá log"}
                             </button>
                         </div>
                     </div>

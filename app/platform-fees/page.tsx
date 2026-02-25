@@ -45,6 +45,21 @@ export default function PlatformFeesPage() {
   });
 
   const [feeMaps, setFeeMaps] = useState<PlatformFeeMap[]>([]);
+
+  // Batch Sync Settings
+  const [showBatchModal, setShowBatchModal] = useState(false);
+  const [batchDateFrom, setBatchDateFrom] = useState(
+    format(subDays(new Date(), 30), "yyyy-MM-dd")
+  );
+  const [batchDateTo, setBatchDateTo] = useState(
+    format(new Date(), "yyyy-MM-dd")
+  );
+  const [batchProcessing, setBatchProcessing] = useState(false);
+  const [batchResult, setBatchResult] = useState<{
+    success: boolean;
+    message: string;
+    errors?: any[];
+  } | null>(null);
   const [toast, setToast] = useState<{
     type: "success" | "error" | "info";
     message: string;
@@ -130,6 +145,33 @@ export default function PlatformFeesPage() {
 
   const handlePageChange = (newPage: number) => {
     setPagination((prev) => ({ ...prev, page: newPage }));
+  };
+
+  const handleBatchProcess = async () => {
+    setBatchProcessing(true);
+    setBatchResult(null);
+    try {
+      const response = await fastApiInvoicesApi.batchSyncPOCharges({
+        startDate: batchDateFrom,
+        endDate: batchDateTo,
+        platform: "shopee",
+      });
+      setBatchResult(response.data);
+      if (response.data.success) {
+        showToast("success", "Đã hoàn tất đồng bộ hàng loạt");
+        fetchData();
+      } else {
+        showToast("error", "Đồng bộ có lỗi, vui lòng xem chi tiết");
+      }
+    } catch (error: any) {
+      setBatchResult({
+        success: false,
+        message: error?.response?.data?.message || "Lỗi khi xử lý đồng bộ",
+      });
+      showToast("error", "Lỗi khi xử lý đồng bộ");
+    } finally {
+      setBatchProcessing(false);
+    }
   };
 
   const handleSyncPOCharges = async (item: any) => {
@@ -254,25 +296,46 @@ export default function PlatformFeesPage() {
             Quản lý và theo dõi chi phí sàn Shopee
           </p>
         </div>
-        <button
-          onClick={fetchData}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-2"
-        >
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowBatchModal(true)}
+            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition flex items-center gap-2"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-            />
-          </svg>
-          Làm mới
-        </button>
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M13 10V3L4 14h7v7l9-11h-7z"
+              />
+            </svg>
+            Tự động chạy
+          </button>
+          <button
+            onClick={fetchData}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-2"
+          >
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+              />
+            </svg>
+            Làm mới
+          </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -485,6 +548,91 @@ export default function PlatformFeesPage() {
           </div>
         </div>
       </div>
+
+      {/* Batch Process Modal */}
+      {showBatchModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-4">
+              Đồng bộ phí hàng loạt
+            </h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Từ ngày
+                </label>
+                <input
+                  type="date"
+                  value={batchDateFrom}
+                  onChange={(e) => setBatchDateFrom(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Đến ngày
+                </label>
+                <input
+                  type="date"
+                  value={batchDateTo}
+                  onChange={(e) => setBatchDateTo(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {batchResult && (
+                <div
+                  className={`p-3 rounded-md text-sm ${batchResult.success
+                    ? "bg-green-50 text-green-700"
+                    : "bg-red-50 text-red-700"
+                    }`}
+                >
+                  <p className="font-medium">{batchResult.message}</p>
+                  {batchResult.errors && batchResult.errors.length > 0 && (
+                    <div className="mt-2 max-h-32 overflow-y-auto bg-white p-2 border rounded">
+                      <p className="font-semibold mb-1">Chi tiết lỗi:</p>
+                      <ul className="list-disc pl-4 space-y-1 text-xs">
+                        {batchResult.errors.map((err, idx) => (
+                          <li key={idx}>
+                            <span className="font-medium mr-1">{err.order}:</span>
+                            <span className="text-gray-600">{err.error}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowBatchModal(false);
+                  setBatchResult(null);
+                }}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                disabled={batchProcessing}
+              >
+                Đóng
+              </button>
+              <button
+                onClick={handleBatchProcess}
+                className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 flex items-center gap-2"
+                disabled={batchProcessing}
+              >
+                {batchProcessing ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Đang xử lý...
+                  </>
+                ) : (
+                  "Chạy ngay"
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
