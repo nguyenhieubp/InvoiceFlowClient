@@ -94,6 +94,7 @@ export default function StockTransferPage() {
     errors: string[];
   } | null>(null);
 
+
   // Hàm convert từ Date object hoặc YYYY-MM-DD sang DDMMMYYYY
   const convertDateToDDMMMYYYY = (date: Date | string): string => {
     if (!date) {
@@ -376,8 +377,8 @@ export default function StockTransferPage() {
       showToast(
         "error",
         error.response?.data?.message ||
-          error.message ||
-          "Lỗi khi đồng bộ batch",
+        error.message ||
+        "Lỗi khi đồng bộ batch",
       );
       setBatchSyncResult({
         success: false,
@@ -932,6 +933,12 @@ export default function StockTransferPage() {
                         Kho liên quan
                       </th>
                       <th className="px-2 py-2.5 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                        ĐVCS Kho
+                      </th>
+                      <th className="px-2 py-2.5 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                        ĐVCS Kho LQ
+                      </th>
+                      <th className="px-2 py-2.5 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
                         Loại I/O
                       </th>
                       <th className="px-2 py-2.5 text-right text-xs font-semibold text-slate-700 uppercase tracking-wider">
@@ -985,11 +992,10 @@ export default function StockTransferPage() {
                         return (
                           <tr
                             key={st.id}
-                            className={`hover:bg-gray-50 transition-colors ${
-                              processingWarehouse === st.id
-                                ? "opacity-50 cursor-wait"
-                                : "cursor-pointer"
-                            }`}
+                            className={`hover:bg-gray-50 transition-colors ${processingWarehouse === st.id
+                              ? "opacity-50 cursor-wait"
+                              : "cursor-pointer"
+                              }`}
                             onDoubleClick={() => handleDoubleClick(st)}
                             title="Double-click để tạo phiếu nhập/xuất kho"
                           >
@@ -1050,15 +1056,20 @@ export default function StockTransferPage() {
                             >
                               {st.relatedStockCode || "-"}
                             </td>
+                            <td className="px-2 py-2.5 whitespace-nowrap text-xs font-semibold text-indigo-700">
+                              {(st as any).donViKho ?? "-"}
+                            </td>
+                            <td className="px-2 py-2.5 whitespace-nowrap text-xs font-semibold text-purple-700">
+                              {(st as any).donViKhoLQ ?? "-"}
+                            </td>
                             <td className="px-2 py-2.5 whitespace-nowrap text-xs">
                               <span
-                                className={`px-2 py-0.5 rounded text-xs font-medium ${
-                                  st.ioType === "I"
-                                    ? "bg-green-100 text-green-800"
-                                    : st.ioType === "O"
-                                      ? "bg-red-100 text-red-800"
-                                      : "bg-gray-100 text-gray-800"
-                                }`}
+                                className={`px-2 py-0.5 rounded text-xs font-medium ${st.ioType === "I"
+                                  ? "bg-green-100 text-green-800"
+                                  : st.ioType === "O"
+                                    ? "bg-red-100 text-red-800"
+                                    : "bg-gray-100 text-gray-800"
+                                  }`}
                               >
                                 {st.ioType}
                               </span>
