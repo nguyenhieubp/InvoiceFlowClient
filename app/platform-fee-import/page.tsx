@@ -45,6 +45,7 @@ export default function PlatformFeeImportPage() {
   const [editingPlatform, setEditingPlatform] = useState<Platform | "">("");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [syncingId, setSyncingId] = useState<string | null>(null);
 
   // List state for each platform
   const [shopeeData, setShopeeData] = useState<any[]>([]);
@@ -415,7 +416,7 @@ export default function PlatformFeeImportPage() {
     //   return;
     // }
 
-    setLoading(true);
+    setSyncingId(item.id);
     try {
       const res = await fastApiInvoicesApi.syncPOCharges(payload);
       if (res.data?.success || res.status === 200 || res.status === 201) {
@@ -449,7 +450,7 @@ export default function PlatformFeeImportPage() {
       }
       showToast("error", `Lỗi khi đồng bộ: ${errorMessage}`);
     } finally {
-      setLoading(false);
+      setSyncingId(null);
     }
   };
 
@@ -669,11 +670,13 @@ export default function PlatformFeeImportPage() {
                         </button>
                         <button
                           onDoubleClick={() => handleSyncPOCharges(item, platform)}
-                          disabled={item.isSynced}
+                          disabled={item.isSynced || syncingId !== null}
                           title={item.isSynced ? "Đã đẩy sang Fast" : "Double click để đẩy sang Fast"}
-                          className="px-2 py-1 text-xs rounded bg-purple-50 text-purple-600 hover:bg-purple-100 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                          className="px-2 py-1 text-xs rounded bg-purple-50 text-purple-600 hover:bg-purple-100 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center gap-1"
                         >
-                          {item.isSynced ? "✓ Synced" : "Đẩy Fast"}
+                          {syncingId === item.id ? (
+                            <><svg className="animate-spin w-3 h-3" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" /></svg>Đang đẩy...</>
+                          ) : item.isSynced ? "✓ Synced" : "Đẩy Fast"}
                         </button>
                       </div>
                     </td>
@@ -1144,10 +1147,14 @@ export default function PlatformFeeImportPage() {
                         >{r.isSynced ? "↩ Hoàn tác" : "✔ Đánh dấu"}</button>
                         <button
                           onDoubleClick={(e) => { e.stopPropagation(); handleSyncPOCharges(r, "shopee"); }}
-                          disabled={r.isSynced}
+                          disabled={r.isSynced || syncingId !== null}
                           title={r.isSynced ? "Đã đẩy sang Fast" : "Double click để đẩy"}
-                          className="px-2 py-1 text-xs rounded bg-purple-50 text-purple-600 hover:bg-purple-100 disabled:opacity-40 disabled:cursor-not-allowed transition"
-                        >{r.isSynced ? "✓ Synced" : "Đẩy Fast"}</button>
+                          className="px-2 py-1 text-xs rounded bg-purple-50 text-purple-600 hover:bg-purple-100 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center gap-1"
+                        >
+                          {syncingId === r.id ? (
+                            <><svg className="animate-spin w-3 h-3" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" /></svg>Đang đẩy...</>
+                          ) : r.isSynced ? "✓ Synced" : "Đẩy Fast"}
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -1413,10 +1420,14 @@ export default function PlatformFeeImportPage() {
                         >{r.isSynced ? "↩ Hoàn tác" : "✔ Đánh dấu"}</button>
                         <button
                           onDoubleClick={(e) => { e.stopPropagation(); handleSyncPOCharges(r, "lazada"); }}
-                          disabled={r.isSynced}
+                          disabled={r.isSynced || syncingId !== null}
                           title={r.isSynced ? "Đã đẩy sang Fast" : "Double click để đẩy"}
-                          className="px-2 py-1 text-xs rounded bg-purple-50 text-purple-600 hover:bg-purple-100 disabled:opacity-40 disabled:cursor-not-allowed transition"
-                        >{r.isSynced ? "✓ Synced" : "Đẩy Fast"}</button>
+                          className="px-2 py-1 text-xs rounded bg-purple-50 text-purple-600 hover:bg-purple-100 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center gap-1"
+                        >
+                          {syncingId === r.id ? (
+                            <><svg className="animate-spin w-3 h-3" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" /></svg>Đang đẩy...</>
+                          ) : r.isSynced ? "✓ Synced" : "Đẩy Fast"}
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -1735,10 +1746,14 @@ export default function PlatformFeeImportPage() {
                         >{r.isSynced ? "↩ Hoàn tác" : "✔ Đánh dấu"}</button>
                         <button
                           onDoubleClick={(e) => { e.stopPropagation(); handleSyncPOCharges(r, "tiktok"); }}
-                          disabled={r.isSynced}
+                          disabled={r.isSynced || syncingId !== null}
                           title={r.isSynced ? "Đã đẩy sang Fast" : "Double click để đẩy"}
-                          className="px-2 py-1 text-xs rounded bg-purple-50 text-purple-600 hover:bg-purple-100 disabled:opacity-40 disabled:cursor-not-allowed transition"
-                        >{r.isSynced ? "✓ Synced" : "Đẩy Fast"}</button>
+                          className="px-2 py-1 text-xs rounded bg-purple-50 text-purple-600 hover:bg-purple-100 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center gap-1"
+                        >
+                          {syncingId === r.id ? (
+                            <><svg className="animate-spin w-3 h-3" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" /></svg>Đang đẩy...</>
+                          ) : r.isSynced ? "✓ Synced" : "Đẩy Fast"}
+                        </button>
                       </div>
                     </td>
                   </tr>
