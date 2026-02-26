@@ -3,29 +3,141 @@
 import { useState, useEffect } from "react";
 import { shopeeFeesApi, fastApiInvoicesApi } from "@/lib/api";
 import { Toast } from "@/components/Toast";
-import Link from "next/link";
 import { format, subDays } from "date-fns";
 
+// ─── Modal: Chỉnh sửa ngày phí trước khi đẩy Fast ───────────────────────────
+interface NgayPhiRow {
+  dong: number;
+  label: string;
+  ma_cp: string;
+  value: number;
+  ngay_phi: string; // ISO date string for input[type=date]
+}
 
+interface SyncModalProps {
+  item: any;
+  onClose: () => void;
+  onConfirm: (rows: NgayPhiRow[], setResult: (r: { ok: boolean; msg: string }) => void) => void;
+  syncing: boolean;
+}
+
+function SyncModal({ item, onClose, onConfirm, syncing }: SyncModalProps) {
+  const today = format(new Date(), "yyyy-MM-dd");
+  const [rows, setRows] = useState<NgayPhiRow[]>([
+    { dong: 1, label: "Phí cố định (SPFIXED)", ma_cp: "SPFIXED", value: Number(item?.commissionFee) || 0, ngay_phi: today },
+    { dong: 2, label: "Phí dịch vụ (SPSERVICE)", ma_cp: "SPSERVICE", value: Number(item?.serviceFee) || 0, ngay_phi: today },
+    { dong: 3, label: "Phí thanh toán (SPPAY5)", ma_cp: "SPPAY5", value: Number(item?.paymentFee) || 0, ngay_phi: today },
+  ]);
+  const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null);
+
+  const updateNgay = (dong: number, val: string) =>
+    setRows((prev) => prev.map((r) => r.dong === dong ? { ...r, ngay_phi: val } : r));
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-bold text-gray-900">Đẩy Fast – Chỉnh ngày phí</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <p className="text-sm text-gray-500 mb-1">
+          Đơn: <span className="font-mono font-semibold text-gray-800">{item?.erpOrderCode}</span>
+        </p>
+        <p className="text-xs text-gray-400 mb-4">
+          Mỗi dòng phí (dong=N) tương ứng với ngay_phiN gửi lên Fast API.
+        </p>
+
+        <div className="space-y-3">
+          {rows.map((r) => (
+            <div key={r.dong} className={`flex items-center gap-3 p-3 rounded-lg border ${r.value === 0 ? "border-gray-100 bg-gray-50 opacity-60" : "border-blue-100 bg-blue-50"}`}>
+              <div className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center shrink-0">
+                {r.dong}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-gray-700 truncate">{r.label}</p>
+                <p className="text-xs text-gray-500 font-mono">{r.value.toLocaleString("vi-VN")} đ</p>
+              </div>
+              <div className="shrink-0">
+                <input
+                  type="date"
+                  value={r.ngay_phi}
+                  disabled={!!result || syncing}
+                  onChange={(e) => updateNgay(r.dong, e.target.value)}
+                  className="border border-gray-300 rounded px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white disabled:opacity-50"
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Kết quả sau khi đẩy */}
+        {result && (
+          <div className={`mt-4 p-3 rounded-lg text-sm font-medium flex items-center gap-2 ${result.ok ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-700 border border-red-200"
+            }`}>
+            {result.ok
+              ? <svg className="w-4 h-4 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+              : <svg className="w-4 h-4 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" /></svg>
+            }
+            {result.msg}
+          </div>
+        )}
+
+        <div className="mt-6 flex justify-end gap-3">
+          <button
+            onClick={onClose}
+            disabled={syncing}
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50"
+          >
+            {result ? "Đóng" : "Hủy"}
+          </button>
+          {!result && (
+            <button
+              onClick={() => onConfirm(rows, setResult)}
+              disabled={syncing}
+              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 flex items-center gap-2 disabled:opacity-50"
+            >
+              {syncing ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                  Đang đẩy...
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                  Đẩy Fast
+                </>
+              )}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
 export default function PlatformFeesPage() {
   const formatCurrency = (value: number | string | undefined) => {
     if (value === undefined || value === null) return "-";
-    return Number(value).toString();
+    return Number(value).toLocaleString("vi-VN");
   };
 
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [pagination, setPagination] = useState({
-    page: 1,
-    limit: 10,
-    total: 0,
-    totalPages: 0,
-  });
+  const [syncing, setSyncing] = useState(false);
+  const [syncingItem, setSyncingItem] = useState<any>(null);
+
+  const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 0 });
   const [brandFilter, setBrandFilter] = useState("menard");
   const [search, setSearch] = useState("");
-  const [startDate, setStartDate] = useState(
-    format(subDays(new Date(), 30), "yyyy-MM-dd"),
-  );
+  const [startDate, setStartDate] = useState(format(subDays(new Date(), 30), "yyyy-MM-dd"));
   const [endDate, setEndDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [queryParams, setQueryParams] = useState({
     brand: "menard",
@@ -34,28 +146,14 @@ export default function PlatformFeesPage() {
     endDate: format(new Date(), "yyyy-MM-dd"),
   });
 
-
   const [showBatchModal, setShowBatchModal] = useState(false);
-  const [batchDateFrom, setBatchDateFrom] = useState(
-    format(subDays(new Date(), 30), "yyyy-MM-dd")
-  );
-  const [batchDateTo, setBatchDateTo] = useState(
-    format(new Date(), "yyyy-MM-dd")
-  );
+  const [batchDateFrom, setBatchDateFrom] = useState(format(subDays(new Date(), 30), "yyyy-MM-dd"));
+  const [batchDateTo, setBatchDateTo] = useState(format(new Date(), "yyyy-MM-dd"));
   const [batchProcessing, setBatchProcessing] = useState(false);
-  const [batchResult, setBatchResult] = useState<{
-    success: boolean;
-    message: string;
-    errors?: any[];
-  } | null>(null);
-  const [toast, setToast] = useState<{
-    type: "success" | "error" | "info";
-    message: string;
-  } | null>(null);
+  const [batchResult, setBatchResult] = useState<{ success: boolean; message: string; errors?: any[] } | null>(null);
 
-  const showToast = (type: "success" | "error" | "info", message: string) => {
-    setToast({ type, message });
-  };
+  const [toast, setToast] = useState<{ type: "success" | "error" | "info"; message: string } | null>(null);
+  const showToast = (type: "success" | "error" | "info", message: string) => setToast({ type, message });
 
   const fetchData = async () => {
     setLoading(true);
@@ -69,10 +167,7 @@ export default function PlatformFeesPage() {
         endDate: queryParams.endDate || undefined,
       });
       setData(response.data.data);
-      setPagination((prev) => ({
-        ...prev,
-        ...response.data.meta,
-      }));
+      setPagination((prev) => ({ ...prev, ...response.data.meta }));
     } catch (error) {
       console.error("Error fetching order fees:", error);
     } finally {
@@ -80,188 +175,109 @@ export default function PlatformFeesPage() {
     }
   };
 
-  useEffect(() => {
-    fetchData();
-  }, [pagination.page, queryParams]);
+  useEffect(() => { fetchData(); }, [pagination.page, queryParams]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setPagination((prev) => ({ ...prev, page: 1 }));
-    setQueryParams({
-      brand: brandFilter,
-      search: search,
-      startDate: startDate,
-      endDate: endDate,
-    });
-  };
-
-  const handlePageChange = (newPage: number) => {
-    setPagination((prev) => ({ ...prev, page: newPage }));
+    setQueryParams({ brand: brandFilter, search, startDate, endDate });
   };
 
   const handleBatchProcess = async () => {
     setBatchProcessing(true);
     setBatchResult(null);
     try {
-      const response = await fastApiInvoicesApi.batchSyncPOCharges({
-        startDate: batchDateFrom,
-        endDate: batchDateTo,
-        platform: "shopee",
-      });
+      const response = await fastApiInvoicesApi.batchSyncPOCharges({ startDate: batchDateFrom, endDate: batchDateTo, platform: "shopee" });
       setBatchResult(response.data);
-      if (response.data.success) {
-        showToast("success", "Đã hoàn tất đồng bộ hàng loạt");
-        fetchData();
-      } else {
-        showToast("error", "Đồng bộ có lỗi, vui lòng xem chi tiết");
-      }
+      if (response.data.success) { showToast("success", "Đã hoàn tất đồng bộ hàng loạt"); fetchData(); }
+      else showToast("error", "Đồng bộ có lỗi, vui lòng xem chi tiết");
     } catch (error: any) {
-      setBatchResult({
-        success: false,
-        message: error?.response?.data?.message || "Lỗi khi xử lý đồng bộ",
-      });
+      setBatchResult({ success: false, message: error?.response?.data?.message || "Lỗi khi xử lý đồng bộ" });
       showToast("error", "Lỗi khi xử lý đồng bộ");
     } finally {
       setBatchProcessing(false);
     }
   };
 
-  const handleSyncPOCharges = async (item: any) => {
-    if (!item) return;
+  // Mở modal để chỉnh ngày phí
+  const handleOpenSyncModal = (item: any) => {
+    if (!item?.erpOrderCode) { showToast("error", "Đơn hàng chưa có ERP Order Code"); return; }
+    setSyncingItem(item);
+  };
 
-    // Validation basic
-    if (!item.erpOrderCode) {
-      showToast("error", "Đơn hàng chưa có ERP Order Code (dh_so)");
-      return;
-    }
+  // Thực sự gửi sau khi user confirm trong modal
+  const handleConfirmSync = async (
+    rows: NgayPhiRow[],
+    setResult: (r: { ok: boolean; msg: string }) => void,
+  ) => {
+    if (!syncingItem) return;
+    const item = syncingItem;
 
-    // Construct Payload
-    const master = {
-      dh_so: item.erpOrderCode,
-      dh_ngay: item.invoiceDate
-        ? format(new Date(item.invoiceDate), "yyyy-MM-dd'T'HH:mm:ss")
-        : item.orderCreatedAt
-          ? format(new Date(item.orderCreatedAt), "yyyy-MM-dd'T'HH:mm:ss")
-          : new Date().toISOString(),
-      dh_dvcs: "TTM", // Hardcoded or generic? User accepted TTM in examples.
-    };
+    const dh_ngay = item.invoiceDate
+      ? format(new Date(item.invoiceDate), "yyyy-MM-dd'T'HH:mm:ss")
+      : item.orderCreatedAt
+        ? format(new Date(item.orderCreatedAt), "yyyy-MM-dd'T'HH:mm:ss")
+        : new Date().toISOString();
 
-    // Chỉ lấy 3 loại phí từ shopee_fee entity — đúng nguồn dữ liệu
-    const makeRow = (dong: number, code: string, value: number) => ({
-      dong,
-      ma_cp: code,
-      cp01_nt: value,
-      cp02_nt: 0,
-      cp03_nt: 0,
-      cp04_nt: 0,
-      cp05_nt: 0,
-      cp06_nt: 0,
+    const ngayPhiMap: Record<string, string> = {};
+    rows.forEach((r) => {
+      if (r.ngay_phi) ngayPhiMap[`ngay_phi${r.dong}`] = new Date(r.ngay_phi).toISOString();
     });
 
-    const details = [
-      makeRow(1, "SPFIXED", Number(item.commissionFee) || 0),
-      makeRow(2, "SPSERVICE", Number(item.serviceFee) || 0),
-      makeRow(3, "SPPAY5", Number(item.paymentFee) || 0),
-    ];
+    const master = { dh_so: item.erpOrderCode, dh_ngay, dh_dvcs: "TTM", ...ngayPhiMap };
+    const details = rows
+      .filter((r) => r.value !== 0)
+      .map((r) => ({ dong: r.dong, ma_cp: r.ma_cp, cp01_nt: r.value, cp02_nt: 0, cp03_nt: 0, cp04_nt: 0, cp05_nt: 0, cp06_nt: 0 }));
 
-    const allZero = details.every((d) => d.cp01_nt === 0);
-    if (allZero) {
-      showToast("info", "Tất cả phí đều = 0, không gửi");
-      return;
-    }
+    if (details.length === 0) { setResult({ ok: false, msg: "Tất cả phí đều = 0, không gửi" }); return; }
 
-    const payload = { master, detail: details };
-
-    setLoading(true);
+    setSyncing(true);
     try {
-      const res = await fastApiInvoicesApi.syncPOCharges(payload);
+      const res = await fastApiInvoicesApi.syncPOCharges({ master, detail: details });
       if (res.data?.success || res.status === 200 || res.status === 201) {
-        showToast("success", `Đồng bộ thành công! ${res.data?.message || ""}`);
+        setResult({ ok: true, msg: `Đồng bộ thành công! ${res.data?.message || ""}` });
       } else {
-        let errorMessage = res.data?.message || "Đồng bộ thất bại";
-        if (Array.isArray(res.data) && res.data.length > 0) {
-          errorMessage = res.data[0].message || errorMessage;
-        } else if (res.data?.result && Array.isArray(res.data.result) && res.data.result.length > 0) {
-          errorMessage = res.data.result[0].message || errorMessage;
-        }
-        showToast("error", errorMessage);
+        const msg = Array.isArray(res.data) ? res.data[0]?.message : res.data?.message || "Đồng bộ thất bại";
+        setResult({ ok: false, msg });
       }
     } catch (err: any) {
-      console.error(err);
-      let errorMessage = err.message || "Unknown error";
-      if (err.response?.data) {
-        const data = err.response.data;
-        if (Array.isArray(data) && data.length > 0) {
-          errorMessage = data[0].message || errorMessage;
-        } else if (data.message) {
-          errorMessage = data.message;
-        }
-      }
-      showToast("error", `Lỗi khi đồng bộ: ${errorMessage}`);
+      const data = err.response?.data;
+      const msg = Array.isArray(data) ? data[0]?.message : data?.message || err.message || "Unknown error";
+      setResult({ ok: false, msg: `Lỗi: ${msg}` });
     } finally {
-      setLoading(false);
+      setSyncing(false);
     }
   };
 
-
   return (
     <div className="container mx-auto px-4 py-8">
-      {/* Toast notifications */}
+      {/* Toast */}
       <div className="fixed top-4 right-4 z-50 space-y-3">
-        {toast && (
-          <Toast
-            type={toast.type}
-            message={toast.message}
-            onClose={() => setToast(null)}
-          />
-        )}
+        {toast && <Toast type={toast.type} message={toast.message} onClose={() => setToast(null)} />}
       </div>
+
+      {/* Sync Modal */}
+      {syncingItem && (
+        <SyncModal
+          item={syncingItem}
+          onClose={() => setSyncingItem(null)}
+          onConfirm={handleConfirmSync}
+          syncing={syncing}
+        />
+      )}
+
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            Chi phí Shopee (Shopee Fees)
-          </h1>
-          <p className="text-gray-600 mt-1">
-            Quản lý và theo dõi chi phí sàn Shopee
-          </p>
+          <h1 className="text-2xl font-bold text-gray-900">Chi phí Shopee (Shopee Fees)</h1>
+          <p className="text-gray-600 mt-1">Quản lý và theo dõi chi phí sàn Shopee</p>
         </div>
         <div className="flex gap-2">
-          <button
-            onClick={() => setShowBatchModal(true)}
-            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition flex items-center gap-2"
-          >
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M13 10V3L4 14h7v7l9-11h-7z"
-              />
-            </svg>
+          <button onClick={() => setShowBatchModal(true)} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition flex items-center gap-2">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
             Tự động chạy
           </button>
-          <button
-            onClick={fetchData}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-2"
-          >
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-              />
-            </svg>
+          <button onClick={fetchData} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-2">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
             Làm mới
           </button>
         </div>
@@ -271,62 +287,24 @@ export default function PlatformFeesPage() {
         {/* Filters */}
         <div className="p-4 border-b border-gray-200 bg-gray-50 flex flex-col md:flex-row md:items-center gap-4">
           <div className="flex items-center gap-2">
-            <label className="text-sm font-medium text-gray-700">
-              Lọc theo Brand:
-            </label>
-            <select
-              value={brandFilter}
-              onChange={(e) => {
-                setBrandFilter(e.target.value);
-              }}
-              className="border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
+            <label className="text-sm font-medium text-gray-700">Lọc theo Brand:</label>
+            <select value={brandFilter} onChange={(e) => setBrandFilter(e.target.value)} className="border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
               <option value="">Tất cả</option>
               <option value="menard">Menard</option>
               <option value="yaman">Yaman</option>
             </select>
           </div>
-
-          {/* Platform filter removed - Shopee only */}
-
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium text-gray-700">Từ:</span>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => {
-                setStartDate(e.target.value);
-              }}
-              className="border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
-
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium text-gray-700">Đến:</span>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => {
-                setEndDate(e.target.value);
-              }}
-              className="border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+            <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
-
           <form onSubmit={handleSearch} className="flex-1 flex gap-2">
-            <input
-              type="text"
-              placeholder="Tìm kiếm theo ERP Order Code..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="flex-1 max-w-sm border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <button
-              type="submit"
-              className="px-3 py-1.5 bg-gray-700 text-white rounded text-sm hover:bg-gray-800 transition"
-            >
-              Tìm kiếm
-            </button>
+            <input type="text" placeholder="Tìm kiếm theo ERP Order Code..." value={search} onChange={(e) => setSearch(e.target.value)} className="flex-1 max-w-sm border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <button type="submit" className="px-3 py-1.5 bg-gray-700 text-white rounded text-sm hover:bg-gray-800 transition">Tìm kiếm</button>
           </form>
         </div>
 
@@ -335,105 +313,59 @@ export default function PlatformFeesPage() {
           <table className="w-full text-left text-sm">
             <thead className="bg-gray-100 text-gray-600 font-semibold uppercase text-xs">
               <tr>
-                <th className="px-6 py-4">Brand</th>
-                <th className="px-6 py-4">Sàn</th>
-                <th className="px-6 py-4">ERP Order Code</th>
-                <th className="px-6 py-4">Order Code</th>
-                <th className="px-6 py-4 text-right">Voucher Shop</th>
-                <th className="px-6 py-4 text-right">Phí cố định</th>
-                <th className="px-6 py-4 text-right">Phí dịch vụ</th>
-                <th className="px-6 py-4 text-right">Phí thanh toán</th>
-                <th className="px-6 py-4">Ngày hoá đơn</th>
-                <th className="px-6 py-4">Ngày tạo đơn</th>
-                <th className="px-6 py-4">Ngày đồng bộ</th>
+                <th className="px-4 py-4">Brand</th>
+                <th className="px-4 py-4">Sàn</th>
+                <th className="px-4 py-4">ERP Order Code</th>
+                <th className="px-4 py-4">Order Code</th>
+                <th className="px-4 py-4 text-right">Voucher Shop</th>
+                <th className="px-4 py-4 text-right">Phí cố định</th>
+                <th className="px-4 py-4 text-right">Phí dịch vụ</th>
+                <th className="px-4 py-4 text-right">Phí thanh toán</th>
+                <th className="px-4 py-4">Ngày hoá đơn</th>
+                <th className="px-4 py-4">Ngày tạo đơn</th>
+                <th className="px-4 py-4">Ngày đồng bộ</th>
+                <th className="px-4 py-4 text-center">Thao tác</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {loading ? (
-                <tr>
-                  <td
-                    colSpan={10}
-                    className="px-6 py-8 text-center text-gray-500"
-                  >
-                    <div className="flex justify-center items-center gap-2">
-                      <div className="animate-spin h-5 w-5 border-2 border-blue-500 rounded-full border-t-transparent"></div>
-                      Đang tải dữ liệu...
-                    </div>
-                  </td>
-                </tr>
+                <tr><td colSpan={12} className="px-6 py-8 text-center text-gray-500">
+                  <div className="flex justify-center items-center gap-2">
+                    <div className="animate-spin h-5 w-5 border-2 border-blue-500 rounded-full border-t-transparent" />
+                    Đang tải dữ liệu...
+                  </div>
+                </td></tr>
               ) : data.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={10}
-                    className="px-6 py-8 text-center text-gray-500"
-                  >
-                    Không có dữ liệu
-                  </td>
-                </tr>
+                <tr><td colSpan={12} className="px-6 py-8 text-center text-gray-500">Không có dữ liệu</td></tr>
               ) : (
                 data.map((item) => (
-                  <tr
-                    key={item.id}
-                    className="hover:bg-gray-50 transition-colors cursor-pointer"
-                    onDoubleClick={() => handleSyncPOCharges(item)}
-                  >
-                    <td className="px-6 py-4">
-                      <span
-                        className={`px-2 py-1 rounded text-xs font-semibold ${item.brand === "menard"
-                          ? "bg-red-100 text-red-700"
-                          : item.brand === "yaman"
-                            ? "bg-blue-100 text-blue-700"
-                            : "bg-gray-100 text-gray-700"
-                          }`}
-                      >
+                  <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-4 py-3">
+                      <span className={`px-2 py-1 rounded text-xs font-semibold ${item.brand === "menard" ? "bg-red-100 text-red-700" : item.brand === "yaman" ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-700"}`}>
                         {(item.brand || "N/A").toUpperCase()}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
-                      <span className="px-2 py-1 rounded text-xs font-semibold bg-orange-100 text-orange-700">
-                        {(item.platform || "SHOPEE").toUpperCase()}
-                      </span>
+                    <td className="px-4 py-3">
+                      <span className="px-2 py-1 rounded text-xs font-semibold bg-orange-100 text-orange-700">{(item.platform || "SHOPEE").toUpperCase()}</span>
                     </td>
-                    <td className="px-6 py-4 font-mono text-gray-700">
-                      {item.erpOrderCode}
-                    </td>
-                    <td className="px-6 py-4 font-mono text-gray-700">
-                      {item.orderSn || "-"}
-                    </td>
-                    <td className="px-6 py-4 text-right font-medium text-gray-900">
-                      {formatCurrency(item.voucherShop)}
-                    </td>
-                    <td className="px-6 py-4 text-right font-medium text-gray-900">
-                      {formatCurrency(item.commissionFee)}
-                    </td>
-                    <td className="px-6 py-4 text-right font-medium text-gray-900">
-                      {formatCurrency(item.serviceFee)}
-                    </td>
-                    <td className="px-6 py-4 text-right font-medium text-gray-900">
-                      {formatCurrency(item.paymentFee)}
-                    </td>
-
-                    <td className="px-6 py-4 text-gray-500">
-                      {item.invoiceDate
-                        ? format(
-                          new Date(item.invoiceDate),
-                          "dd/MM/yyyy HH:mm",
-                        )
-                        : "-"}
-                    </td>
-
-                    <td className="px-6 py-4 text-gray-500">
-                      {item.orderCreatedAt
-                        ? format(
-                          new Date(item.orderCreatedAt),
-                          "dd/MM/yyyy HH:mm",
-                        )
-                        : "-"}
-                    </td>
-                    <td className="px-6 py-4 text-gray-500">
-                      {item.syncedAt
-                        ? format(new Date(item.syncedAt), "dd/MM/yyyy HH:mm")
-                        : "-"}
+                    <td className="px-4 py-3 font-mono text-gray-700 text-xs">{item.erpOrderCode}</td>
+                    <td className="px-4 py-3 font-mono text-gray-500 text-xs">{item.orderSn || "-"}</td>
+                    <td className="px-4 py-3 text-right font-medium text-gray-900">{formatCurrency(item.voucherShop)}</td>
+                    <td className="px-4 py-3 text-right font-medium text-gray-900">{formatCurrency(item.commissionFee)}</td>
+                    <td className="px-4 py-3 text-right font-medium text-gray-900">{formatCurrency(item.serviceFee)}</td>
+                    <td className="px-4 py-3 text-right font-medium text-gray-900">{formatCurrency(item.paymentFee)}</td>
+                    <td className="px-4 py-3 text-gray-500 text-xs">{item.invoiceDate ? format(new Date(item.invoiceDate), "dd/MM/yyyy HH:mm") : "-"}</td>
+                    <td className="px-4 py-3 text-gray-500 text-xs">{item.orderCreatedAt ? format(new Date(item.orderCreatedAt), "dd/MM/yyyy HH:mm") : "-"}</td>
+                    <td className="px-4 py-3 text-gray-500 text-xs">{item.syncedAt ? format(new Date(item.syncedAt), "dd/MM/yyyy HH:mm") : "-"}</td>
+                    <td className="px-4 py-3 text-center">
+                      <button
+                        onClick={() => handleOpenSyncModal(item)}
+                        title="Chỉnh sửa ngày phí rồi đẩy Fast"
+                        className="px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition flex items-center gap-1 mx-auto"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                        Đẩy Fast
+                      </button>
                     </td>
                   </tr>
                 ))
@@ -445,35 +377,13 @@ export default function PlatformFeesPage() {
         {/* Pagination */}
         <div className="p-4 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
           <p className="text-sm text-gray-600">
-            Hiển thị{" "}
-            <span className="font-medium">
-              {Math.min(
-                (pagination.page - 1) * pagination.limit + 1,
-                pagination.total,
-              )}
-            </span>{" "}
-            đến{" "}
-            <span className="font-medium">
-              {Math.min(pagination.page * pagination.limit, pagination.total)}
-            </span>{" "}
-            trong tổng số{" "}
+            Hiển thị <span className="font-medium">{Math.min((pagination.page - 1) * pagination.limit + 1, pagination.total)}</span> đến{" "}
+            <span className="font-medium">{Math.min(pagination.page * pagination.limit, pagination.total)}</span> trong tổng số{" "}
             <span className="font-medium">{pagination.total}</span> bản ghi
           </p>
           <div className="flex gap-2">
-            <button
-              onClick={() => handlePageChange(pagination.page - 1)}
-              disabled={pagination.page <= 1}
-              className="px-3 py-1 border border-gray-300 rounded bg-white text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition"
-            >
-              Trước
-            </button>
-            <button
-              onClick={() => handlePageChange(pagination.page + 1)}
-              disabled={pagination.page >= pagination.totalPages}
-              className="px-3 py-1 border border-gray-300 rounded bg-white text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition"
-            >
-              Sau
-            </button>
+            <button onClick={() => setPagination((p) => ({ ...p, page: p.page - 1 }))} disabled={pagination.page <= 1} className="px-3 py-1 border border-gray-300 rounded bg-white text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition">Trước</button>
+            <button onClick={() => setPagination((p) => ({ ...p, page: p.page + 1 }))} disabled={pagination.page >= pagination.totalPages} className="px-3 py-1 border border-gray-300 rounded bg-white text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition">Sau</button>
           </div>
         </div>
       </div>
@@ -482,50 +392,25 @@ export default function PlatformFeesPage() {
       {showBatchModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">
-              Đồng bộ phí hàng loạt
-            </h3>
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Đồng bộ phí hàng loạt</h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Từ ngày
-                </label>
-                <input
-                  type="date"
-                  value={batchDateFrom}
-                  onChange={(e) => setBatchDateFrom(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+                <label className="block text-sm font-medium text-gray-700 mb-1">Từ ngày</label>
+                <input type="date" value={batchDateFrom} onChange={(e) => setBatchDateFrom(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Đến ngày
-                </label>
-                <input
-                  type="date"
-                  value={batchDateTo}
-                  onChange={(e) => setBatchDateTo(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+                <label className="block text-sm font-medium text-gray-700 mb-1">Đến ngày</label>
+                <input type="date" value={batchDateTo} onChange={(e) => setBatchDateTo(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
-
               {batchResult && (
-                <div
-                  className={`p-3 rounded-md text-sm ${batchResult.success
-                    ? "bg-green-50 text-green-700"
-                    : "bg-red-50 text-red-700"
-                    }`}
-                >
+                <div className={`p-3 rounded-md text-sm ${batchResult.success ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>
                   <p className="font-medium">{batchResult.message}</p>
                   {batchResult.errors && batchResult.errors.length > 0 && (
                     <div className="mt-2 max-h-32 overflow-y-auto bg-white p-2 border rounded">
                       <p className="font-semibold mb-1">Chi tiết lỗi:</p>
                       <ul className="list-disc pl-4 space-y-1 text-xs">
                         {batchResult.errors.map((err, idx) => (
-                          <li key={idx}>
-                            <span className="font-medium mr-1">{err.order}:</span>
-                            <span className="text-gray-600">{err.error}</span>
-                          </li>
+                          <li key={idx}><span className="font-medium mr-1">{err.order}:</span><span className="text-gray-600">{err.error}</span></li>
                         ))}
                       </ul>
                     </div>
@@ -534,29 +419,9 @@ export default function PlatformFeesPage() {
               )}
             </div>
             <div className="mt-6 flex justify-end gap-3">
-              <button
-                onClick={() => {
-                  setShowBatchModal(false);
-                  setBatchResult(null);
-                }}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
-                disabled={batchProcessing}
-              >
-                Đóng
-              </button>
-              <button
-                onClick={handleBatchProcess}
-                className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 flex items-center gap-2"
-                disabled={batchProcessing}
-              >
-                {batchProcessing ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    Đang xử lý...
-                  </>
-                ) : (
-                  "Chạy ngay"
-                )}
+              <button onClick={() => { setShowBatchModal(false); setBatchResult(null); }} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200" disabled={batchProcessing}>Đóng</button>
+              <button onClick={handleBatchProcess} className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 flex items-center gap-2" disabled={batchProcessing}>
+                {batchProcessing ? (<><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />Đang xử lý...</>) : "Chạy ngay"}
               </button>
             </div>
           </div>
