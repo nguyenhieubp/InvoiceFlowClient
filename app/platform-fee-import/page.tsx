@@ -25,6 +25,9 @@ interface PlatformFeeMap {
 }
 
 import { EditFeeModal } from "./EditFeeModal";
+import { platform } from "os";
+
+
 
 export default function PlatformFeeImportPage() {
   const [activeTab, setActiveTab] = useState<TabType>("import");
@@ -46,6 +49,7 @@ export default function PlatformFeeImportPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [syncingId, setSyncingId] = useState<string | null>(null);
+
 
   // List state for each platform
   const [shopeeData, setShopeeData] = useState<any[]>([]);
@@ -345,27 +349,30 @@ export default function PlatformFeeImportPage() {
   const handleSyncPOCharges = async (item: any, platform: string) => {
     if (!item) return;
 
-    // Guard: prevent double-sync
     if (item.isSynced) {
       showToast("error", `Bản ghi này đã được đẩy sang Fast lúc ${item.syncedAt ? new Date(item.syncedAt).toLocaleString("vi-VN") : "trước đó"}, không cần đẩy lại.`);
       return;
     }
 
-    // Construct Payload
+    const dateStr = item.ngayDoiSoat
+      ? format(new Date(item.ngayDoiSoat), "yyyy-MM-dd'T'HH:mm:ss")
+      : item.orderDate
+        ? format(new Date(item.orderDate), "yyyy-MM-dd'T'HH:mm:ss")
+        : format(new Date(), "yyyy-MM-dd'T'HH:mm:ss");
+
     const master = {
       dh_so: (item.erpOrderCode || "").trim(),
-      // Fix: Prioritize ngayDoiSoat (Reconciliation Date) over orderDate
-      dh_ngay: item.ngayDoiSoat
-        ? new Date(item.ngayDoiSoat).toISOString()
-        : item.orderDate
-          ? new Date(item.orderDate).toISOString()
-          : new Date().toISOString(),
-      dh_dvcs: item.boPhan || "TTM", // Default to TTM if empty as per user example
+      dh_ngay: dateStr,
+      dh_dvcs: item.boPhan || "TTM",
+      ngay_phi1: item.ngay_phi1 ? format(new Date(item.ngay_phi1), "yyyy-MM-dd'T'HH:mm:ss") : dateStr,
+      ngay_phi2: item.ngay_phi2 ? format(new Date(item.ngay_phi2), "yyyy-MM-dd'T'HH:mm:ss") : dateStr,
+      ngay_phi3: item.ngay_phi3 ? format(new Date(item.ngay_phi3), "yyyy-MM-dd'T'HH:mm:ss") : dateStr,
+      ngay_phi4: item.ngay_phi4 ? format(new Date(item.ngay_phi4), "yyyy-MM-dd'T'HH:mm:ss") : dateStr,
+      ngay_phi5: item.ngay_phi5 ? format(new Date(item.ngay_phi5), "yyyy-MM-dd'T'HH:mm:ss") : dateStr,
+      ngay_phi6: item.ngay_phi6 ? format(new Date(item.ngay_phi6), "yyyy-MM-dd'T'HH:mm:ss") : dateStr,
     };
 
     const details: any[] = [];
-
-    // Helper to build a blank detail row
     const makeRow = (dong: number, code: string, value: number) => ({
       dong,
       ma_cp: code,
@@ -378,20 +385,17 @@ export default function PlatformFeeImportPage() {
     });
 
     if (platform === "shopee") {
-      // Always send all rows, value = 0 if not present
       SHOPEE_IMPORT_FEE_CONFIG.forEach((rule) => {
         const value = Number(item[rule.field]) || 0;
         details.push(makeRow(rule.row, rule.code, value));
       });
     } else if (platform === "tiktok") {
-      // Always send all rows
       TIKTOK_IMPORT_FEE_CONFIG.forEach((rule) => {
         const value = Number(item[rule.field]) || 0;
         details.push(makeRow(rule.row, rule.code, value));
       });
     } else if (platform === "lazada") {
       if (item.maPhiNhanDienHachToan) {
-        const rawName = item.tenPhiDoanhThu;
         const systemCode = item.maPhiNhanDienHachToan || "164020";
         const value = Number(item.soTien || item.phi1) || 0;
         details.push(makeRow(1, systemCode, value));
@@ -403,56 +407,36 @@ export default function PlatformFeeImportPage() {
       return;
     }
 
-    const payload = {
-      master,
-      detail: details,
-    };
+    // Filter out rows with 0 value
+    const finalDetails = details.filter(r => r.cp01_nt !== 0);
 
-    // if (
-    //   !confirm(
-    //     `Bạn có chắc chắn muốn đẩy phí cho đơn ${master.dh_so} sang Fast?`
-    //   )
-    // ) {
-    //   return;
-    // }
+    if (finalDetails.length === 0) {
+      showToast("info", "Tất cả phí đều = 0, không có gì để gửi.");
+      return;
+    }
 
+    const payload = { master, detail: finalDetails };
     setSyncingId(item.id);
+
     try {
       const res = await fastApiInvoicesApi.syncPOCharges(payload);
       if (res.data?.success || res.status === 200 || res.status === 201) {
         showToast("success", `Đồng bộ thành công! ${res.data?.message || ""}`);
-        // Mark as synced in DB
-        try { await platformFeeImportApi.markSynced(platform, item.id); } catch (_) { }
+        try { await platformFeeImportApi.markSynced(platform as Platform, item.id); } catch (_) { }
         fetchPlatformData(platform as Platform);
       } else {
-        let errorMessage = res.data?.message || "Đồng bộ thất bại";
-        if (Array.isArray(res.data) && res.data.length > 0) {
-          errorMessage = res.data[0].message || errorMessage;
-        } else if (
-          res.data?.result &&
-          Array.isArray(res.data.result) &&
-          res.data.result.length > 0
-        ) {
-          errorMessage = res.data.result[0].message || errorMessage;
-        }
-        showToast("error", errorMessage);
+        const errMsg = Array.isArray(res.data) ? res.data[0]?.message : res.data?.message || "Đồng bộ thất bại";
+        showToast("error", errMsg);
       }
     } catch (err: any) {
-      console.error(err);
-      let errorMessage = err.message || "Unknown error";
-      if (err.response?.data) {
-        const data = err.response.data;
-        if (Array.isArray(data) && data.length > 0) {
-          errorMessage = data[0].message || errorMessage;
-        } else if (data.message) {
-          errorMessage = data.message;
-        }
-      }
-      showToast("error", `Lỗi khi đồng bộ: ${errorMessage}`);
+      const data = err.response?.data;
+      const errMsg = Array.isArray(data) ? data[0]?.message : data?.message || err.message || "Unknown error";
+      showToast("error", `Lỗi: ${errMsg}`);
     } finally {
       setSyncingId(null);
     }
   };
+
 
   // Helper function to render platform table
   const renderPlatformTable = (
@@ -636,7 +620,7 @@ export default function PlatformFeeImportPage() {
                 data.map((item) => (
                   <tr
                     key={item.id}
-                    className={`hover:bg-gray-50 transition-colors ${item.isSynced ? "bg-green-50/40" : ""}`}
+                    className={`hover:bg-gray-50 transition-colors ${item.isSynced ? "opacity-60" : ""}`}
                   >
                     {/* Status badge */}
                     <td className="px-3 py-3 whitespace-nowrap">
@@ -651,12 +635,12 @@ export default function PlatformFeeImportPage() {
                     </td>
                     {/* Action buttons */}
                     <td className="px-3 py-3 whitespace-nowrap">
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleEdit(item, platform)}
                           disabled={item.isSynced}
                           title={item.isSynced ? "Đã đẩy, không thể sửa" : "Chỉnh sửa"}
-                          className="px-2 py-1 text-xs rounded bg-blue-50 text-blue-600 hover:bg-blue-100 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                          className="px-2.5 py-1 text-xs font-medium rounded border border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
                         >
                           Sửa
                         </button>
@@ -664,19 +648,19 @@ export default function PlatformFeeImportPage() {
                           onClick={() => handleDeleteFee(item, platform)}
                           disabled={item.isSynced || deletingId === item.id}
                           title={item.isSynced ? "Đã đẩy, không thể xoá" : "Xoá"}
-                          className="px-2 py-1 text-xs rounded bg-red-50 text-red-600 hover:bg-red-100 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                          className="px-2.5 py-1 text-xs font-medium rounded border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center min-w-[3rem]"
                         >
-                          {deletingId === item.id ? "..." : "Xoá"}
+                          {deletingId === item.id ? <div className="w-3 h-3 border-2 border-red-600 border-t-transparent rounded-full animate-spin" /> : "Xoá"}
                         </button>
                         <button
                           onDoubleClick={() => handleSyncPOCharges(item, platform)}
                           disabled={item.isSynced || syncingId !== null}
                           title={item.isSynced ? "Đã đẩy sang Fast" : "Double click để đẩy sang Fast"}
-                          className="px-2 py-1 text-xs rounded bg-purple-50 text-purple-600 hover:bg-purple-100 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center gap-1"
+                          className="px-2.5 py-1 text-xs font-medium rounded border border-purple-200 bg-purple-50 text-purple-600 hover:bg-purple-100 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-1 min-w-[5rem]"
                         >
                           {syncingId === item.id ? (
                             <><svg className="animate-spin w-3 h-3" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" /></svg>Đang đẩy...</>
-                          ) : item.isSynced ? "✓ Synced" : "Đẩy Fast"}
+                          ) : item.isSynced ? "✓ Đã đẩy Fast" : "Đẩy Fast"}
                         </button>
                       </div>
                     </td>
@@ -941,19 +925,6 @@ export default function PlatformFeeImportPage() {
           </form>
         </div>
 
-        {/* Action Legend - compact */}
-        <div className="px-4 py-1.5 bg-gray-50 border-b border-gray-200 flex items-center gap-2 text-[11px] text-gray-500">
-          <span className="font-semibold text-gray-600">Thao tác:</span>
-          <span className="px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-medium">Sửa</span><span>chỉ khi chưa đẩy</span>
-          <span className="text-gray-300">|</span>
-          <span className="px-1.5 py-0.5 rounded bg-red-100 text-red-600 font-medium">Xoá</span><span>chỉ khi chưa đẩy</span>
-          <span className="text-gray-300">|</span>
-          <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-medium">✔ Đánh dấu</span><span>thủ công mark đã đẩy</span>
-          <span className="text-gray-300">|</span>
-          <span className="px-1.5 py-0.5 rounded bg-orange-100 text-orange-600 font-medium">↩ Hoàn tác</span><span>đặt lại chưa đẩy</span>
-          <span className="text-gray-300">|</span>
-          <span className="px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 font-medium">Đẩy Fast</span><span>double-click để gửi Fast</span>
-        </div>
 
         {/* Table */}
         <div className="overflow-x-auto">
@@ -1036,7 +1007,7 @@ export default function PlatformFeeImportPage() {
                 rows.map((r: any) => (
                   <tr
                     key={`${r.id}`}
-                    className={`hover:bg-gray-50 transition-colors ${r.isSynced ? "bg-green-50/40" : ""}`}
+                    className={`hover:bg-gray-50 transition-colors ${r.isSynced ? "opacity-60" : ""}`}
                   >
                     <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
                       {r.stt}
@@ -1127,33 +1098,32 @@ export default function PlatformFeeImportPage() {
                       )}
                     </td>
                     <td className="px-3 py-3 whitespace-nowrap">
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-2">
                         <button
                           onClick={(e) => { e.stopPropagation(); handleEdit(r, "shopee"); }}
                           disabled={r.isSynced}
                           title={r.isSynced ? "Đã đẩy, không thể sửa" : "Chỉnh sửa"}
-                          className="px-2 py-1 text-xs rounded bg-blue-50 text-blue-600 hover:bg-blue-100 disabled:opacity-40 disabled:cursor-not-allowed transition"
-                        >Sửa</button>
+                          className="px-2.5 py-1 text-xs font-medium rounded border border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                        >
+                          Sửa
+                        </button>
                         <button
                           onClick={(e) => { e.stopPropagation(); handleDeleteFee(r, "shopee"); }}
                           disabled={r.isSynced || deletingId === r.id}
                           title={r.isSynced ? "Đã đẩy, không thể xoá" : "Xoá"}
-                          className="px-2 py-1 text-xs rounded bg-red-50 text-red-600 hover:bg-red-100 disabled:opacity-40 disabled:cursor-not-allowed transition"
-                        >{deletingId === r.id ? "..." : "Xoá"}</button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleToggleSynced(r, "shopee"); }}
-                          title={r.isSynced ? "Hoàn tác về Chưa đẩy" : "Đánh dấu đã đẩy"}
-                          className={`px-2 py-1 text-xs rounded transition ${r.isSynced ? "bg-orange-50 text-orange-600 hover:bg-orange-100" : "bg-emerald-50 text-emerald-600 hover:bg-emerald-100"}`}
-                        >{r.isSynced ? "↩ Hoàn tác" : "✔ Đánh dấu"}</button>
+                          className="px-2.5 py-1 text-xs font-medium rounded border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center min-w-[3rem]"
+                        >
+                          {deletingId === r.id ? <div className="w-3 h-3 border-2 border-red-600 border-t-transparent rounded-full animate-spin" /> : "Xoá"}
+                        </button>
                         <button
                           onDoubleClick={(e) => { e.stopPropagation(); handleSyncPOCharges(r, "shopee"); }}
                           disabled={r.isSynced || syncingId !== null}
                           title={r.isSynced ? "Đã đẩy sang Fast" : "Double click để đẩy"}
-                          className="px-2 py-1 text-xs rounded bg-purple-50 text-purple-600 hover:bg-purple-100 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center gap-1"
+                          className="px-2.5 py-1 text-xs font-medium rounded border border-purple-200 bg-purple-50 text-purple-600 hover:bg-purple-100 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-1 min-w-[5rem]"
                         >
                           {syncingId === r.id ? (
                             <><svg className="animate-spin w-3 h-3" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" /></svg>Đang đẩy...</>
-                          ) : r.isSynced ? "✓ Synced" : "Đẩy Fast"}
+                          ) : r.isSynced ? "✓ Đã đẩy Fast" : "Đẩy Fast"}
                         </button>
                       </div>
                     </td>
@@ -1288,19 +1258,6 @@ export default function PlatformFeeImportPage() {
           </form>
         </div>
 
-        {/* Action Legend - compact */}
-        <div className="px-4 py-1.5 bg-gray-50 border-b border-gray-200 flex items-center gap-2 text-[11px] text-gray-500">
-          <span className="font-semibold text-gray-600">Thao tác:</span>
-          <span className="px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-medium">Sửa</span><span>chỉ khi chưa đẩy</span>
-          <span className="text-gray-300">|</span>
-          <span className="px-1.5 py-0.5 rounded bg-red-100 text-red-600 font-medium">Xoá</span><span>chỉ khi chưa đẩy</span>
-          <span className="text-gray-300">|</span>
-          <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-medium">✔ Đánh dấu</span><span>thủ công mark đã đẩy</span>
-          <span className="text-gray-300">|</span>
-          <span className="px-1.5 py-0.5 rounded bg-orange-100 text-orange-600 font-medium">↩ Hoàn tác</span><span>đặt lại chưa đẩy</span>
-          <span className="text-gray-300">|</span>
-          <span className="px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 font-medium">Đẩy Fast</span><span>double-click để gửi Fast</span>
-        </div>
 
         {/* Table */}
         <div className="overflow-x-auto">
@@ -1355,7 +1312,7 @@ export default function PlatformFeeImportPage() {
                 rows.map((r) => (
                   <tr
                     key={`${r.stt}`}
-                    className={`hover:bg-gray-50 transition-colors ${r.isSynced ? "bg-green-50/40" : ""}`}
+                    className={`hover:bg-gray-50 transition-colors ${r.isSynced ? "opacity-60" : ""}`}
                   >
                     <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
                       {r.stt}
@@ -1400,33 +1357,32 @@ export default function PlatformFeeImportPage() {
                       )}
                     </td>
                     <td className="px-3 py-3 whitespace-nowrap">
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-2">
                         <button
                           onClick={(e) => { e.stopPropagation(); handleEdit(r, "lazada"); }}
                           disabled={r.isSynced}
                           title={r.isSynced ? "Đã đẩy, không thể sửa" : "Chỉnh sửa"}
-                          className="px-2 py-1 text-xs rounded bg-blue-50 text-blue-600 hover:bg-blue-100 disabled:opacity-40 disabled:cursor-not-allowed transition"
-                        >Sửa</button>
+                          className="px-2.5 py-1 text-xs font-medium rounded border border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                        >
+                          Sửa
+                        </button>
                         <button
                           onClick={(e) => { e.stopPropagation(); handleDeleteFee(r, "lazada"); }}
                           disabled={r.isSynced || deletingId === r.id}
                           title={r.isSynced ? "Đã đẩy, không thể xoá" : "Xoá"}
-                          className="px-2 py-1 text-xs rounded bg-red-50 text-red-600 hover:bg-red-100 disabled:opacity-40 disabled:cursor-not-allowed transition"
-                        >{deletingId === r.id ? "..." : "Xoá"}</button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleToggleSynced(r, "lazada"); }}
-                          title={r.isSynced ? "Hoàn tác về Chưa đẩy" : "Đánh dấu đã đẩy"}
-                          className={`px-2 py-1 text-xs rounded transition ${r.isSynced ? "bg-orange-50 text-orange-600 hover:bg-orange-100" : "bg-emerald-50 text-emerald-600 hover:bg-emerald-100"}`}
-                        >{r.isSynced ? "↩ Hoàn tác" : "✔ Đánh dấu"}</button>
+                          className="px-2.5 py-1 text-xs font-medium rounded border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center min-w-[3rem]"
+                        >
+                          {deletingId === r.id ? <div className="w-3 h-3 border-2 border-red-600 border-t-transparent rounded-full animate-spin" /> : "Xoá"}
+                        </button>
                         <button
                           onDoubleClick={(e) => { e.stopPropagation(); handleSyncPOCharges(r, "lazada"); }}
                           disabled={r.isSynced || syncingId !== null}
                           title={r.isSynced ? "Đã đẩy sang Fast" : "Double click để đẩy"}
-                          className="px-2 py-1 text-xs rounded bg-purple-50 text-purple-600 hover:bg-purple-100 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center gap-1"
+                          className="px-2.5 py-1 text-xs font-medium rounded border border-purple-200 bg-purple-50 text-purple-600 hover:bg-purple-100 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-1 min-w-[5rem]"
                         >
                           {syncingId === r.id ? (
                             <><svg className="animate-spin w-3 h-3" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" /></svg>Đang đẩy...</>
-                          ) : r.isSynced ? "✓ Synced" : "Đẩy Fast"}
+                          ) : r.isSynced ? "✓ Đã đẩy Fast" : "Đẩy Fast"}
                         </button>
                       </div>
                     </td>
@@ -1552,19 +1508,6 @@ export default function PlatformFeeImportPage() {
           </form>
         </div>
 
-        {/* Action Legend - compact */}
-        <div className="px-4 py-1.5 bg-gray-50 border-b border-gray-200 flex items-center gap-2 text-[11px] text-gray-500">
-          <span className="font-semibold text-gray-600">Thao tác:</span>
-          <span className="px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-medium">Sửa</span><span>chỉ khi chưa đẩy</span>
-          <span className="text-gray-300">|</span>
-          <span className="px-1.5 py-0.5 rounded bg-red-100 text-red-600 font-medium">Xoá</span><span>chỉ khi chưa đẩy</span>
-          <span className="text-gray-300">|</span>
-          <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-medium">✔ Đánh dấu</span><span>thủ công mark đã đẩy</span>
-          <span className="text-gray-300">|</span>
-          <span className="px-1.5 py-0.5 rounded bg-orange-100 text-orange-600 font-medium">↩ Hoàn tác</span><span>đặt lại chưa đẩy</span>
-          <span className="text-gray-300">|</span>
-          <span className="px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 font-medium">Đẩy Fast</span><span>double-click để gửi Fast</span>
-        </div>
 
         {/* Table */}
         <div className="overflow-x-auto">
@@ -1726,33 +1669,32 @@ export default function PlatformFeeImportPage() {
                       )}
                     </td>
                     <td className="px-3 py-3 whitespace-nowrap">
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-2">
                         <button
                           onClick={(e) => { e.stopPropagation(); handleEdit(r, "tiktok"); }}
                           disabled={r.isSynced}
                           title={r.isSynced ? "Đã đẩy, không thể sửa" : "Chỉnh sửa"}
-                          className="px-2 py-1 text-xs rounded bg-blue-50 text-blue-600 hover:bg-blue-100 disabled:opacity-40 disabled:cursor-not-allowed transition"
-                        >Sửa</button>
+                          className="px-2.5 py-1 text-xs font-medium rounded border border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                        >
+                          Sửa
+                        </button>
                         <button
                           onClick={(e) => { e.stopPropagation(); handleDeleteFee(r, "tiktok"); }}
                           disabled={r.isSynced || deletingId === r.id}
                           title={r.isSynced ? "Đã đẩy, không thể xoá" : "Xoá"}
-                          className="px-2 py-1 text-xs rounded bg-red-50 text-red-600 hover:bg-red-100 disabled:opacity-40 disabled:cursor-not-allowed transition"
-                        >{deletingId === r.id ? "..." : "Xoá"}</button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleToggleSynced(r, "tiktok"); }}
-                          title={r.isSynced ? "Hoàn tác về Chưa đẩy" : "Đánh dấu đã đẩy"}
-                          className={`px-2 py-1 text-xs rounded transition ${r.isSynced ? "bg-orange-50 text-orange-600 hover:bg-orange-100" : "bg-emerald-50 text-emerald-600 hover:bg-emerald-100"}`}
-                        >{r.isSynced ? "↩ Hoàn tác" : "✔ Đánh dấu"}</button>
+                          className="px-2.5 py-1 text-xs font-medium rounded border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center min-w-[3rem]"
+                        >
+                          {deletingId === r.id ? <div className="w-3 h-3 border-2 border-red-600 border-t-transparent rounded-full animate-spin" /> : "Xoá"}
+                        </button>
                         <button
                           onDoubleClick={(e) => { e.stopPropagation(); handleSyncPOCharges(r, "tiktok"); }}
                           disabled={r.isSynced || syncingId !== null}
                           title={r.isSynced ? "Đã đẩy sang Fast" : "Double click để đẩy"}
-                          className="px-2 py-1 text-xs rounded bg-purple-50 text-purple-600 hover:bg-purple-100 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center gap-1"
+                          className="px-2.5 py-1 text-xs font-medium rounded border border-purple-200 bg-purple-50 text-purple-600 hover:bg-purple-100 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-1 min-w-[5rem]"
                         >
                           {syncingId === r.id ? (
                             <><svg className="animate-spin w-3 h-3" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" /></svg>Đang đẩy...</>
-                          ) : r.isSynced ? "✓ Synced" : "Đẩy Fast"}
+                          ) : r.isSynced ? "✓ Đã đẩy Fast" : "Đẩy Fast"}
                         </button>
                       </div>
                     </td>

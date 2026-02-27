@@ -22,7 +22,21 @@ export function EditFeeModal({
 
     useEffect(() => {
         if (item) {
-            setFormData({ ...item });
+            const defaultDateStr = format(new Date(), "yyyy-MM-dd");
+            const newData = { ...item };
+
+            // Default fee dates to today if they are empty
+            for (let i = 1; i <= 6; i++) {
+                const key = `ngay_phi${i}`;
+                if (!newData[key]) {
+                    newData[key] = defaultDateStr;
+                } else {
+                    // Ensure existing dates are also correctly formatted for the input type="date"
+                    newData[key] = format(new Date(newData[key]), "yyyy-MM-dd");
+                }
+            }
+
+            setFormData(newData);
         }
     }, [item]);
 
@@ -153,7 +167,6 @@ export function EditFeeModal({
                             </div>
                         </div>
 
-                        {/* Generic Fields */}
                         <div className="col-span-full border-t pt-4 mt-2">
                             <h3 className="font-medium text-gray-700 mb-2">Phí Chung</h3>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -163,6 +176,19 @@ export function EditFeeModal({
                                 {renderField("Phí 4", "phi4", "number")}
                                 {renderField("Phí 5", "phi5", "number")}
                                 {renderField("Phí 6", "phi6", "number")}
+                            </div>
+                        </div>
+
+                        {/* Fee Dates */}
+                        <div className="col-span-full border-t pt-4 mt-2">
+                            <h3 className="font-medium text-gray-700 mb-2">Ngày Phí (Dùng khi đẩy Fast)</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                {renderField("Ngày Phí 1", "ngay_phi1", "date")}
+                                {renderField("Ngày Phí 2", "ngay_phi2", "date")}
+                                {renderField("Ngày Phí 3", "ngay_phi3", "date")}
+                                {renderField("Ngày Phí 4", "ngay_phi4", "date")}
+                                {renderField("Ngày Phí 5", "ngay_phi5", "date")}
+                                {renderField("Ngày Phí 6", "ngay_phi6", "date")}
                             </div>
                         </div>
                     </div>
