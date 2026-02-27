@@ -6,91 +6,6 @@ import { format, subDays } from "date-fns";
 import { TIKTOK_FEE_CONFIG } from "@/lib/fee-config";
 import { Toast } from "@/components/Toast";
 
-// ─── Modal: Chỉnh sửa ngày phí trước khi đẩy Fast ───────────────────────────
-interface NgayPhiRow {
-  dong: number;
-  label: string;
-  ma_cp: string;
-  value: number;
-  ngay_phi: string;
-}
-
-interface SyncModalProps {
-  item: any;
-  onClose: () => void;
-  onConfirm: (rows: NgayPhiRow[], setResult: (r: { ok: boolean; msg: string }) => void) => void;
-  syncing: boolean;
-}
-
-function SyncModal({ item, onClose, onConfirm, syncing }: SyncModalProps) {
-  const today = format(new Date(), "yyyy-MM-dd");
-  const [rows, setRows] = useState<NgayPhiRow[]>([
-    { dong: 1, label: "Phí HH TikTok 4.54% (TTCOM454)", ma_cp: "TTCOM454", value: Number(item?.subTotal) || 0, ngay_phi: today },
-    { dong: 2, label: "Phí giao dịch 5% (TTPAY5)", ma_cp: "TTPAY5", value: Number(item?.totalAmount) || 0, ngay_phi: today },
-    { dong: 3, label: "Phí dịch vụ SFP (TTSFP6)", ma_cp: "TTSFP6", value: Number(item?.sellerDiscount) || 0, ngay_phi: today },
-    { dong: 4, label: "Phí Affiliate (TTAFF)", ma_cp: "TTAFF", value: Number(item?.affiliateCommission) || 0, ngay_phi: today },
-  ]);
-  const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null);
-
-  const updateNgay = (dong: number, val: string) =>
-    setRows((prev) => prev.map((r) => r.dong === dong ? { ...r, ngay_phi: val } : r));
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold text-gray-900">Đẩy Fast – Chỉnh ngày phí TikTok</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition">
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-          </button>
-        </div>
-        <p className="text-sm text-gray-500 mb-1">
-          Đơn: <span className="font-mono font-semibold text-gray-800">{item?.erpOrderCode}</span>
-        </p>
-        <p className="text-xs text-gray-400 mb-4">Mỗi dòng phí (dong=N) tương ứng với ngay_phiN gửi lên Fast API.</p>
-        <div className="space-y-3">
-          {rows.map((r) => (
-            <div key={r.dong} className={`flex items-center gap-3 p-3 rounded-lg border ${r.value === 0 ? "border-gray-100 bg-gray-50 opacity-60" : "border-purple-100 bg-purple-50"}`}>
-              <div className="w-6 h-6 rounded-full bg-purple-600 text-white text-xs font-bold flex items-center justify-center shrink-0">{r.dong}</div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-gray-700 truncate">{r.label}</p>
-                <p className="text-xs text-gray-500 font-mono">{r.value.toLocaleString("vi-VN")} đ</p>
-              </div>
-              <input
-                type="date"
-                value={r.ngay_phi}
-                disabled={!!result || syncing}
-                onChange={(e) => updateNgay(r.dong, e.target.value)}
-                className="shrink-0 border border-gray-300 rounded px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white disabled:opacity-50"
-              />
-            </div>
-          ))}
-        </div>
-
-        {/* Kết quả trong modal */}
-        {result && (
-          <div className={`mt-4 p-3 rounded-lg text-sm font-medium flex items-center gap-2 ${result.ok ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-700 border border-red-200"
-            }`}>
-            {result.ok
-              ? <svg className="w-4 h-4 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
-              : <svg className="w-4 h-4 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" /></svg>
-            }
-            {result.msg}
-          </div>
-        )}
-
-        <div className="mt-6 flex justify-end gap-3">
-          <button onClick={onClose} disabled={syncing} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50">{result ? "Đóng" : "Hủy"}</button>
-          {!result && (
-            <button onClick={() => onConfirm(rows, setResult)} disabled={syncing} className="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 flex items-center gap-2 disabled:opacity-50">
-              {syncing ? (<><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />Đang đẩy...</>) : (<><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>Đẩy Fast</>)}
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 interface PlatformFeeMap {
   id: string;
@@ -133,7 +48,6 @@ export default function TikTokFeesPage() {
   });
 
   const [feeMaps, setFeeMaps] = useState<PlatformFeeMap[]>([]);
-  const [syncingItem, setSyncingItem] = useState<any>(null);
   const [syncing, setSyncing] = useState(false);
 
   // Batch Sync
@@ -265,131 +179,57 @@ export default function TikTokFeesPage() {
     }
   };
 
-  const handleOpenSyncModal = (item: any) => {
+  const handleSyncPOCharges = async (item: any) => {
     if (!item?.erpOrderCode) { showToast("error", "Đơn hàng chưa có ERP Order Code"); return; }
-    setSyncingItem(item);
-  };
 
-  const handleConfirmSync = async (
-    rows: NgayPhiRow[],
-    setResult: (r: { ok: boolean; msg: string }) => void,
-  ) => {
-    if (!syncingItem) return;
-    const item = syncingItem;
-    const dh_ngay = item.orderCreatedAt ? new Date(item.orderCreatedAt).toISOString() : new Date().toISOString();
-    const ngayPhiMap: Record<string, string> = {};
-    rows.forEach((r) => { if (r.ngay_phi) ngayPhiMap[`ngay_phi${r.dong}`] = new Date(r.ngay_phi).toISOString(); });
-    const master = { dh_so: item.erpOrderCode, dh_ngay, dh_dvcs: "TTM", ...ngayPhiMap };
-    const details = rows.filter((r) => r.value !== 0).map((r) => ({
-      dong: r.dong, ma_cp: r.ma_cp, cp01_nt: r.value,
-      cp02_nt: 0, cp03_nt: 0, cp04_nt: 0, cp05_nt: 0, cp06_nt: 0,
+    const dh_ngay = item.orderCreatedAt
+      ? format(new Date(item.orderCreatedAt), "yyyy-MM-dd'T'HH:mm:ss")
+      : format(new Date(), "yyyy-MM-dd'T'HH:mm:ss");
+
+    const defaultDate = item.orderCreatedAt
+      ? format(new Date(item.orderCreatedAt), "yyyy-MM-dd'T'HH:mm:ss")
+      : format(new Date(), "yyyy-MM-dd'T'HH:mm:ss");
+
+    const master = {
+      dh_so: item.erpOrderCode,
+      dh_ngay,
+      dh_dvcs: "TTM",
+      ngay_phi1: defaultDate,
+      ngay_phi2: defaultDate,
+      ngay_phi3: defaultDate,
+      ngay_phi4: defaultDate,
+    };
+
+    const details = [
+      { dong: 1, label: "Phí HH TikTok 4.54% (TTCOM454)", ma_cp: "TTCOM454", value: Number(item?.subTotal) || 0 },
+      { dong: 2, label: "Phí giao dịch 5% (TTPAY5)", ma_cp: "TTPAY5", value: Number(item?.totalAmount) || 0 },
+      { dong: 3, label: "Phí dịch vụ SFP (TTSFP6)", ma_cp: "TTSFP6", value: Number(item?.sellerDiscount) || 0 },
+      { dong: 4, label: "Phí Affiliate (TTAFF)", ma_cp: "TTAFF", value: Number(item?.affiliateCommission) || 0 },
+    ].filter(r => r.value !== 0).map((r) => ({
+      dong: r.dong, ma_cp: r.ma_cp, cp01_nt: r.value, cp02_nt: 0, cp03_nt: 0, cp04_nt: 0, cp05_nt: 0, cp06_nt: 0
     }));
-    if (details.length === 0) { setResult({ ok: false, msg: "Tất cả phí đều = 0, không gửi" }); return; }
+
+    if (details.length === 0) {
+      showToast("info", "Tất cả phí đều = 0, không gửi");
+      return;
+    }
+
     setSyncing(true);
     try {
       const res = await fastApiInvoicesApi.syncPOCharges({ master, detail: details });
       if (res.data?.success || res.status === 200 || res.status === 201) {
-        setResult({ ok: true, msg: `Đồng bộ thành công! ${res.data?.message || ""}` });
+        showToast("success", `Đồng bộ thành công! ${res.data?.message || ""}`);
+        fetchData();
       } else {
-        const errMsg = Array.isArray(res.data) ? res.data[0]?.message : res.data?.message || "Đồng bộ thất bại";
-        setResult({ ok: false, msg: errMsg });
+        const msg = Array.isArray(res.data) ? res.data[0]?.message : res.data?.message || "Đồng bộ thất bại";
+        showToast("error", msg);
       }
     } catch (err: any) {
       const data = err.response?.data;
-      const errMsg = Array.isArray(data) ? data[0]?.message : data?.message || err.message || "Unknown error";
-      setResult({ ok: false, msg: `Lỗi: ${errMsg}` });
+      const msg = Array.isArray(data) ? data[0]?.message : data?.message || err.message || "Unknown error";
+      showToast("error", `Lỗi: ${msg}`);
     } finally {
       setSyncing(false);
-    }
-  };
-
-  // Legacy (kept for compat, not used)
-  const handleSyncPOCharges = async (item: any) => {
-    console.log("handleSyncPOCharges", item);
-    if (!item) return;
-
-    if (!item.erpOrderCode) {
-      showToast("error", "Đơn hàng chưa có ERP Order Code (dh_so)");
-      return;
-    }
-
-    const master = {
-      dh_so: item.erpOrderCode,
-      dh_ngay: item.orderCreatedAt
-        ? new Date(item.orderCreatedAt).toISOString()
-        : new Date().toISOString(),
-      dh_dvcs: "TTM",
-    };
-
-    const details: any[] = [];
-
-    TIKTOK_FEE_CONFIG.forEach((rule) => {
-      const value = Number(item[rule.field]);
-      if (value && value !== 0) {
-        const code = getSystemCode(
-          "tiktok",
-          rule.rawName,
-          rule.defaultCode
-        );
-
-        const detail = {
-          dong: rule.row,
-          ma_cp: code,
-          cp01_nt: 0,
-          cp02_nt: 0,
-          cp03_nt: 0,
-          cp04_nt: 0,
-          cp05_nt: 0,
-          cp06_nt: 0,
-        };
-
-        if (rule.targetCol === "cp02_nt") {
-          detail.cp02_nt = value;
-        } else {
-          detail.cp01_nt = value;
-        }
-        details.push(detail);
-      }
-    });
-
-    if (details.length === 0) {
-      showToast("info", "Không có dữ liệu phí (TikTok Fees) để đồng bộ");
-      return;
-    }
-
-    const payload = {
-      master,
-      detail: details,
-    };
-
-    setLoading(true);
-    try {
-      const res = await fastApiInvoicesApi.syncPOCharges(payload);
-      if (res.data?.success || res.status === 200 || res.status === 201) {
-        showToast("success", `Đồng bộ thành công! ${res.data?.message || ""}`);
-      } else {
-        let errorMessage = res.data?.message || "Đồng bộ thất bại";
-        if (Array.isArray(res.data) && res.data.length > 0) {
-          errorMessage = res.data[0].message || errorMessage;
-        } else if (res.data?.result && Array.isArray(res.data.result) && res.data.result.length > 0) {
-          errorMessage = res.data.result[0].message || errorMessage;
-        }
-        showToast("error", errorMessage);
-      }
-    } catch (err: any) {
-      console.error(err);
-      let errorMessage = err.message || "Unknown error";
-      if (err.response?.data) {
-        const data = err.response.data;
-        if (Array.isArray(data) && data.length > 0) {
-          errorMessage = data[0].message || errorMessage;
-        } else if (data.message) {
-          errorMessage = data.message;
-        }
-      }
-      showToast("error", `Lỗi khi đồng bộ: ${errorMessage}`);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -401,10 +241,7 @@ export default function TikTokFeesPage() {
         {toast && <Toast type={toast.type} message={toast.message} onClose={() => setToast(null)} />}
       </div>
 
-      {/* Sync Modal */}
-      {syncingItem && (
-        <SyncModal item={syncingItem} onClose={() => setSyncingItem(null)} onConfirm={handleConfirmSync} syncing={syncing} />
-      )}
+
 
       <div className="mb-8 flex items-center justify-between">
         <div>
@@ -628,9 +465,10 @@ export default function TikTokFeesPage() {
                     </td>
                     <td className="px-4 py-3 text-center">
                       <button
-                        onClick={() => handleOpenSyncModal(item)}
-                        title="Chỉnh ngày phí rồi đẩy Fast"
-                        className="px-3 py-1.5 text-xs font-medium rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition flex items-center gap-1 mx-auto"
+                        onClick={() => handleSyncPOCharges(item)}
+                        disabled={syncing}
+                        title="Đẩy Fast"
+                        className="px-3 py-1.5 text-xs font-medium rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition flex items-center gap-1 mx-auto disabled:opacity-50"
                       >
                         <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
                         Đẩy Fast
