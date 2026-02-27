@@ -20,7 +20,7 @@ export default function PurchaseOrdersPage() {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(20);
+  const [limit, setLimit] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
 
@@ -268,11 +268,10 @@ export default function PurchaseOrdersPage() {
       className: "whitespace-nowrap",
       render: (item: any) => (
         <span
-          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${
-            item.receivedQty >= item.qty
-              ? "bg-green-100 text-green-800"
-              : "bg-amber-100 text-amber-800"
-          }`}
+          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${item.receivedQty >= item.qty
+            ? "bg-green-100 text-green-800"
+            : "bg-amber-100 text-amber-800"
+            }`}
         >
           {item.receivedQty >= item.qty ? "Completed" : "Pending"}
         </span>
