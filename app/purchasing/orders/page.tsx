@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { getPurchaseOrders } from "@/lib/api";
+import { getPurchaseOrders, syncPurchaseOrderToFast } from "@/lib/api";
 import { format } from "date-fns";
 import { Loader2, Search } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
@@ -52,6 +52,33 @@ export default function PurchaseOrdersPage() {
         variant: "destructive",
         title: "Error",
         description: "Failed to fetch purchase orders",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSyncFast = async (id: string, poCode: string) => {
+    toast({
+      title: "Đang xử lý",
+      description: `Đang đồng bộ PO ${poCode} sang FAST...`,
+    });
+    setLoading(true);
+    try {
+      await syncPurchaseOrderToFast(id);
+      toast({
+        title: "Thành công",
+        description: `Đã đồng bộ PO ${poCode} sang FAST thành công.`,
+        className: "bg-green-500 text-white",
+      });
+    } catch (error: any) {
+      console.error(error);
+      const errorMessage =
+        error?.response?.data?.message || "Lỗi khi đồng bộ PO sang Fast";
+      toast({
+        variant: "destructive",
+        title: "Lỗi đồng bộ",
+        description: errorMessage,
       });
     } finally {
       setLoading(false);
@@ -236,6 +263,12 @@ export default function PurchaseOrdersPage() {
       className: "whitespace-nowrap",
     },
     {
+      label: "Mã ĐVCS",
+      key: "ma_dvcs",
+      className: "whitespace-nowrap",
+      format: (v: any) => v || "-",
+    },
+    {
       label: "Tên đơn vị nhận",
       key: "shipToBranchName",
       className: "max-w-[150px] truncate",
@@ -408,7 +441,11 @@ export default function PurchaseOrdersPage() {
                 </tr>
               ) : (
                 data.map((item, index) => (
-                  <tr key={item.id} className="hover:bg-gray-50 cursor-pointer">
+                  <tr
+                    key={item.id}
+                    className="hover:bg-gray-50 cursor-pointer"
+                    onDoubleClick={() => handleSyncFast(item.id, item.poCode)}
+                  >
                     <td className="sticky left-0 z-10 bg-white px-4 py-3 text-sm text-gray-900 border-r">
                       {(page - 1) * limit + index + 1}
                     </td>

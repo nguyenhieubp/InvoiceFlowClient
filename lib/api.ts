@@ -192,6 +192,10 @@ export const getPurchaseOrders = async (params: {
   return api.get("/purchase-orders", { params });
 };
 
+export const syncPurchaseOrderToFast = async (id: string) => {
+  return api.post(`/purchase-orders/${id}/fast`);
+};
+
 export const getGoodsReceipts = async (params: {
   startDate?: string;
   endDate?: string;

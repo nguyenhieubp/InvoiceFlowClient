@@ -207,6 +207,12 @@ export default function GoodsReceiptsPage() {
       className: "whitespace-nowrap",
     },
     {
+      label: "Mã ĐVCS",
+      key: "ma_dvcs",
+      className: "whitespace-nowrap",
+      format: (v: any) => v || "-",
+    },
+    {
       label: "PO gốc",
       key: "poCode",
       className: "whitespace-nowrap",
