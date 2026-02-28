@@ -597,8 +597,8 @@ export default function WarehouseStatisticsPage() {
               {batchRetryResult && (
                 <div
                   className={`mb-6 p-4 rounded-lg border text-sm ${batchRetryResult.success
-                      ? "bg-green-50 border-green-200 text-green-800"
-                      : "bg-red-50 border-red-200 text-red-800"
+                    ? "bg-green-50 border-green-200 text-green-800"
+                    : "bg-red-50 border-red-200 text-red-800"
                     }`}
                 >
                   <h4 className="font-semibold flex items-center gap-2 mb-2">
@@ -1048,10 +1048,10 @@ export default function WarehouseStatisticsPage() {
                     <td className="px-4 py-3">
                       <span
                         className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${item.ioType === "I"
-                            ? "bg-sky-50 text-sky-700 border border-sky-200"
-                            : item.ioType === "O"
-                              ? "bg-amber-50 text-amber-700 border border-amber-200"
-                              : "bg-purple-50 text-purple-700 border border-purple-200"
+                          ? "bg-sky-50 text-sky-700 border border-sky-200"
+                          : item.ioType === "O"
+                            ? "bg-amber-50 text-amber-700 border border-amber-200"
+                            : "bg-purple-50 text-purple-700 border border-purple-200"
                           }`}
                       >
                         {item.ioType === "I"
