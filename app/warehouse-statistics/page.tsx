@@ -1152,11 +1152,33 @@ export default function WarehouseStatisticsPage() {
 
         {/* Pagination in Footer */}
         <div className="bg-slate-50 px-6 py-4 border-t border-slate-200 flex items-center justify-between">
-          <div className="text-sm text-slate-500">
-            Hiển thị trang{" "}
-            <span className="font-medium">{pagination.page}</span> /{" "}
-            <span className="font-medium">{pagination.totalPages}</span> (Tổng{" "}
-            {pagination.total} bản ghi)
+          <div className="flex items-center gap-4 text-sm text-slate-500">
+            <div>
+              Hiển thị trang{" "}
+              <span className="font-medium">{pagination.page}</span> /{" "}
+              <span className="font-medium">{pagination.totalPages}</span> (Tổng{" "}
+              {pagination.total} bản ghi)
+            </div>
+            <div className="flex items-center gap-2 border-l border-slate-300 pl-4">
+              <span>Số bản ghi mỗi trang:</span>
+              <select
+                value={pagination.limit}
+                onChange={(e) =>
+                  setPagination((prev) => ({
+                    ...prev,
+                    limit: parseInt(e.target.value),
+                    page: 1, // Reset to first page when limit changes
+                  }))
+                }
+                className="px-2 py-1 border border-slate-300 rounded bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              >
+                <option value={5}>5</option>
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <button
